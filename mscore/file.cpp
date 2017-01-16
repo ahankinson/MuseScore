@@ -74,6 +74,7 @@
 #include "synthesizer/msynthesizer.h"
 #include "svggenerator.h"
 #include "scorePreview.h"
+#include "exportmei.h"
 
 #ifdef OMR
 #include "omr/omr.h"
@@ -1575,6 +1576,7 @@ void MuseScore::exportFile()
       fl.append(tr("Standard MIDI File") + " (*.mid)");
       fl.append(tr("MusicXML File") + " (*.xml)");
       fl.append(tr("Compressed MusicXML File") + " (*.mxl)");
+      fl.append(tr("Musice Encoding Initiative File") + " (*.mei)");
       fl.append(tr("Uncompressed MuseScore File") + " (*.mscx)");
 
       QString saveDialogTitle = tr("MuseScore: Export");
@@ -1826,6 +1828,10 @@ bool MuseScore::saveAs(Score* cs, bool saveCopy, const QString& path, const QStr
             // save as compressed MusicXML *.mxl file
             rv = saveMxl(cs, fn);
             }
+      else if (ext == "mei") {
+            // save as an MEI file.
+            rv = saveMei(cs, fn);
+            }
       else if (ext == "mid") {
             // save as midi file *.mid
             rv = saveMidi(cs, fn);
@@ -1874,6 +1880,7 @@ bool MuseScore::saveAs(Score* cs, bool saveCopy, const QString& path, const QStr
             }
       return rv;
       }
+
 
 //---------------------------------------------------------
 //   saveMidi
