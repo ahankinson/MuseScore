@@ -33,24 +33,28 @@ struct ChannelActions {
 //---------------------------------------------------------
 
 class StaffText : public Text  {
-      Q_OBJECT
+      Q_GADGET
 
       QString _channelNames[4];
       QList<ChannelActions> _channelActions;
       SwingParameters _swingParameters;
-      bool _setAeolusStops;
-      int aeolusStops[4];
-      bool _swing;
+      bool _setAeolusStops { false };
+      int aeolusStops[4]   { 0, 0, 0, 0 };
+      bool _swing          { false };
+
+   protected:
+      virtual void writeProperties(XmlWriter& xml) const;
 
    public:
       StaffText(Score* = 0);
-      virtual StaffText* clone() const                    { return new StaffText(*this); }
-      virtual Element::Type type() const                  { return Element::Type::STAFF_TEXT; }
+      StaffText(SubStyle, Score* = 0);
+      virtual StaffText* clone() const                    { return new StaffText(*this);    }
+      virtual ElementType type() const                    { return ElementType::STAFF_TEXT; }
       virtual void write(XmlWriter& xml) const;
       virtual void read(XmlReader&);
-      virtual int subtype() const                         { return (int) textStyleType(); }
+      virtual int subtype() const                         { return (int) subStyle(); }
       virtual void layout() override;
-      virtual QString subtypeName() const                 { return textStyle().name(); }
+      virtual QString subtypeName() const                 { return "??"; }
       virtual QVariant propertyDefault(P_ID id) const override;
 
       Segment* segment() const;

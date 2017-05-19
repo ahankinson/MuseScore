@@ -128,7 +128,7 @@ class ClefInfo {
 //---------------------------------------------------------
 
 class Clef : public Element {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(bool showCourtesy READ showCourtesy WRITE undoSetShowCourtesy)
       Q_PROPERTY(bool small READ small)
 
@@ -143,14 +143,14 @@ class Clef : public Element {
       Clef(const Clef&);
       ~Clef() {}
       virtual Clef* clone() const        { return new Clef(*this); }
-      virtual Element::Type type() const { return Element::Type::CLEF; }
+      virtual ElementType type() const { return ElementType::CLEF; }
       virtual qreal mag() const;
 
       Segment* segment() const           { return (Segment*)parent(); }
       Measure* measure() const           { return (Measure*)parent()->parent(); }
 
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&);
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&);
       virtual void layout();
       virtual void draw(QPainter*) const;
       virtual void read(XmlReader&);

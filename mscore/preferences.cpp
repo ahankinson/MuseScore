@@ -53,8 +53,6 @@ bool useALSA = false, useJACK = false, usePortaudio = false, usePulseAudio = fal
 
 extern bool externalStyle;
 
-static int exportAudioSampleRates[2] = { 44100, 48000 };
-
 //---------------------------------------------------------
 //   Preferences
 //---------------------------------------------------------
@@ -201,7 +199,8 @@ void Preferences::init()
 #else
       nativeDialogs           = false;    // don't use system native file dialogs
 #endif
-      exportAudioSampleRate   = exportAudioSampleRates[0];
+      exportAudioSampleRate   = 44100;
+      exportMp3BitRate        = 128;
 
       workspace               = "Basic";
       exportPdfDpi            = 300;
@@ -296,10 +295,10 @@ void Preferences::write()
       s.setValue("pngTransparent",     pngTransparent);
       s.setValue("language",           language);
 
-      s.setValue("paperWidth",  MScore::defaultStyle().pageFormat()->width());
-      s.setValue("paperHeight", MScore::defaultStyle().pageFormat()->height());
+      s.setValue("paperWidth",  MScore::defaultStyle().value(StyleIdx::pageWidth).toReal());
+      s.setValue("paperHeight", MScore::defaultStyle().value(StyleIdx::pageHeight).toReal());
 
-      s.setValue("twosided",    MScore::defaultStyle().pageFormat()->twosided());
+      s.setValue("twosided",    MScore::defaultStyle().value(StyleIdx::pageTwosided).toBool());
       s.setValue("spatium",     MScore::defaultStyle().value(StyleIdx::spatium).toDouble() / DPI);
 
       s.setValue("mag", mag);
@@ -337,6 +336,7 @@ void Preferences::write()
       s.setValue("vraster", MScore::vRaster());
       s.setValue("nativeDialogs", nativeDialogs);
       s.setValue("exportAudioSampleRate", exportAudioSampleRate);
+      s.setValue("exportMp3BitRate", exportMp3BitRate);
 
       s.setValue("workspace", workspace);
       s.setValue("exportPdfDpi", exportPdfDpi);
@@ -509,6 +509,7 @@ void Preferences::read()
 
       nativeDialogs    = s.value("nativeDialogs", nativeDialogs).toBool();
       exportAudioSampleRate = s.value("exportAudioSampleRate", exportAudioSampleRate).toInt();
+      exportMp3BitRate   = s.value("exportMp3Bitrate", exportMp3BitRate).toInt();
 
       workspace          = s.value("workspace", workspace).toString();
       exportPdfDpi       = s.value("exportPdfDpi", exportPdfDpi).toInt();
@@ -589,7 +590,54 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
 #endif
 #ifndef USE_ALSA
       alsaDriver->setVisible(false);
+      alsaDriver->setChecked(false);
+#else
+      alsaSampleRate->clear();
+      alsaSampleRate->addItem(tr("192000"), 192000);
+      alsaSampleRate->addItem( tr("96000"),  96000);
+      alsaSampleRate->addItem( tr("88200"),  88200);
+      alsaSampleRate->addItem( tr("48000"),  48000); // default
+      alsaSampleRate->addItem( tr("44100"),  44100);
+      alsaSampleRate->addItem( tr("32000"),  32000);
+      alsaSampleRate->addItem( tr("22050"),  22050);
+
+      alsaPeriodSize->clear();
+      alsaPeriodSize->addItem(tr("4096"), 4096);
+      alsaPeriodSize->addItem(tr("2048"), 2048);
+      alsaPeriodSize->addItem(tr("1024"), 1024); // default
+      alsaPeriodSize->addItem( tr("512"),  512);
+      alsaPeriodSize->addItem( tr("256"),  256);
+      alsaPeriodSize->addItem( tr("128"),  128);
+      alsaPeriodSize->addItem(  tr("64"),   64);
 #endif
+
+      exportAudioSampleRate->clear();
+      exportAudioSampleRate->addItem(tr("32000"), 32000);
+      exportAudioSampleRate->addItem(tr("44100"), 44100); // default
+      exportAudioSampleRate->addItem(tr("48000"), 48000);
+
+#ifndef USE_LAME
+      exportMp3BitRateLabel->setVisible(false);
+      exportMp3BitRate->setVisible(false);
+      exportMp3BitRateUnit->setVisible(false);
+#else
+      exportMp3BitRate->clear();
+      exportMp3BitRate->addItem( tr("32"),  32);
+      exportMp3BitRate->addItem( tr("40"),  40);
+      exportMp3BitRate->addItem( tr("48"),  48);
+      exportMp3BitRate->addItem( tr("56"),  56);
+      exportMp3BitRate->addItem( tr("64"),  64);
+      exportMp3BitRate->addItem( tr("80"),  80);
+      exportMp3BitRate->addItem( tr("96"),  96);
+      exportMp3BitRate->addItem(tr("112"), 112);
+      exportMp3BitRate->addItem(tr("128"), 128); // default
+      exportMp3BitRate->addItem(tr("160"), 160);
+      exportMp3BitRate->addItem(tr("192"), 192);
+      exportMp3BitRate->addItem(tr("224"), 224);
+      exportMp3BitRate->addItem(tr("256"), 256);
+      exportMp3BitRate->addItem(tr("320"), 320);
+#endif
+
 #ifndef USE_PORTAUDIO
       portaudioDriver->setVisible(false);
 #endif
@@ -663,11 +711,6 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
       recordButtons->addButton(recordUndo,   RMIDI_UNDO);
       recordButtons->addButton(recordEditMode, RMIDI_NOTE_EDIT_MODE);
       recordButtons->addButton(recordRealtimeAdvance, RMIDI_REALTIME_ADVANCE);
-
-      int n = sizeof(exportAudioSampleRates)/sizeof(*exportAudioSampleRates);
-      exportAudioSampleRate->clear();
-      for (int idx = 0; idx < n; ++idx)
-            exportAudioSampleRate->addItem(QString("%1").arg(exportAudioSampleRates[idx]));
 
       connect(recordButtons,          SIGNAL(buttonClicked(int)), SLOT(recordButtonClicked(int)));
       connect(midiRemoteControlClear, SIGNAL(clicked()), SLOT(midiRemoteControlClearClicked()));
@@ -832,9 +875,10 @@ void PreferenceDialog::updateValues()
 
       alsaDevice->setText(prefs.alsaDevice);
 
-      int index = alsaSampleRate->findText(QString("%1").arg(prefs.alsaSampleRate));
+      int index = alsaSampleRate->findData(prefs.alsaSampleRate);
       alsaSampleRate->setCurrentIndex(index);
-      index = alsaPeriodSize->findText(QString("%1").arg(prefs.alsaPeriodSize));
+
+      index = alsaPeriodSize->findData(prefs.alsaPeriodSize);
       alsaPeriodSize->setCurrentIndex(index);
 
       alsaFragments->setValue(prefs.alsaFragments);
@@ -995,15 +1039,12 @@ void PreferenceDialog::updateValues()
       myPlugins->setText(prefs.myPluginsPath);
       mySoundfonts->setText(prefs.mySoundfontsPath);
 
-      idx = 0;
-      int n = sizeof(exportAudioSampleRates)/sizeof(*exportAudioSampleRates);
-      for (;idx < n; ++idx) {
-            if (exportAudioSampleRates[idx] == prefs.exportAudioSampleRate)
-                  break;
-            }
-      if (idx == n)     // if not found in table
-            idx = 0;
-      exportAudioSampleRate->setCurrentIndex(idx);
+      index = exportAudioSampleRate->findData(prefs.exportAudioSampleRate);
+      exportAudioSampleRate->setCurrentIndex(index);
+
+      index = exportMp3BitRate->findData(prefs.exportMp3BitRate);
+      exportMp3BitRate->setCurrentIndex(index);
+
       exportPdfDpi->setValue(prefs.exportPdfDpi);
       pageVertical->setChecked(MScore::verticalOrientation());
       }
@@ -1338,14 +1379,15 @@ void PreferenceDialog::apply()
                   }
             }
       else if (
-         (prefs.useAlsaAudio != alsaDriver->isChecked())
-         || (wasJack != nowJack)
+         (wasJack != nowJack)
          || (prefs.usePortaudioAudio != portaudioDriver->isChecked())
          || (prefs.usePulseAudio != pulseaudioDriver->isChecked())
+#ifdef USE_ALSA
          || (prefs.alsaDevice != alsaDevice->text())
-         || (prefs.alsaSampleRate != alsaSampleRate->currentText().toInt())
-         || (prefs.alsaPeriodSize != alsaPeriodSize->currentText().toInt())
+         || (prefs.alsaSampleRate != alsaSampleRate->currentData().toInt())
+         || (prefs.alsaPeriodSize != alsaPeriodSize->currentData().toInt())
          || (prefs.alsaFragments != alsaFragments->value())
+#endif
             ) {
             if (seq)
                   seq->exit();
@@ -1353,8 +1395,8 @@ void PreferenceDialog::apply()
             prefs.usePortaudioAudio  = portaudioDriver->isChecked();
             prefs.usePulseAudio      = pulseaudioDriver->isChecked();
             prefs.alsaDevice         = alsaDevice->text();
-            prefs.alsaSampleRate     = alsaSampleRate->currentText().toInt();
-            prefs.alsaPeriodSize     = alsaPeriodSize->currentText().toInt();
+            prefs.alsaSampleRate     = alsaSampleRate->currentData().toInt();
+            prefs.alsaPeriodSize     = alsaPeriodSize->currentData().toInt();
             prefs.alsaFragments      = alsaFragments->value();
             preferences = prefs;
             if (seq) {
@@ -1400,8 +1442,8 @@ void PreferenceDialog::apply()
       prefs.myPluginsPath      = myPlugins->text();
       prefs.mySoundfontsPath = mySoundfonts->text();
 
-      int idx = exportAudioSampleRate->currentIndex();
-      prefs.exportAudioSampleRate = exportAudioSampleRates[idx];
+      prefs.exportAudioSampleRate = exportAudioSampleRate->currentData().toInt();
+      prefs.exportMp3BitRate   = exportMp3BitRate->currentData().toInt();
 
       prefs.midiExpandRepeats  = expandRepeats->isChecked();
       prefs.midiExportRPNs     = exportRPNs->isChecked();
@@ -1910,10 +1952,12 @@ void Preferences::updatePluginList()
 
 void PreferenceDialog::printShortcutsClicked()
       {
+#ifndef QT_NO_PRINTER
       QPrinter printer(QPrinter::HighResolution);
-      MStyle* s = &MScore::defaultStyle();
-      const PageFormat* pf = s->pageFormat();
-      printer.setPaperSize(pf->size(), QPrinter::Inch);
+      const MStyle& s = MScore::defaultStyle();
+      qreal pageW = s.value(StyleIdx::pageWidth).toReal();
+      qreal pageH = s.value(StyleIdx::pageHeight).toReal();
+      printer.setPaperSize(QSizeF(pageW, pageH), QPrinter::Inch);
 
       printer.setCreator("MuseScore Version: " VERSION);
       printer.setFullPage(true);
@@ -1971,5 +2015,6 @@ void PreferenceDialog::printShortcutsClicked()
             item = shortcutList->itemBelow(item);
             }
       p.end();
+#endif
       }
 }

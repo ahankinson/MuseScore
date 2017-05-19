@@ -79,7 +79,7 @@ void TestTools::undoAddLineBreaks()
       QVERIFY(saveCompareScore(score, writeFile1, reference1));
 
       // undo
-      score->undoStack()->undo();
+      score->undoStack()->undo(ed);
       QVERIFY(saveCompareScore(score, writeFile2, reference2));
 
       delete score;
@@ -164,7 +164,7 @@ void TestTools::undoSlashFill()
       MasterScore* score = readScore(readFile);
 
       // select
-      Segment* s = score->firstMeasure()->findSegment(Segment::Type::ChordRest, MScore::division * 2);
+      Segment* s = score->firstMeasure()->findSegment(SegmentType::ChordRest, MScore::division * 2);
       score->selection().setRange(s, score->lastSegment(), 0, 2);
 
       // do
@@ -174,7 +174,7 @@ void TestTools::undoSlashFill()
       QVERIFY(saveCompareScore(score, writeFile1, reference1));
 
       // undo
-      score->undoStack()->undo();
+      score->undoStack()->undo(ed);
       QVERIFY(saveCompareScore(score, writeFile2, reference2));
 
       delete score;
@@ -203,7 +203,7 @@ void TestTools::undoSlashRhythm()
       QVERIFY(saveCompareScore(score, writeFile1, reference1));
 
       // undo
-      score->undoStack()->undo();
+      score->undoStack()->undo(ed);
       QVERIFY(saveCompareScore(score, writeFile2, reference2));
 
       delete score;
@@ -227,7 +227,7 @@ void TestTools::undoResequenceAlpha()
       QVERIFY(saveCompareScore(score, writeFile1, reference1));
 
       // undo
-      score->undoStack()->undo();
+      score->undoStack()->undo(ed);
       QVERIFY(saveCompareScore(score, writeFile2, reference2));
 
       delete score;
@@ -251,7 +251,7 @@ void TestTools::undoResequenceNumeric()
       QVERIFY(saveCompareScore(score, writeFile1, reference1));
 
       // undo
-      score->undoStack()->undo();
+      score->undoStack()->undo(ed);
       QVERIFY(saveCompareScore(score, writeFile2, reference2));
 
       delete score;
@@ -275,7 +275,7 @@ void TestTools::undoResequenceMeasure()
       QVERIFY(saveCompareScore(score, writeFile1, reference1));
 
       // undo
-      score->undoStack()->undo();
+      score->undoStack()->undo(ed);
       QVERIFY(saveCompareScore(score, writeFile2, reference2));
 
       delete score;
@@ -299,7 +299,7 @@ void TestTools::undoResequencePart()
       QVERIFY(saveCompareScore(score, writeFile1, reference1));
 
       // undo
-      score->undoStack()->undo();
+      score->undoStack()->undo(ed);
       QVERIFY(saveCompareScore(score, writeFile2, reference2));
 
       delete score;

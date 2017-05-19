@@ -32,7 +32,7 @@ class MeasureBase;
 //---------------------------------------------------------
 
 class Page : public Element {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(int pagenumber READ no)
 
       QList<System*> _systems;
@@ -50,13 +50,14 @@ class Page : public Element {
       Page(Score*);
       ~Page();
       virtual Page* clone() const           { return new Page(*this); }
-      virtual Element::Type type() const    { return Element::Type::PAGE; }
+      virtual ElementType type() const      { return ElementType::PAGE; }
       const QList<System*>& systems() const { return _systems;   }
       QList<System*>& systems()             { return _systems;   }
       System* system(int idx)               { return _systems[idx];   }
 
       virtual void write(XmlWriter&) const;
       virtual void read(XmlReader&);
+      virtual void styleChanged() override;
 
       void appendSystem(System* s);
 
@@ -75,10 +76,6 @@ class Page : public Element {
       QList<Element*> items(const QPointF& p);
       void rebuildBspTree()   { bspTreeValid = false; }
       QPointF pagePos() const { return QPointF(); }     ///< position in page coordinates
-      QList<System*> searchSystem(const QPointF& pos) const;
-      Measure* searchMeasure(const QPointF& p) const;
-      MeasureBase* pos2measure(const QPointF&, int* staffIdx, int* pitch,
-         Segment**, QPointF* offset) const;
       QList<Element*> elements();               ///< list of visible elements
       QRectF tbbox();                           // tight bounding box, excluding white space
       int endTick() const;

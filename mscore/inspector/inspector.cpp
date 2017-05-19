@@ -12,6 +12,7 @@
 //=============================================================================
 
 #include "inspector.h"
+#include "inspectorTextBase.h"
 #include "inspectorBeam.h"
 #include "inspectorImage.h"
 #include "inspectorLasso.h"
@@ -31,6 +32,7 @@
 #include "inspectorText.h"
 #include "inspectorBarline.h"
 #include "inspectorFingering.h"
+#include "inspectorDynamic.h"
 #include "musescore.h"
 #include "scoreview.h"
 #include "bendproperties.h"
@@ -59,6 +61,7 @@
 #include "libmscore/slur.h"
 #include "libmscore/breath.h"
 #include "libmscore/lyrics.h"
+#include "libmscore/accidental.h"
 
 namespace Ms {
 
@@ -102,8 +105,10 @@ Inspector::Inspector(QWidget* parent)
 
       _inspectorEdit = false;
       ie             = 0;
-      _element       = 0;
-      retranslate();
+      oe             = 0;
+      _score         = 0;
+//      retranslate();
+      setWindowTitle(tr("Inspector"));
       }
 
 //---------------------------------------------------------
@@ -114,198 +119,207 @@ void Inspector::retranslate()
       {
       setWindowTitle(tr("Inspector"));
       sa->setAccessibleName(tr("Inspector Subwindow"));
-      QList<Element*> el = _el;
-      setElements(QList<Element*>());
-      setElements(el);
+      Score* s = _score;
+      update(0);
+      update(s);
+      }
+
+//---------------------------------------------------------
+//   element
+//---------------------------------------------------------
+
+Element* Inspector::element() const
+      {
+      return el() && !el()->empty() ? (*el())[0] : 0;
       }
 
 //---------------------------------------------------------
 //   reset
 //---------------------------------------------------------
 
-void Inspector::reset()
+void Inspector::update()
       {
-      if (ie)
-            ie->setElement();
+      update(_score);
       }
 
 //---------------------------------------------------------
-//   setElement
+//   el
 //---------------------------------------------------------
 
-void Inspector::setElement(Element* e)
+const QList<Element*>* Inspector::el() const
       {
-      QList<Element*> el;
-      if (e)
-            el.append(e);
-      setElements(el);
+      return _score ? &_score->selection().elements() : 0;
       }
 
 //---------------------------------------------------------
-//   setElements
+//   update
 //---------------------------------------------------------
 
-void Inspector::setElements(const QList<Element*>& l)
+void Inspector::update(Score* s)
       {
       if (_inspectorEdit)     // if within an inspector-originated edit
             return;
-
-      Element* e = l.isEmpty() ? 0 : l[0];
-      if (e == 0 || _element == 0 || (_el != l)) {
-            _el = l;
-            ie = 0;
-            _element = e;
-
-            if (_element == 0)
-                  ie = new InspectorEmpty(this);
-
+      _score = s;
+      if (oe != element()) {
+            ie  = 0;
+            oe  = element();
             bool sameTypes = true;
-            for (Element* ee : _el) {
-                  if (((_element->type() != ee->type()) && // different and
-                      (!_element->isSlurTieSegment() || !ee->isSlurTieSegment())) || // neither Slur nor Tie either side, or
-                      (ee->isNote() && toNote(ee)->chord()->isGrace() != toNote(_element)->chord()->isGrace())) // HACK
-                        sameTypes = false;
+            if (!element())
+                  ie = new InspectorEmpty(this);
+            else {
+                  for (Element* ee : *el()) {
+                        if (((element()->type() != ee->type()) && // different and
+                            (!element()->isSystemText()     || !ee->isStaffText())  && // neither system text nor
+                            (!element()->isStaffText()      || !ee->isSystemText()) && // staff text either side and
+                            (!element()->isPedalSegment()   || !ee->isTextLineSegment()) && // neither pedal nor
+                            (!element()->isTextLineSegment()|| !ee->isPedalSegment())    && // text line either side and
+                            (!element()->isSlurTieSegment() || !ee->isSlurTieSegment())) || // neither Slur nor Tie either side, or
+                            (ee->isNote() && toNote(ee)->chord()->isGrace() != toNote(element())->chord()->isGrace())) // HACK
+                              {
+                              sameTypes = false;
+                              break;
+                              }
+                        }
                   }
             if (!sameTypes)
                   ie = new InspectorGroupElement(this);
-            else if (_element) {
-                  switch(_element->type()) {
-                        case Element::Type::FBOX:
-                        case Element::Type::VBOX:
+            else if (element()) {
+                  switch(element()->type()) {
+                        case ElementType::FBOX:
+                        case ElementType::VBOX:
                               ie = new InspectorVBox(this);
                               break;
-                        case Element::Type::TBOX:
+                        case ElementType::TBOX:
                               ie = new InspectorTBox(this);
                               break;
-                        case Element::Type::HBOX:
+                        case ElementType::HBOX:
                               ie = new InspectorHBox(this);
                               break;
-                        case Element::Type::ARTICULATION:
+                        case ElementType::ARTICULATION:
                               ie = new InspectorArticulation(this);
                               break;
-                        case Element::Type::SPACER:
+                        case ElementType::SPACER:
                               ie = new InspectorSpacer(this);
                               break;
-                        case Element::Type::NOTE:
+                        case ElementType::NOTE:
                               ie = new InspectorNote(this);
                               break;
-                        case Element::Type::ACCIDENTAL:
+                        case ElementType::ACCIDENTAL:
                               ie = new InspectorAccidental(this);
                               break;
-                        case Element::Type::REST:
+                        case ElementType::REST:
                               ie = new InspectorRest(this);
                               break;
-                        case Element::Type::CLEF:
+                        case ElementType::CLEF:
                               ie = new InspectorClef(this);
                               break;
-                        case Element::Type::TIMESIG:
+                        case ElementType::TIMESIG:
                               ie = new InspectorTimeSig(this);
                               break;
-                        case Element::Type::KEYSIG:
+                        case ElementType::KEYSIG:
                               ie = new InspectorKeySig(this);
                               break;
-                        case Element::Type::TUPLET:
+                        case ElementType::TUPLET:
                               ie = new InspectorTuplet(this);
                               break;
-                        case Element::Type::BEAM:
+                        case ElementType::BEAM:
                               ie = new InspectorBeam(this);
                               break;
-                        case Element::Type::IMAGE:
+                        case ElementType::IMAGE:
                               ie = new InspectorImage(this);
                               break;
-                        case Element::Type::LASSO:
+                        case ElementType::LASSO:
                               ie = new InspectorLasso(this);
                               break;
-                        case Element::Type::VOLTA_SEGMENT:
+                        case ElementType::VOLTA_SEGMENT:
                               ie = new InspectorVolta(this);
                               break;
-                        case Element::Type::OTTAVA_SEGMENT:
+                        case ElementType::OTTAVA_SEGMENT:
                               ie = new InspectorOttava(this);
                               break;
-                        case Element::Type::TRILL_SEGMENT:
+                        case ElementType::TRILL_SEGMENT:
                               ie = new InspectorTrill(this);
                               break;
-                        case Element::Type::HAIRPIN_SEGMENT:
+                        case ElementType::HAIRPIN_SEGMENT:
                               ie = new InspectorHairpin(this);
                               break;
-                        case Element::Type::TEXTLINE_SEGMENT:
-                        case Element::Type::PEDAL_SEGMENT:
+                        case ElementType::TEXTLINE_SEGMENT:
+                        case ElementType::PEDAL_SEGMENT:
                               ie = new InspectorTextLine(this);
                               break;
-                        case Element::Type::SLUR_SEGMENT:
-                        case Element::Type::TIE_SEGMENT:
+                        case ElementType::SLUR_SEGMENT:
+                        case ElementType::TIE_SEGMENT:
                               ie = new InspectorSlurTie(this);
                               break;
-                        case Element::Type::BAR_LINE:
+                        case ElementType::BAR_LINE:
                               ie = new InspectorBarLine(this);
                               break;
-                        case Element::Type::JUMP:
+                        case ElementType::JUMP:
                               ie = new InspectorJump(this);
                               break;
-                        case Element::Type::MARKER:
+                        case ElementType::MARKER:
                               ie = new InspectorMarker(this);
                               break;
-                        case Element::Type::GLISSANDO:
-                        case Element::Type::GLISSANDO_SEGMENT:
+                        case ElementType::GLISSANDO:
+                        case ElementType::GLISSANDO_SEGMENT:
                               ie = new InspectorGlissando(this);
                               break;
-                        case Element::Type::TEMPO_TEXT:
+                        case ElementType::TEMPO_TEXT:
                               ie = new InspectorTempoText(this);
                               break;
-                        case Element::Type::DYNAMIC:
+                        case ElementType::DYNAMIC:
                               ie = new InspectorDynamic(this);
                               break;
-                        case Element::Type::AMBITUS:
+                        case ElementType::AMBITUS:
                               ie = new InspectorAmbitus(this);
                               break;
-                        case Element::Type::FRET_DIAGRAM:
+                        case ElementType::FRET_DIAGRAM:
                               ie = new InspectorFretDiagram(this);
                               break;
-                        case Element::Type::LAYOUT_BREAK:
+                        case ElementType::LAYOUT_BREAK:
                               ie = new InspectorBreak(this);
                               break;
-                        case Element::Type::BEND:
+                        case ElementType::BEND:
                               ie = new InspectorBend(this);
                               break;
-                        case Element::Type::TREMOLOBAR:
+                        case ElementType::TREMOLOBAR:
                               ie = new InspectorTremoloBar(this);
                               break;
-                        case Element::Type::ARPEGGIO:
+                        case ElementType::ARPEGGIO:
                               ie = new InspectorArpeggio(this);
                               break;
-                        case Element::Type::BREATH:
+                        case ElementType::BREATH:
                               ie = new InspectorCaesura(this);
                               break;
-                        case Element::Type::LYRICS:
+                        case ElementType::LYRICS:
                               ie = new InspectorLyric(this);
                               break;
-                        case Element::Type::STAFF_TEXT:
-                              ie = new InspectorStafftext(this);
+                        case ElementType::STAFF_TEXT:
+                        case ElementType::SYSTEM_TEXT:
+                        case ElementType::REHEARSAL_MARK:
+                              ie = new InspectorStaffText(this);
                               break;
-                        case Element::Type::STAFFTYPE_CHANGE:
+                        case ElementType::STAFFTYPE_CHANGE:
                               ie = new InspectorStaffTypeChange(this);
                               break;
-                        case Element::Type::BRACKET:
+                        case ElementType::BRACKET:
                               ie = new InspectorBracket(this);
                               break;
-                        case Element::Type::INSTRUMENT_NAME:
+                        case ElementType::INSTRUMENT_NAME:
                               ie = new InspectorIname(this);
                               break;
-                        case Element::Type::FINGERING:
+                        case ElementType::FINGERING:
                               ie = new InspectorFingering(this);
                               break;
                         default:
-                              if (_element->isText())
+                              if (element()->isText())
                                     ie = new InspectorText(this);
                               else
                                     ie = new InspectorElement(this);
                               break;
                         }
                   }
-            QWidget* ww = sa->takeWidget();
-            if (ww)
-                  ww->deleteLater();
-            sa->setWidget(ie);
+            sa->setWidget(ie);      // will destroy previous set widget
 
             //focus policies were set by hand in each inspector_*.ui. this code just helps keeping them like they are
             //also fixes mac problem. on Mac Qt::TabFocus doesn't work, but Qt::StrongFocus works
@@ -331,8 +345,8 @@ void Inspector::setElements(const QList<Element*>& l)
                         }
                   }
             }
-      _element = e;
-      ie->setElement();
+      if (ie)
+            ie->setElement();
       }
 
 //---------------------------------------------------------
@@ -350,71 +364,9 @@ void Inspector::changeEvent(QEvent *event)
 //   setupUi
 //---------------------------------------------------------
 
-void UiInspectorElement::setupUi(QWidget *InspectorElement)
+void UiInspectorElement::setupUi(QWidget* inspectorElement)
       {
-      Ui::InspectorElement::setupUi(InspectorElement);
-
-      QAction* a = getAction("hraster");
-      a->setCheckable(true);
-      hRaster->setDefaultAction(a);
-      hRaster->setContextMenuPolicy(Qt::ActionsContextMenu);
-      hRaster->addAction(getAction("config-raster"));
-
-      a = getAction("vraster");
-      a->setCheckable(true);
-      vRaster->setDefaultAction(a);
-      vRaster->setContextMenuPolicy(Qt::ActionsContextMenu);
-      vRaster->addAction(getAction("config-raster"));
-      }
-
-//---------------------------------------------------------
-//   InspectorElementBase
-//---------------------------------------------------------
-
-InspectorElementBase::InspectorElementBase(QWidget* parent)
-   : InspectorBase(parent)
-      {
-      e.setupUi(addWidget());
-      iList = {
-            { P_ID::VISIBLE,   0, 0, e.visible,    e.resetVisible   },
-            { P_ID::Z,         0, 0, e.z,          e.resetZ         },
-            { P_ID::COLOR,     0, 0, e.color,      e.resetColor     },
-            { P_ID::USER_OFF,  0, 0, e.offsetX,    e.resetX         },
-            { P_ID::USER_OFF,  1, 0, e.offsetY,    e.resetY         },
-            { P_ID::AUTOPLACE, 0, 0, e.autoplace,  e.resetAutoplace },
-            };
-      pList = { { e.title, e.panel } };
-      connect(e.resetAutoplace, SIGNAL(clicked()), SLOT(resetAutoplace()));
-      connect(e.autoplace, SIGNAL(toggled(bool)),  SLOT(autoplaceChanged(bool)));
-      }
-
-//---------------------------------------------------------
-//   setElement
-//---------------------------------------------------------
-
-void InspectorElementBase::setElement()
-      {
-      InspectorBase::setElement();
-      autoplaceChanged(inspector->element()->autoplace());
-      }
-
-//---------------------------------------------------------
-//   autoplaceChanged
-//---------------------------------------------------------
-
-void InspectorElementBase::autoplaceChanged(bool val)
-      {
-      for (auto i : std::vector<QWidget*> { e.offsetX, e.offsetY, e.resetX, e.resetY, e.hRaster, e.vRaster })
-            i->setEnabled(!val);
-      }
-
-//---------------------------------------------------------
-//   resetAutoplace
-//---------------------------------------------------------
-
-void InspectorElementBase::resetAutoplace()
-      {
-      autoplaceChanged(true);
+      Ui::InspectorElement::setupUi(inspectorElement);
       }
 
 //---------------------------------------------------------
@@ -452,19 +404,19 @@ InspectorStaffTypeChange::InspectorStaffTypeChange(QWidget* parent)
       sl.setupUi(addWidget());
 
       iList = {
-            { P_ID::STAFF_YOFFSET,          0, 0, sl.yoffset,         sl.resetYoffset         },
-            { P_ID::SMALL,                  0, 0, sl.small,           sl.resetSmall           },
-            { P_ID::MAG,                    0, 0, sl.scale,           sl.resetScale           },
-            { P_ID::STAFF_LINES,            0, 0, sl.lines,           sl.resetLines           },
-            { P_ID::STEP_OFFSET,            0, 0, sl.stepOffset,      sl.resetStepOffset      },
-            { P_ID::LINE_DISTANCE,          0, 0, sl.lineDistance,    sl.resetLineDistance    },
-            { P_ID::STAFF_SHOW_BARLINES,    0, 0, sl.showBarlines,    sl.resetShowBarlines    },
-            { P_ID::STAFF_SHOW_LEDGERLINES, 0, 0, sl.showLedgerlines, sl.resetShowLedgerlines },
-            { P_ID::STAFF_SLASH_STYLE,      0, 0, sl.slashStyle,      sl.resetSlashStyle      },
-            { P_ID::STAFF_NOTEHEAD_SCHEME,  0, 0, sl.noteheadScheme,  sl.resetNoteheadScheme  },
-            { P_ID::STAFF_GEN_CLEF,         0, 0, sl.genClefs,        sl.resetGenClefs        },
-            { P_ID::STAFF_GEN_TIMESIG,      0, 0, sl.genTimesig,      sl.resetGenTimesig      },
-            { P_ID::STAFF_GEN_KEYSIG,       0, 0, sl.genKeysig,       sl.resetGenKeysig       },
+            { P_ID::STAFF_YOFFSET,          0, sl.yoffset,         sl.resetYoffset         },
+            { P_ID::SMALL,                  0, sl.small,           sl.resetSmall           },
+            { P_ID::MAG,                    0, sl.scale,           sl.resetScale           },
+            { P_ID::STAFF_LINES,            0, sl.lines,           sl.resetLines           },
+            { P_ID::STEP_OFFSET,            0, sl.stepOffset,      sl.resetStepOffset      },
+            { P_ID::LINE_DISTANCE,          0, sl.lineDistance,    sl.resetLineDistance    },
+            { P_ID::STAFF_SHOW_BARLINES,    0, sl.showBarlines,    sl.resetShowBarlines    },
+            { P_ID::STAFF_SHOW_LEDGERLINES, 0, sl.showLedgerlines, sl.resetShowLedgerlines },
+            { P_ID::STAFF_SLASH_STYLE,      0, sl.slashStyle,      sl.resetSlashStyle      },
+            { P_ID::STAFF_NOTEHEAD_SCHEME,  0, sl.noteheadScheme,  sl.resetNoteheadScheme  },
+            { P_ID::STAFF_GEN_CLEF,         0, sl.genClefs,        sl.resetGenClefs        },
+            { P_ID::STAFF_GEN_TIMESIG,      0, sl.genTimesig,      sl.resetGenTimesig      },
+            { P_ID::STAFF_GEN_KEYSIG,       0, sl.genKeysig,       sl.resetGenKeysig       },
             };
 
       sl.noteheadScheme->clear();
@@ -492,13 +444,13 @@ InspectorVBox::InspectorVBox(QWidget* parent)
       vb.setupUi(addWidget());
 
       iList = {
-            { P_ID::TOP_GAP,       0, 0, vb.topGap,       vb.resetTopGap       },
-            { P_ID::BOTTOM_GAP,    0, 0, vb.bottomGap,    vb.resetBottomGap    },
-            { P_ID::LEFT_MARGIN,   0, 0, vb.leftMargin,   vb.resetLeftMargin   },
-            { P_ID::RIGHT_MARGIN,  0, 0, vb.rightMargin,  vb.resetRightMargin  },
-            { P_ID::TOP_MARGIN,    0, 0, vb.topMargin,    vb.resetTopMargin    },
-            { P_ID::BOTTOM_MARGIN, 0, 0, vb.bottomMargin, vb.resetBottomMargin },
-            { P_ID::BOX_HEIGHT,    0, 0, vb.height,       0                    }
+            { P_ID::TOP_GAP,       0, vb.topGap,       vb.resetTopGap       },
+            { P_ID::BOTTOM_GAP,    0, vb.bottomGap,    vb.resetBottomGap    },
+            { P_ID::LEFT_MARGIN,   0, vb.leftMargin,   vb.resetLeftMargin   },
+            { P_ID::RIGHT_MARGIN,  0, vb.rightMargin,  vb.resetRightMargin  },
+            { P_ID::TOP_MARGIN,    0, vb.topMargin,    vb.resetTopMargin    },
+            { P_ID::BOTTOM_MARGIN, 0, vb.bottomMargin, vb.resetBottomMargin },
+            { P_ID::BOX_HEIGHT,    0, vb.height,       0                    }
             };
       mapSignals();
       }
@@ -513,12 +465,12 @@ InspectorTBox::InspectorTBox(QWidget* parent)
       tb.setupUi(addWidget());
 
       iList = {
-            { P_ID::TOP_GAP,       0, 0, tb.topGap,       tb.resetTopGap       },
-            { P_ID::BOTTOM_GAP,    0, 0, tb.bottomGap,    tb.resetBottomGap    },
-            { P_ID::LEFT_MARGIN,   0, 0, tb.leftMargin,   tb.resetLeftMargin   },
-            { P_ID::RIGHT_MARGIN,  0, 0, tb.rightMargin,  tb.resetRightMargin  },
-            { P_ID::TOP_MARGIN,    0, 0, tb.topMargin,    tb.resetTopMargin    },
-            { P_ID::BOTTOM_MARGIN, 0, 0, tb.bottomMargin, tb.resetBottomMargin },
+            { P_ID::TOP_GAP,       0, tb.topGap,       tb.resetTopGap       },
+            { P_ID::BOTTOM_GAP,    0, tb.bottomGap,    tb.resetBottomGap    },
+            { P_ID::LEFT_MARGIN,   0, tb.leftMargin,   tb.resetLeftMargin   },
+            { P_ID::RIGHT_MARGIN,  0, tb.rightMargin,  tb.resetRightMargin  },
+            { P_ID::TOP_MARGIN,    0, tb.topMargin,    tb.resetTopMargin    },
+            { P_ID::BOTTOM_MARGIN, 0, tb.bottomMargin, tb.resetBottomMargin },
             };
       mapSignals();
       }
@@ -533,10 +485,10 @@ InspectorHBox::InspectorHBox(QWidget* parent)
       hb.setupUi(addWidget());
 
       iList = {
-            { P_ID::TOP_GAP,               0, 0, hb.leftGap,  hb.resetLeftGap  },
-            { P_ID::BOTTOM_GAP,            0, 0, hb.rightGap, hb.resetRightGap },
-            { P_ID::BOX_WIDTH,             0, 0, hb.width,    0                },
-            { P_ID::CREATE_SYSTEM_HEADER,  0, 0, hb.createSystemHeader, hb.resetCreateSystemHeader }
+            { P_ID::TOP_GAP,               0, hb.leftGap,  hb.resetLeftGap  },
+            { P_ID::BOTTOM_GAP,            0, hb.rightGap, hb.resetRightGap },
+            { P_ID::BOX_WIDTH,             0, hb.width,    0                },
+            { P_ID::CREATE_SYSTEM_HEADER,  0, hb.createSystemHeader, hb.resetCreateSystemHeader }
             };
 
       mapSignals();
@@ -552,11 +504,11 @@ InspectorArticulation::InspectorArticulation(QWidget* parent)
       ar.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::ARTICULATION_ANCHOR, 0, 0, ar.anchor,           ar.resetAnchor           },
-            { P_ID::DIRECTION,           0, 0, ar.direction,        ar.resetDirection        },
-            { P_ID::TIME_STRETCH,        0, 0, ar.timeStretch,      ar.resetTimeStretch      },
-            { P_ID::ORNAMENT_STYLE,      0, 0, ar.ornamentStyle,    ar.resetOrnamentStyle    },
-            { P_ID::PLAY,                0, 0, ar.playArticulation, ar.resetPlayArticulation }
+            { P_ID::ARTICULATION_ANCHOR, 0, ar.anchor,           ar.resetAnchor           },
+            { P_ID::DIRECTION,           0, ar.direction,        ar.resetDirection        },
+            { P_ID::TIME_STRETCH,        0, ar.timeStretch,      ar.resetTimeStretch      },
+            { P_ID::ORNAMENT_STYLE,      0, ar.ornamentStyle,    ar.resetOrnamentStyle    },
+            { P_ID::PLAY,                0, ar.playArticulation, ar.resetPlayArticulation }
             };
       const std::vector<InspectorPanel> ppList = { { ar.title, ar.panel } };
       mapSignals(iiList, ppList);
@@ -572,7 +524,7 @@ InspectorSpacer::InspectorSpacer(QWidget* parent)
       sp.setupUi(addWidget());
 
       iList = {
-            { P_ID::SPACE, 0, false, sp.height, 0 }
+            { P_ID::SPACE, 0, sp.height, 0 }
             };
       mapSignals();
       }
@@ -588,8 +540,8 @@ InspectorRest::InspectorRest(QWidget* parent)
       r.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::LEADING_SPACE,  0, 1, s.leadingSpace,  s.resetLeadingSpace  },
-            { P_ID::SMALL,          0, 0, r.small,         r.resetSmall         },
+            { P_ID::LEADING_SPACE,  1, s.leadingSpace,  s.resetLeadingSpace  },
+            { P_ID::SMALL,          0, r.small,         r.resetSmall         },
             };
       const std::vector<InspectorPanel> ppList = {
             { s.title, s.panel },
@@ -619,7 +571,7 @@ InspectorRest::InspectorRest(QWidget* parent)
       hbox->addWidget(tuplet);
       _layout->addLayout(hbox);
 
-      e.offsetY->setSingleStep(1.0);        // step in spatium units
+//TODO      e.offset->setSingleStep(1.0);        // step in spatium units
 
       connect(tuplet,   SIGNAL(clicked()),     SLOT(tupletClicked()));
       }
@@ -647,8 +599,8 @@ void InspectorRest::tupletClicked()
       Tuplet* tuplet = rest->tuplet();
       if (tuplet) {
             rest->score()->select(tuplet);
-            inspector->setElement(tuplet);
             rest->score()->update();
+            inspector->update();
             }
       }
 
@@ -663,12 +615,13 @@ InspectorTimeSig::InspectorTimeSig(QWidget* parent)
       t.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::LEADING_SPACE,  0, 1, s.leadingSpace,   s.resetLeadingSpace  },
-            { P_ID::SHOW_COURTESY,  0, 0, t.showCourtesy,   t.resetShowCourtesy  },
-//            { P_ID::TIMESIG,        0, 0, t.timesigZ,       t.resetTimesig       },
-//            { P_ID::TIMESIG,        1, 0, t.timesigN,       t.resetTimesig       },
-//            { P_ID::TIMESIG_GLOBAL, 0, 0, t.globalTimesigZ, t.resetGlobalTimesig },
-//            { P_ID::TIMESIG_GLOBAL, 1, 0, t.globalTimesigN, t.resetGlobalTimesig }
+            { P_ID::LEADING_SPACE,  1, s.leadingSpace,   s.resetLeadingSpace  },
+            { P_ID::SHOW_COURTESY,  0, t.showCourtesy,   t.resetShowCourtesy  },
+            { P_ID::SCALE,          0, t.scale,          t.resetScale         },
+//          { P_ID::TIMESIG,        0, t.timesigZ,       t.resetTimesig       },
+//          { P_ID::TIMESIG,        0, t.timesigN,       t.resetTimesig       },
+//          { P_ID::TIMESIG_GLOBAL, 0, t.globalTimesigZ, t.resetGlobalTimesig },
+//          { P_ID::TIMESIG_GLOBAL, 0, t.globalTimesigN, t.resetGlobalTimesig }
             };
       const std::vector<InspectorPanel> ppList = {
             { s.title, s.panel },
@@ -698,9 +651,9 @@ InspectorKeySig::InspectorKeySig(QWidget* parent)
       k.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::LEADING_SPACE,  0, 1, s.leadingSpace,  s.resetLeadingSpace  },
-            { P_ID::SHOW_COURTESY,  0, 0, k.showCourtesy,  k.resetShowCourtesy  },
-//            { P_ID::SHOW_NATURALS,  0, 0, k.showNaturals,  k.resetShowNaturals  }
+            { P_ID::LEADING_SPACE,  1, s.leadingSpace,  s.resetLeadingSpace  },
+            { P_ID::SHOW_COURTESY,  0, k.showCourtesy,  k.resetShowCourtesy  },
+//          { P_ID::SHOW_NATURALS,  0, k.showNaturals,  k.resetShowNaturals  }
             };
       const std::vector<InspectorPanel> ppList = {
             { s.title, s.panel },
@@ -708,8 +661,6 @@ InspectorKeySig::InspectorKeySig(QWidget* parent)
             };
       mapSignals(iiList, ppList);
       }
-
-//   InspectorKeySig::setElement
 
 void InspectorKeySig::setElement()
       {
@@ -729,9 +680,9 @@ InspectorTuplet::InspectorTuplet(QWidget* parent)
       t.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::DIRECTION,    0, 0, t.direction,   t.resetDirection   },
-            { P_ID::NUMBER_TYPE,  0, 0, t.numberType,  t.resetNumberType  },
-            { P_ID::BRACKET_TYPE, 0, 0, t.bracketType, t.resetBracketType }
+            { P_ID::DIRECTION,    0, t.direction,   t.resetDirection   },
+            { P_ID::NUMBER_TYPE,  0, t.numberType,  t.resetNumberType  },
+            { P_ID::BRACKET_TYPE, 0, t.bracketType, t.resetBracketType }
             };
       const std::vector<InspectorPanel> ppList = { {t.title, t.panel} };
 
@@ -748,9 +699,14 @@ InspectorAccidental::InspectorAccidental(QWidget* parent)
       a.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::SMALL,               0, 0, a.small,       a.resetSmall       },
-            { P_ID::ACCIDENTAL_BRACKET,  0, 0, a.hasBracket,  a.resetHasBracket  }
+            { P_ID::SMALL,               0, a.small,    a.resetSmall    },
+            { P_ID::ACCIDENTAL_BRACKET,  0, a.bracket,  a.resetBracket  }
             };
+      a.bracket->clear();
+      a.bracket->addItem(tr("None"), int(AccidentalBracket::NONE));
+      a.bracket->addItem(tr("Parenthesis"), int(AccidentalBracket::PARENTHESIS));
+      a.bracket->addItem(tr("Bracket"), int(AccidentalBracket::BRACKET));
+
       const std::vector<InspectorPanel> ppList = { { a.title, a.panel } };
       mapSignals(iiList, ppList);
       }
@@ -765,7 +721,12 @@ InspectorBend::InspectorBend(QWidget* parent)
       g.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::PLAY,         0, 0, g.playBend,    g.resetPlayBend    }
+            { P_ID::PLAY,           0, g.playBend,    g.resetPlayBend    },
+            { P_ID::FONT_FACE,      0, g.fontFace,    g.resetFontFace    },
+            { P_ID::FONT_SIZE,      0, g.fontSize,    g.resetFontSize    },
+            { P_ID::FONT_BOLD,      0, g.bold,        g.resetBold        },
+            { P_ID::FONT_ITALIC,    0, g.italic,      g.resetItalic      },
+            { P_ID::FONT_UNDERLINE, 0, g.underline,   g.resetUnderline   },
             };
       const std::vector<InspectorPanel> ppList = { {g.title, g.panel} };
       mapSignals(iiList, ppList);
@@ -796,9 +757,9 @@ InspectorTremoloBar::InspectorTremoloBar(QWidget* parent)
       g.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::PLAY,         0, 0, g.play,        g.resetPlay       },
-            { P_ID::LINE_WIDTH,   0, 0, g.lineWidth,   g.resetLineWidth  },
-            { P_ID::MAG,          0, 0, g.mag,         g.resetMag        }
+            { P_ID::PLAY,       0, g.play,        g.resetPlay        },
+            { P_ID::LINE_WIDTH, 0, g.lineWidth,   g.resetLineWidth   },
+            { P_ID::MAG,        0, g.mag,         g.resetMag         }
             };
       const std::vector<InspectorPanel> ppList = { { g.title, g.panel } };
 
@@ -831,8 +792,8 @@ InspectorClef::InspectorClef(QWidget* parent)
       c.setupUi(addWidget());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::LEADING_SPACE,  0, 1, s.leadingSpace,  s.resetLeadingSpace  },
-            { P_ID::SHOW_COURTESY,  0, 0, c.showCourtesy,  c.resetShowCourtesy  }
+            { P_ID::LEADING_SPACE, 1, s.leadingSpace,  s.resetLeadingSpace  },
+            { P_ID::SHOW_COURTESY, 0, c.showCourtesy,  c.resetShowCourtesy  }
             };
       const std::vector<InspectorPanel> ppList = {
             { s.title, s.panel },
@@ -853,11 +814,11 @@ void InspectorClef::setElement()
       // try to locate the 'other clef' of a courtesy / main pair
       Clef* clef = toClef(inspector->element());
       // if not in a clef-segment-measure hierachy, do nothing
-      if (!clef->parent() || clef->parent()->type() != Element::Type::SEGMENT)
+      if (!clef->parent() || clef->parent()->type() != ElementType::SEGMENT)
             return;
       Segment*    segm = toSegment(clef->parent());
       int         segmTick = segm->tick();
-      if (!segm->parent() || segm->parent()->type() != Element::Type::MEASURE)
+      if (!segm->parent() || segm->parent()->type() != ElementType::MEASURE)
             return;
 
       Measure* meas = toMeasure(segm->parent());
@@ -869,7 +830,7 @@ void InspectorClef::setElement()
             otherMeas = meas->nextMeasure();                // look for a next measure
       // look for a clef segment in the 'other' measure at the same tick of this clef segment
       if (otherMeas)
-            otherSegm = otherMeas->findSegment(Segment::Type::Clef, segmTick);
+            otherSegm = otherMeas->findSegment(SegmentType::Clef, segmTick);
       // if any 'other' segment found, look for a clef in the same track as this
       if (otherSegm)
             otherClef = toClef(otherSegm->element(clef->track()));
@@ -888,44 +849,23 @@ void InspectorClef::valueChanged(int idx)
 //---------------------------------------------------------
 
 InspectorTempoText::InspectorTempoText(QWidget* parent)
-   : InspectorElementBase(parent)
+   : InspectorTextBase(parent)
       {
-      t.setupUi(addWidget());
       tt.setupUi(addWidget());
 
       const std::vector<InspectorItem> il = {
-            { P_ID::TEXT_STYLE_TYPE,   0, 0, t.style,       t.resetStyle       },
-            { P_ID::TEMPO,             0, 0, tt.tempo,      tt.resetTempo      },
-            { P_ID::TEMPO_FOLLOW_TEXT, 0, 0, tt.followText, tt.resetFollowText }
+            { P_ID::TEMPO,             0, tt.tempo,       tt.resetTempo       },
+            { P_ID::TEMPO_FOLLOW_TEXT, 0, tt.followText,  tt.resetFollowText  },
+            { P_ID::PLACEMENT,         0, tt.placement,   tt.resetPlacement   }
             };
       const std::vector<InspectorPanel> ppList = {
-            { t.title, t.panel },
             { tt.title, tt.panel }
             };
+      tt.placement->clear();
+      tt.placement->addItem(tr("Above"), 0);
+      tt.placement->addItem(tr("Below"), 1);
       mapSignals(il, ppList);
-      connect(t.resetToStyle, SIGNAL(clicked()), SLOT(resetToStyle()));
       connect(tt.followText, SIGNAL(toggled(bool)), tt.tempo, SLOT(setDisabled(bool)));
-      }
-
-//---------------------------------------------------------
-//   setElement
-//---------------------------------------------------------
-
-void InspectorTempoText::setElement()
-      {
-      Element* e = inspector->element();
-      Score* score = e->score();
-
-      t.style->blockSignals(true);
-      t.style->clear();
-      const QList<TextStyle>& ts = score->style().textStyles();
-      int n = ts.size();
-      for (int i = 0; i < n; ++i) {
-            if (!(ts.at(i).hidden() & TextStyleHidden::IN_LISTS) )
-                  t.style->addItem(qApp->translate("TextStyle",ts.at(i).name().toUtf8().data()), i);
-            }
-      t.style->blockSignals(false);
-      InspectorBase::setElement();
       }
 
 //---------------------------------------------------------
@@ -941,70 +881,19 @@ void InspectorTempoText::postInit()
       }
 
 //---------------------------------------------------------
-//   InspectorDynamic
-//---------------------------------------------------------
-
-InspectorDynamic::InspectorDynamic(QWidget* parent)
-   : InspectorElementBase(parent)
-      {
-      t.setupUi(addWidget());
-      d.setupUi(addWidget());
-
-      const std::vector<InspectorItem> il = {
-            { P_ID::TEXT_STYLE_TYPE,    0, 0, t.style,     t.resetStyle     },
-            { P_ID::DYNAMIC_RANGE,      0, 0, d.dynRange,  d.resetDynRange  },
-            { P_ID::VELOCITY,           0, 0, d.velocity,  0                },
-            { P_ID::PLACEMENT,          0, 0, d.placement, d.resetPlacement }
-            };
-      const std::vector<InspectorPanel> ppList = {
-            { t.title, t.panel },
-            { d.title, d.panel }
-            };
-      d.placement->clear();
-      d.placement->addItem(tr("Above"), 0);
-      d.placement->addItem(tr("Below"), 1);
-      mapSignals(il, ppList);
-      connect(t.resetToStyle, SIGNAL(clicked()), SLOT(resetToStyle()));
-      }
-
-//---------------------------------------------------------
-//   setElement
-//---------------------------------------------------------
-
-void InspectorDynamic::setElement()
-      {
-      Element* e = inspector->element();
-      Score* score = e->score();
-
-      t.style->blockSignals(true);
-      t.style->clear();
-      const QList<TextStyle>& ts = score->style().textStyles();
-      int n = ts.size();
-      for (int i = 0; i < n; ++i) {
-            if (!(ts.at(i).hidden() & TextStyleHidden::IN_LISTS) )
-                  t.style->addItem(qApp->translate("TextStyle",ts.at(i).name().toUtf8().data()), i);
-            }
-      t.style->blockSignals(false);
-      InspectorElementBase::setElement();
-      }
-
-//---------------------------------------------------------
 //   InspectorLyric
 //---------------------------------------------------------
 
 InspectorLyric::InspectorLyric(QWidget* parent)
-   : InspectorElementBase(parent)
+   : InspectorTextBase(parent)
       {
-      t.setupUi(addWidget());
       l.setupUi(addWidget());
 
       const std::vector<InspectorItem> il = {
-            { P_ID::TEXT_STYLE_TYPE,    0, 0, t.style,     t.resetStyle     },
-            { P_ID::PLACEMENT,          0, 0, l.placement, l.resetPlacement },
-            { P_ID::VERSE,              0, 0, l.verse,     l.resetVerse     }
+            { P_ID::PLACEMENT,          0, l.placement, l.resetPlacement },
+            { P_ID::VERSE,              0, l.verse,     l.resetVerse     }
             };
       const std::vector<InspectorPanel> ppList = {
-            { t.title, t.panel },
             { l.title, l.panel }
             };
       l.placement->clear();
@@ -1023,10 +912,8 @@ void InspectorLyric::valueChanged(int idx)
       if (iList[idx].t == P_ID::VERSE) {
             int val    = getValue(iList[idx]).toInt();
             Lyrics* l  = toLyrics(inspector->element());
-            printf("value changed %d  old %d\n", val, l->no());
             Lyrics* nl = l->chordRest()->lyrics(val, l->placement());
             if (nl) {
-                  printf("   move away %d -> %d\n", nl->no(), l->no());
                   nl->undoChangeProperty(P_ID::VERSE, l->no());
                   }
             }
@@ -1034,89 +921,46 @@ void InspectorLyric::valueChanged(int idx)
       }
 
 //---------------------------------------------------------
-//   setElement
+//   InspectorStaffText
 //---------------------------------------------------------
 
-void InspectorLyric::setElement()
+InspectorStaffText::InspectorStaffText(QWidget* parent)
+   : InspectorTextBase(parent)
       {
-      Element* e = inspector->element();
-      Score* score = e->score();
-
-      t.style->blockSignals(true);
-      t.style->clear();
-      const QList<TextStyle>& ts = score->style().textStyles();
-      int n = ts.size();
-      for (int i = 0; i < n; ++i) {
-            if (!(ts.at(i).hidden() & TextStyleHidden::IN_LISTS) )
-                  t.style->addItem(qApp->translate("TextStyle",ts.at(i).name().toUtf8().data()), i);
-            }
-      t.style->blockSignals(false);
-      InspectorElementBase::setElement();
-      }
-
-//---------------------------------------------------------
-//   InspectorStafftext
-//---------------------------------------------------------
-
-InspectorStafftext::InspectorStafftext(QWidget* parent)
-   : InspectorElementBase(parent)
-      {
-      t.setupUi(addWidget());
       s.setupUi(addWidget());
 
       Element* e = inspector->element();
-      Text* te = static_cast<Text*>(e);
       bool sameTypes = true;
 
-      for (const auto& ee : inspector->el()) {
-            Text* tt = static_cast<Text*>(ee);
-
-            if (tt->systemFlag() != te->systemFlag()) {
+      for (const auto& ee : *inspector->el()) {
+            if (e->isSystemText() != ee->isSystemText()) {
                   sameTypes = false;
                   break;
                   }
             }
-      if (sameTypes) {
-            if (te->systemFlag())
-                  s.title->setText(tr("System Text"));
-            else
-                  s.title->setText(tr("Staff Text"));
-            }
+      if (sameTypes)
+            s.title->setText(e->isSystemText() ? tr("System Text") : tr("Staff Text"));
 
       const std::vector<InspectorItem> il = {
-            { P_ID::TEXT_STYLE_TYPE,    0, 0, t.style,     t.resetStyle     },
-            { P_ID::PLACEMENT,          0, 0, s.placement, s.resetPlacement },
+            { P_ID::PLACEMENT,  0, s.placement,    s.resetPlacement    },
+            { P_ID::SUB_STYLE,  0, s.subStyle,     s.resetSubStyle     }
             };
       const std::vector<InspectorPanel> ppList = {
-            { t.title, t.panel },
             { s.title, s.panel }
             };
       s.placement->clear();
       s.placement->addItem(tr("Above"), 0);
       s.placement->addItem(tr("Below"), 1);
-      mapSignals(il, ppList);
-      connect(t.resetToStyle, SIGNAL(clicked()), SLOT(resetToStyle()));
-      }
 
-//---------------------------------------------------------
-//   setElement
-//---------------------------------------------------------
-
-void InspectorStafftext::setElement()
-      {
-      Element* e = inspector->element();
-      Score* score = e->score();
-
-      t.style->blockSignals(true);
-      t.style->clear();
-      const QList<TextStyle>& ts = score->style().textStyles();
-      int n = ts.size();
-      for (int i = 0; i < n; ++i) {
-            if (!(ts.at(i).hidden() & TextStyleHidden::IN_LISTS) )
-                  t.style->addItem(qApp->translate("TextStyle",ts.at(i).name().toUtf8().data()), i);
+      s.subStyle->clear();
+      for (auto ss : { SubStyle::SYSTEM, SubStyle::STAFF, SubStyle::TEMPO, SubStyle::METRONOME,
+         SubStyle::REHEARSAL_MARK, SubStyle::EXPRESSION,
+         SubStyle::REPEAT_LEFT, SubStyle::REPEAT_RIGHT, SubStyle::USER1, SubStyle::USER2 } )
+            {
+            s.subStyle->addItem(subStyleUserName(ss), int(ss));
             }
-      t.style->blockSignals(false);
-      InspectorElementBase::setElement();
+
+      mapSignals(il, ppList);
       }
 
 //---------------------------------------------------------
@@ -1131,7 +975,7 @@ InspectorSlurTie::InspectorSlurTie(QWidget* parent)
       Element* e = inspector->element();
       bool sameTypes = true;
 
-      for (const auto& ee : inspector->el()) {
+      for (const auto& ee : *inspector->el()) {
             if (ee->accessibleInfo() != e->accessibleInfo()) {
                   sameTypes = false;
                   break;
@@ -1141,8 +985,8 @@ InspectorSlurTie::InspectorSlurTie(QWidget* parent)
             s.title->setText(e->accessibleInfo());
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::LINE_TYPE,       0, 0, s.lineType,      s.resetLineType      },
-            { P_ID::SLUR_DIRECTION,  0, 0, s.slurDirection, s.resetSlurDirection }
+            { P_ID::LINE_TYPE,       0, s.lineType,      s.resetLineType      },
+            { P_ID::SLUR_DIRECTION,  0, s.slurDirection, s.resetSlurDirection }
             };
       const std::vector<InspectorPanel> ppList = { { s.title, s.panel } };
       mapSignals(iiList, ppList);
@@ -1177,7 +1021,7 @@ InspectorCaesura::InspectorCaesura(QWidget* parent) : InspectorElementBase(paren
 
       Breath* b = toBreath(inspector->element());
       bool sameTypes = true;
-      for (const auto& ee : inspector->el()) {
+      for (const auto& ee : *inspector->el()) {
             if (ee->accessibleInfo() != b->accessibleInfo()) {
                   sameTypes = false;
                   break;
@@ -1187,7 +1031,7 @@ InspectorCaesura::InspectorCaesura(QWidget* parent) : InspectorElementBase(paren
             c.title->setText(b->accessibleInfo());
 
       const std::vector<InspectorItem> il = {
-            { P_ID::PAUSE,          0, 0, c.pause,         c.resetPause         }
+            { P_ID::PAUSE,  0, c.pause,         c.resetPause         }
             };
       const std::vector<InspectorPanel> ppList = { {c.title, c.panel} };
       mapSignals(il, ppList);
@@ -1202,7 +1046,7 @@ InspectorBracket::InspectorBracket(QWidget* parent) : InspectorBase(parent)
       b.setupUi(addWidget());
 
       const std::vector<InspectorItem> il = {
-            { P_ID::BRACKET_COLUMN, 0, 0, b.column, b.resetColumn }
+            { P_ID::BRACKET_COLUMN, 0, b.column, b.resetColumn }
             };
       mapSignals(il);
       }
@@ -1211,12 +1055,12 @@ InspectorBracket::InspectorBracket(QWidget* parent) : InspectorBase(parent)
 //   InspectorIname
 //---------------------------------------------------------
 
-InspectorIname::InspectorIname(QWidget* parent) : InspectorBase(parent)
+InspectorIname::InspectorIname(QWidget* parent) : InspectorTextBase(parent)
       {
       i.setupUi(addWidget());
 
       const std::vector<InspectorItem> il = {
-            { P_ID::INAME_LAYOUT_POSITION, 0, 0, i.layoutPosition, i.resetLayoutPosition }
+            { P_ID::INAME_LAYOUT_POSITION, 0, i.layoutPosition, i.resetLayoutPosition }
             };
       mapSignals(il);
       }

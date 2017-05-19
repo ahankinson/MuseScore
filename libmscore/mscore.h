@@ -17,6 +17,7 @@
 #include "style.h"
 
 namespace Ms {
+//      Q_NAMESPACE
 
 #define MSC_VERSION     "3.00"
 static constexpr int MSCVERSION = 300;
@@ -68,7 +69,10 @@ class Sequencer;
 
 enum class HairpinType : char;
 
-static constexpr int VOICES = 4;
+#ifndef VOICES
+#define VOICES 4
+#endif
+
 inline int staff2track(int staffIdx) { return staffIdx << 2; }
 inline int track2staff(int voice)    { return voice >> 2;    }
 inline int track2voice(int track)    { return track & 3;     }
@@ -227,6 +231,7 @@ enum class NoteType : unsigned char {
       GRACE32_AFTER = 0x80,
       INVALID       = 0xFF
       };
+// Q_ENUM_NS(NoteType);
 
 constexpr NoteType operator| (NoteType t1, NoteType t2) {
       return static_cast<NoteType>(static_cast<int>(t1) | static_cast<int>(t2));
@@ -292,18 +297,15 @@ enum class NoteHeadScheme : char {
 //   BarLineType
 //---------------------------------------------------------
 
-// MS_QML_ENUM(BarLineType, int,
-
 enum class BarLineType {
-      UNKNOWN          = 0,
-      NORMAL           = 1,\
-      DOUBLE           = 2,\
-      START_REPEAT     = 4,\
-      END_REPEAT       = 8,\
-      BROKEN           = 0x10,\
-      END              = 0x20,\
-      END_START_REPEAT = 0x40,\
-      DOTTED           = 0x80\
+      NORMAL           = 1,
+      DOUBLE           = 2,
+      START_REPEAT     = 4,
+      END_REPEAT       = 8,
+      BROKEN           = 0x10,
+      END              = 0x20,
+//      END_START_REPEAT = 0x40,
+      DOTTED           = 0x80
       };
 
 constexpr BarLineType operator| (BarLineType t1, BarLineType t2) {
@@ -322,7 +324,7 @@ enum class IconType : signed char {
       SBEAM, MBEAM, NBEAM, BEAM32, BEAM64, AUTOBEAM,
       FBEAM1, FBEAM2,
       VFRAME, HFRAME, TFRAME, FFRAME, MEASURE,
-      BRACKETS
+      BRACKETS, PARENTHESES
       };
 
 //---------------------------------------------------------
@@ -379,11 +381,11 @@ class MPaintDevice : public QPaintDevice {
 //---------------------------------------------------------
 
 class MScore : public QObject {
-      Q_OBJECT
+      Q_GADGET
 
-      static MStyle _defaultStyle;       // buildin modified by preferences
-      static MStyle _defaultStyleForParts;
       static MStyle _baseStyle;          // buildin initial style
+      static MStyle _defaultStyle;       // buildin modified by preferences
+      static MStyle* _defaultStyleForParts;
 
       static QString _globalShare;
       static int _hRaster, _vRaster;
@@ -407,11 +409,12 @@ class MScore : public QObject {
 
       static void init();
 
-      static void defaultStyleForPartsHasChanged();
-      static void setDefaultStyle(const MStyle& s) { _defaultStyle = s; }
-      static MStyle& defaultStyle()                { return _defaultStyle;         }
-      static const MStyle& defaultStyleForParts()  { return _defaultStyleForParts; }
       static const MStyle& baseStyle()             { return _baseStyle;            }
+      static MStyle& defaultStyle()                { return _defaultStyle;         }
+      static const MStyle* defaultStyleForParts()  { return _defaultStyleForParts; }
+
+      static void setDefaultStyle(const MStyle& s) { _defaultStyle = s; }
+      static void defaultStyleForPartsHasChanged();
 
       static const QString& globalShare()   { return _globalShare; }
       static qreal hRaster()                { return _hRaster;     }
@@ -465,6 +468,7 @@ class MScore : public QObject {
       static bool noImages;
 
       static bool pdfPrinting;
+      static bool svgPrinting;
       static double pixelRatio;
 
       static qreal verticalPageGap;
@@ -537,7 +541,6 @@ Q_DECLARE_METATYPE(Ms::Direction);
 //Q_DECLARE_METATYPE(Ms::MSQE_Direction::E);
 Q_DECLARE_METATYPE(Ms::Direction::E);
 Q_DECLARE_METATYPE(Ms::MScore::DirectionH);
-Q_DECLARE_METATYPE(Ms::TextStyleType);
 Q_DECLARE_METATYPE(Ms::BarLineType);
 
 #endif

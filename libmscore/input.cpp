@@ -71,11 +71,11 @@ void InputState::update(Element* e)
       {
       if (e == 0)
             return;
-      if (e && e->type() == Element::Type::CHORD)
+      if (e && e->type() == ElementType::CHORD)
             e = static_cast<Chord*>(e)->upNote();
 
       setDrumNote(-1);
-      if (e->type() == Element::Type::NOTE) {
+      if (e->type() == ElementType::NOTE) {
             Note* note    = static_cast<Note*>(e);
             Chord* chord  = note->chord();
             setDuration(chord->durationType());
@@ -84,7 +84,7 @@ void InputState::update(Element* e)
             setNoteType(note->noteType());
             setBeamMode(chord->beamMode());
             }
-      else if (e->type() == Element::Type::REST) {
+      else if (e->type() == ElementType::REST) {
             Rest* rest   = static_cast<Rest*>(e);
             if (rest->durationType().type() == TDuration::DurationType::V_MEASURE)
                   setDuration(TDuration::DurationType::V_QUARTER);
@@ -95,10 +95,10 @@ void InputState::update(Element* e)
             setBeamMode(rest->beamMode());
             setNoteType(NoteType::NORMAL);
             }
-      if (e->type() == Element::Type::NOTE || e->type() == Element::Type::REST) {
+      if (e->type() == ElementType::NOTE || e->type() == ElementType::REST) {
             const Instrument* instr = e->part()->instrument();
             if (instr->useDrumset()) {
-                  if (e->type() == Element::Type::NOTE)
+                  if (e->type() == ElementType::NOTE)
                         setDrumNote(static_cast<Note*>(e)->pitch());
                   else
                         setDrumNote(-1);
@@ -124,7 +124,7 @@ void InputState::moveInputPos(Element* e)
       if (s->isSegment()) {
             if (s->measure()->isMMRest()) {
                   Measure* m = s->measure()->mmRestFirst();
-                  s = m->findSegment(Segment::Type::ChordRest, m->tick());
+                  s = m->findSegment(SegmentType::ChordRest, m->tick());
                   }
             _lastSegment = _segment;
             _segment = s;
@@ -139,7 +139,7 @@ void InputState::setSegment(Segment* s)
       {
       if (s && s->measure()->isMMRest()) {
             Measure* m = s->measure()->mmRestFirst();
-            s = m->findSegment(Segment::Type::ChordRest, m->tick());
+            s = m->findSegment(SegmentType::ChordRest, m->tick());
             }
       _segment = s;
       _lastSegment = s;
@@ -152,8 +152,8 @@ void InputState::setSegment(Segment* s)
 Segment* InputState::nextInputPos() const
       {
       Measure* m = _segment->measure();
-      Segment* s = _segment->next1(Segment::Type::ChordRest);
-      for (; s; s = s->next1(Segment::Type::ChordRest)) {
+      Segment* s = _segment->next1(SegmentType::ChordRest);
+      for (; s; s = s->next1(SegmentType::ChordRest)) {
             if (s->element(_track) || s->measure() != m) {
                   if (s->element(_track)) {
                         if (s->element(_track)->isRest() && toRest(s->element(_track))->isGap())

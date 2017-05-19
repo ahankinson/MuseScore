@@ -15,6 +15,7 @@
 #include "tempo.h"
 #include "system.h"
 #include "measure.h"
+#include "staff.h"
 #include "xml.h"
 
 namespace Ms {
@@ -27,14 +28,13 @@ namespace Ms {
 //---------------------------------------------------------
 
 TempoText::TempoText(Score* s)
-   : Text(s)
+   : Text(SubStyle::TEMPO, s)
       {
       _tempo      = 2.0;      // propertyDefault(P_TEMPO).toDouble();
       _followText = false;
-      _relative = 1.0;
+      _relative   = 1.0;
       _isRelative = false;
       setPlacement(Element::Placement::ABOVE);
-      setTextStyleType(TextStyleType::TEMPO);
       }
 
 //---------------------------------------------------------
@@ -65,16 +65,6 @@ void TempoText::read(XmlReader& e)
                   _followText = e.readInt();
             else if (!Text::readProperties(e))
                   e.unknown();
-            }
-      if (score()->mscVersion() <= 114) {
-            //
-            // Reset text in old version to
-            // style.
-            //
-//TODO            if (textStyle() != TextStyleType::INVALID) {
-//                  setStyled(true);
-//                  styleChanged();
-//                  }
             }
       // check sanity
       if (xmlText().isEmpty()) {
@@ -162,6 +152,7 @@ QString TempoText::duration2tempoTextString(const TDuration dur)
 //---------------------------------------------------------
 // updateScore
 //---------------------------------------------------------
+
 void TempoText::updateScore()
       {
       if (segment())
@@ -173,6 +164,7 @@ void TempoText::updateScore()
 //---------------------------------------------------------
 // updateRelative
 //---------------------------------------------------------
+
 void TempoText::updateRelative()
       {
       qreal tempoBefore = score()->tempo(tick() - 1);
@@ -273,8 +265,10 @@ void TempoText::undoSetFollowText(bool v)
 QVariant TempoText::getProperty(P_ID propertyId) const
       {
       switch(propertyId) {
-            case P_ID::TEMPO:             return _tempo;
-            case P_ID::TEMPO_FOLLOW_TEXT: return _followText;
+            case P_ID::TEMPO:
+                  return _tempo;
+            case P_ID::TEMPO_FOLLOW_TEXT:
+                  return _followText;
             default:
                   return Text::getProperty(propertyId);
             }
@@ -311,9 +305,14 @@ bool TempoText::setProperty(P_ID propertyId, const QVariant& v)
 QVariant TempoText::propertyDefault(P_ID id) const
       {
       switch(id) {
-            case P_ID::TEMPO:             return 2.0;
-            case P_ID::TEMPO_FOLLOW_TEXT: return false;
-            case P_ID::PLACEMENT:         return int(Element::Placement::ABOVE);
+            case P_ID::SUB_STYLE:
+                  return int(SubStyle::TEMPO);
+            case P_ID::TEMPO:
+                  return 2.0;
+            case P_ID::TEMPO_FOLLOW_TEXT:
+                  return false;
+            case P_ID::PLACEMENT:
+                  return int(Element::Placement::ABOVE);
             default:
                   return Text::propertyDefault(id);
             }
@@ -328,14 +327,22 @@ void TempoText::layout()
       {
       if (autoplace())
             setUserOff(QPointF());
-      setPos(textStyle().offset(spatium()));
+
+      qreal y;
+      if (placeAbove())
+            y = score()->styleP(StyleIdx::tempoPosAbove);
+      else {
+            qreal sh = staff() ? staff()->height() : 0;
+            y = score()->styleP(StyleIdx::tempoPosBelow) + sh + lineSpacing();
+            }
+      setPos(QPointF(0.0, y));
       Text::layout1();
 
       // tempo text on first chordrest of measure should align over time sig if present
       //
       Segment* s = segment();
       if (s && !s->rtick()) {
-            Segment* p = segment()->prev(Segment::Type::TimeSig);
+            Segment* p = segment()->prev(SegmentType::TimeSig);
             if (p) {
                   rxpos() -= s->x() - p->x();
                   Element* e = p->element(staffIdx() * VOICES);
@@ -344,15 +351,20 @@ void TempoText::layout()
                   }
             }
 
-      if (placement() == Element::Placement::BELOW)
-            rypos() = -rypos() + 4 * spatium();
-
       if (s && autoplace()) {
-            Shape s1 = s->staffShape(staffIdx()).translated(s->pos());
-            Shape s2 = shape().translated(s->pos());
-            qreal d  = s2.minVerticalDistance(s1);
-            if (d > 0)
-                  setUserOff(QPointF(0.0, -d));
+            qreal minDistance = score()->styleP(StyleIdx::tempoMinDistance);
+            Shape s1 = s->measure()->staffShape(staffIdx());
+            Shape s2 = shape().translated(s->pos() + pos());
+            if (placeAbove()) {
+                  qreal d = s2.minVerticalDistance(s1);
+                  if (d > -minDistance)
+                        rUserYoffset() = -d - minDistance;
+                  }
+            else {
+                  qreal d = s1.minVerticalDistance(s2);
+                  if (d > -minDistance)
+                        rUserYoffset() = d + minDistance;
+                  }
             }
       if (!autoplace())
             adjustReadPos();
@@ -366,13 +378,13 @@ QString TempoText::duration2userName(const TDuration t)
       {
       QString dots;
       switch (t.dots()) {
-            case 1: dots = tr("Dotted %1").arg(t.durationTypeUserName());
+            case 1: dots = QObject::tr("Dotted %1").arg(t.durationTypeUserName());
                   break;
-            case 2: dots = tr("Double dotted %1").arg(t.durationTypeUserName());
+            case 2: dots = QObject::tr("Double dotted %1").arg(t.durationTypeUserName());
                   break;
-            case 3: dots = tr("Triple dotted %1").arg(t.durationTypeUserName());
+            case 3: dots = QObject::tr("Triple dotted %1").arg(t.durationTypeUserName());
                   break;
-            case 4: dots = tr("Quadruple dotted %1").arg(t.durationTypeUserName());
+            case 4: dots = QObject::tr("Quadruple dotted %1").arg(t.durationTypeUserName());
                   break;
             default:
                   dots = t.durationTypeUserName();
@@ -405,10 +417,10 @@ QString TempoText::accessibleInfo() const
             dots1 = duration2userName(t1);
             if (x2 != -1) {
                   dots2 = duration2userName(t2);
-                  return QString("%1: %2 %3 = %4 %5").arg(Element::accessibleInfo()).arg(dots1).arg(tr("note")).arg(dots2).arg(tr("note"));
+                  return QString("%1: %2 %3 = %4 %5").arg(Element::accessibleInfo()).arg(dots1).arg(QObject::tr("note")).arg(dots2).arg(QObject::tr("note"));
                   }
             else
-                  return QString("%1: %2 %3 = %4").arg(Element::accessibleInfo()).arg(dots1).arg(tr("note")).arg(secondPart);
+                  return QString("%1: %2 %3 = %4").arg(Element::accessibleInfo()).arg(dots1).arg(QObject::tr("note")).arg(secondPart);
             }
       else
             return Text::accessibleInfo();

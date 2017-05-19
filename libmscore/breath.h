@@ -35,14 +35,14 @@ struct BreathType {
 //---------------------------------------------------------
 
 class Breath : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       qreal _pause;
       SymId _symId;
 
    public:
       Breath(Score* s);
-      virtual Element::Type type() const override { return Element::Type::BREATH; }
+      virtual ElementType type() const override { return ElementType::BREATH; }
       virtual Breath* clone() const override      { return new Breath(*this); }
 
       void setSymId(SymId id)          { _symId = id; }

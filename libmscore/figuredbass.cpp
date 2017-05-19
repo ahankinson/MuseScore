@@ -956,15 +956,23 @@ bool FiguredBassItem::startsWithParenthesis() const
 //---------------------------------------------------------
 
 FiguredBass::FiguredBass(Score* s)
-   : Text(s)
+   : Text(SubStyle::FIGURED_BASS, s)
       {
       setFlag(ElementFlag::ON_STAFF, true);
       setOnNote(true);
-      setTextStyleType(TextStyleType::FIGURED_BASS);
-      TextStyle st("Figured Bass", g_FBFonts[0].family, score()->styleD(StyleIdx::figuredBassFontSize),
-                  false, false, false, Align::LEFT | Align::TOP, QPointF(0, score()->styleD(StyleIdx::figuredBassYOffset)), OffsetType::SPATIUM);
+#if 0  // TODO
+      TextStyle st(
+         g_FBFonts[0].family,
+         score()->styleD(StyleIdx::figuredBassFontSize),
+         false,
+         false,
+         false,
+         Align::LEFT | Align::TOP,
+         QPointF(0, score()->styleD(StyleIdx::figuredBassYOffset)),
+         OffsetType::SPATIUM);
       st.setSizeIsSpatiumDependent(true);
-      setTextStyle(st);
+      setSubStyle(st);
+#endif
       setTicks(0);
       items.clear();
       }
@@ -1005,9 +1013,9 @@ void FiguredBass::write(XmlWriter& xml) const
       if (items.size() < 1)
             Text::writeProperties(xml, true);
       else {
-            if (textStyleType() != TextStyleType::FIGURED_BASS)
-                  // if all items parsed and not unstiled, we simply have a special style: write it
-                  xml.tag("style", textStyle().name());
+//            if (textStyleType() != StyledPropertyListIdx::FIGURED_BASS)
+//                  // if all items parsed and not unstiled, we simply have a special style: write it
+//                  xml.tag("style", textStyle().name());
             for(FiguredBassItem* item : items)
                   item->write(xml);
             Element::writeProperties(xml);
@@ -1041,7 +1049,7 @@ void FiguredBass::read(XmlReader& e)
                   normalizedText.append(pItem->normalizedText());
                   }
 //            else if (tag == "style")
-//                  setTextStyleType(e.readElementText());
+//                  setStyledPropertyListIdx(e.readElementText());
             else if (!Text::readProperties(e))
                   e.unknown();
             }
@@ -1059,17 +1067,19 @@ void FiguredBass::layout()
       qreal yOff  = score()->styleD(StyleIdx::figuredBassYOffset);
       qreal _sp   = spatium();
       // if 'our' style, force 'our' style data from FiguredBass parameters
-      if (textStyleType() == TextStyleType::FIGURED_BASS) {
-            TextStyle st("Figured Bass", g_FBFonts[0].family, score()->styleD(StyleIdx::figuredBassFontSize),
+#if 0
+      if (textStyleType() == StyledPropertyListIdx::FIGURED_BASS) {
+            TextStyle st(g_FBFonts[0].family, score()->styleD(StyleIdx::figuredBassFontSize),
                         false, false, false, Align::LEFT | Align::TOP, QPointF(0, yOff),
                         OffsetType::SPATIUM);
             st.setSizeIsSpatiumDependent(true);
             setTextStyle(st);
             }
-
+#endif
       // if in edit mode or if style has been changed,
       // do nothing else, keeping default laying out and formatting
-      if (editMode() || items.size() < 1 || textStyleType() != TextStyleType::FIGURED_BASS) {
+//      if (editMode() || items.size() < 1 || subStyle() != SubStyle::FIGURED_BASS) {
+      if (items.size() < 1 || subStyle() != SubStyle::FIGURED_BASS) {
             Text::layout();
             return;
             }
@@ -1121,7 +1131,7 @@ void FiguredBass::layoutLines()
       Measure* m = score()->tick2measure(nextTick-1);
       if (m) {
             // locate the first segment (of ANY type) right after this' last tick
-            for (nextSegm = m->first(Segment::Type::All); nextSegm; nextSegm = nextSegm->next()) {
+            for (nextSegm = m->first(SegmentType::All); nextSegm; nextSegm = nextSegm->next()) {
                   if (nextSegm->tick() >= nextTick)
                         break;
                   }
@@ -1195,7 +1205,8 @@ void FiguredBass::draw(QPainter* painter) const
                   }
             }
       // if in edit mode or with custom style, use standard text drawing
-      if (editMode() || textStyleType() != TextStyleType::FIGURED_BASS)
+//      if (editMode() || subStyle() != SubStyle::FIGURED_BASS)
+      if (subStyle() != SubStyle::FIGURED_BASS)
             Text::draw(painter);
       else {                                                // not edit mode:
             if (items.size() < 1)                           // if not parseable into f.b. items
@@ -1218,17 +1229,17 @@ void FiguredBass::draw(QPainter* painter) const
 //   startEdit / edit / endEdit
 //---------------------------------------------------------
 
-void FiguredBass::startEdit(MuseScoreView * msv, const QPointF & pt)
+void FiguredBass::startEdit(EditData& ed)
       {
       Text::layout();               // convert layout to standard Text conventions
-      Text::startEdit(msv, pt);
+      Text::startEdit(ed);
       }
 
-void FiguredBass::endEdit()
+void FiguredBass::endEdit(EditData& ed)
       {
-      int         idx;
+      int idx;
 
-      Text::endEdit();
+      Text::endEdit(ed);
       // as the standard text editor keeps inserting spurious HTML formatting and styles
       // retrieve and work only on the plain text
       QString txt = plainText();
@@ -1303,13 +1314,13 @@ FiguredBass* FiguredBass::nextFiguredBass() const
       int         nextTick = segment()->tick() + _ticks;    // the tick beyond this' duration
 
       // locate the ChordRest segment right after this' end
-      nextSegm = score()->tick2segment(nextTick, true, Segment::Type::ChordRest);
+      nextSegm = score()->tick2segment(nextTick, true, SegmentType::ChordRest);
       if (nextSegm == 0)
             return 0;
 
       // scan segment annotations for an existing FB element in the this' staff
       for (Element* e : nextSegm->annotations())
-            if (e->type() == Element::Type::FIGURED_BASS && e->track() == track())
+            if (e->type() == ElementType::FIGURED_BASS && e->track() == track())
                   return static_cast<FiguredBass*>(e);
 
       return 0;
@@ -1411,7 +1422,7 @@ FiguredBass * FiguredBass::addFiguredBassToSegment(Segment * seg, int track, int
       // scan segment annotations for an existing FB element in the same staff
       FiguredBass* fb = 0;
       for (Element* e : seg->annotations()) {
-            if (e->type() == Element::Type::FIGURED_BASS && (e->track() / VOICES) == staff) {
+            if (e->type() == ElementType::FIGURED_BASS && (e->track() / VOICES) == staff) {
                   // an FB already exists in segment: re-use it
                   fb = static_cast<FiguredBass*>(e);
                   *pNew = false;
@@ -1441,7 +1452,7 @@ FiguredBass * FiguredBass::addFiguredBassToSegment(Segment * seg, int track, int
             // set onNote status
             fb->setOnNote(false);               // assume not onNote
             for (int i = track; i < track + VOICES; i++)         // if segment has chord in staff, set onNote
-                  if (seg->element(i) && seg->element(i)->type() == Element::Type::CHORD) {
+                  if (seg->element(i) && seg->element(i)->type() == ElementType::CHORD) {
                         fb->setOnNote(true);
                         break;
                   }
@@ -1453,9 +1464,9 @@ FiguredBass * FiguredBass::addFiguredBassToSegment(Segment * seg, int track, int
             // locate previous FB for same staff
             Segment *         prevSegm;
             FiguredBass*      prevFB = 0;
-            for(prevSegm = seg->prev1(Segment::Type::ChordRest); prevSegm; prevSegm = prevSegm->prev1(Segment::Type::ChordRest)) {
+            for(prevSegm = seg->prev1(SegmentType::ChordRest); prevSegm; prevSegm = prevSegm->prev1(SegmentType::ChordRest)) {
                   for (Element* e : prevSegm->annotations()) {
-                        if (e->type() == Element::Type::FIGURED_BASS && (e->track() ) == track) {
+                        if (e->type() == ElementType::FIGURED_BASS && (e->track() ) == track) {
                               prevFB = static_cast<FiguredBass*>(e);   // previous FB found
                               break;
                               }
@@ -1578,7 +1589,7 @@ bool FiguredBass::readConfigFile(const QString& fileName)
 
       QFile f(path);
       if (!f.open(QIODevice::ReadOnly)) {
-            MScore::lastError = tr("Cannot open figured bass description:\n%1\n%2").arg(f.fileName()).arg(f.errorString());
+            MScore::lastError = QObject::tr("Cannot open figured bass description:\n%1\n%2").arg(f.fileName()).arg(f.errorString());
             qDebug("FiguredBass::read failed: <%s>", qPrintable(path));
             return false;
             }
@@ -1751,19 +1762,19 @@ void FiguredBass::writeMusicXML(XmlWriter& xml, bool isOriginalFigure, int crEnd
 FiguredBass* Score::addFiguredBass()
       {
       Element* el = selection().element();
-      if (el == 0 || (el->type() != Element::Type::NOTE && el->type() != Element::Type::FIGURED_BASS)) {
+      if (el == 0 || (el->type() != ElementType::NOTE && el->type() != ElementType::FIGURED_BASS)) {
             MScore::setError(NO_NOTE_FIGUREDBASS_SELECTED);
             return 0;
             }
 
       FiguredBass * fb;
       bool bNew;
-      if (el->type() == Element::Type::NOTE) {
+      if (el->type() == ElementType::NOTE) {
             ChordRest * cr = static_cast<Note*>(el)->chord();
             fb = FiguredBass::addFiguredBassToSegment(cr->segment(),
                         (cr->track() / VOICES) * VOICES, 0, &bNew);
             }
-      else if (el->type() == Element::Type::FIGURED_BASS) {
+      else if (el->type() == ElementType::FIGURED_BASS) {
             fb = static_cast<FiguredBass*>(el);
             bNew = false;
             }

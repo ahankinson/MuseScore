@@ -590,7 +590,10 @@ Note::Note(const Note& n, bool link)
             add(new Accidental(*(n._accidental)));
 
       // types in _el: SYMBOL, IMAGE, FINGERING, TEXT, BEND
+      bool tabFingering = staff()->staffType(tick())->showTabFingering();
       for (Element* e : n._el) {
+            if (e->isFingering() && staff()->isTabStaff(tick()) && !tabFingering)    // tablature has no fingering
+                  continue;
             Element* ce = e->clone();
             add(ce);
             if (link)
@@ -609,7 +612,6 @@ Note::Note(const Note& n, bool link)
       _tieBack  = 0;
       for (NoteDot* dot : n._dots)
             add(new NoteDot(*dot));
-      _lineOffset = n._lineOffset;
       _mark      = n._mark;
       }
 
@@ -958,17 +960,17 @@ void Note::add(Element* e)
       e->setTrack(track());
 
       switch(e->type()) {
-            case Element::Type::NOTEDOT:
+            case ElementType::NOTEDOT:
                   _dots.append(toNoteDot(e));
                   break;
-            case Element::Type::SYMBOL:
-            case Element::Type::IMAGE:
-            case Element::Type::FINGERING:
-            case Element::Type::TEXT:
-            case Element::Type::BEND:
+            case ElementType::SYMBOL:
+            case ElementType::IMAGE:
+            case ElementType::FINGERING:
+            case ElementType::TEXT:
+            case ElementType::BEND:
                   _el.push_back(e);
                   break;
-            case Element::Type::TIE:
+            case ElementType::TIE:
                   {
                   Tie* tie = toTie(e);
                   tie->setStartNote(this);
@@ -984,11 +986,11 @@ void Note::add(Element* e)
                         }
                   }
                   break;
-            case Element::Type::ACCIDENTAL:
+            case ElementType::ACCIDENTAL:
                   _accidental = toAccidental(e);
                   break;
-            case Element::Type::TEXTLINE:
-            case Element::Type::GLISSANDO:
+            case ElementType::TEXTLINE:
+            case ElementType::GLISSANDO:
                   addSpanner(static_cast<Spanner*>(e));
                   break;
             default:
@@ -1005,19 +1007,19 @@ void Note::add(Element* e)
 void Note::remove(Element* e)
       {
       switch(e->type()) {
-            case Element::Type::NOTEDOT:
+            case ElementType::NOTEDOT:
                   _dots.takeLast();
                   break;
 
-            case Element::Type::TEXT:
-            case Element::Type::SYMBOL:
-            case Element::Type::IMAGE:
-            case Element::Type::FINGERING:
-            case Element::Type::BEND:
+            case ElementType::TEXT:
+            case ElementType::SYMBOL:
+            case ElementType::IMAGE:
+            case ElementType::FINGERING:
+            case ElementType::BEND:
                   if (!_el.remove(e))
                         qDebug("Note::remove(): cannot find %s", e->name());
                   break;
-            case Element::Type::TIE:
+            case ElementType::TIE:
                   {
                   Tie* tie = toTie(e);
                   setTieFor(0);
@@ -1031,12 +1033,12 @@ void Note::remove(Element* e)
                   }
                   break;
 
-            case Element::Type::ACCIDENTAL:
+            case ElementType::ACCIDENTAL:
                   _accidental = 0;
                   break;
 
-            case Element::Type::TEXTLINE:
-            case Element::Type::GLISSANDO:
+            case ElementType::TEXTLINE:
+            case ElementType::GLISSANDO:
                   removeSpanner(static_cast<Spanner*>(e));
                   break;
 
@@ -1091,8 +1093,12 @@ void Note::draw(QPainter* painter) const
                   QRectF bb = QRectF(bbox().x()-d, tab->fretMaskY()*magS(), bbox().width() + 2*d, tab->fretMaskH()*magS());
                   // we do not know which viewer did this draw() call
                   // so update all:
-                  for (MuseScoreView* view : score()->getViewer())
-                        view->drawBackground(painter, bb);
+                  if (!score()->getViewer().empty()) {
+                        for (MuseScoreView* view : score()->getViewer())
+                              view->drawBackground(painter, bb);
+                        }
+                  else
+                        painter->fillRect(bb, Qt::white);
 
                   if (fretConflict() && !score()->printing()) {          //on fret conflict, draw on red background
                         painter->save();
@@ -1311,7 +1317,6 @@ bool Note::readProperties(XmlReader& e)
             _line = e.readInt();
       else if (tag == "Fingering") {
             Fingering* f = new Fingering(score());
-            f->setTextStyleType(TextStyleType::FINGERING);
             f->read(e);
             add(f);
             }
@@ -1400,7 +1405,7 @@ bool Note::readProperties(XmlReader& e)
             // check this is not a lower-to-higher cross-staff spanner we already got
             int id = e.intAttribute("id");
             Spanner* placeholder = e.findSpanner(id);
-            if (placeholder) {
+            if (placeholder && placeholder->endElement()) {
                   // if it is, fill end data from place-holder
                   sp->setAnchor(Spanner::Anchor::NOTE);           // make sure we can set a Note as end element
                   sp->setEndElement(placeholder->endElement());
@@ -1440,25 +1445,6 @@ bool Note::readProperties(XmlReader& e)
       }
 
 //---------------------------------------------------------
-//   drag
-//---------------------------------------------------------
-
-QRectF Note::drag(EditData* data)
-      {
-      if (staff()->isDrumStaff(tick()))
-            return QRect();
-      dragMode = true;
-      QRectF bb(chord()->bbox());
-
-      qreal _spatium = spatium();
-      bool tab       = staff()->isTabStaff(chord()->tick());
-      qreal step     = _spatium * (tab ? staff()->staffType(tick())->lineDistance().val() : 0.5);
-      _lineOffset    = lrint(data->delta.y() / step);
-      triggerLayout();
-      return bb.translated(chord()->pagePos());
-      }
-
-//---------------------------------------------------------
 //   transposition
 //---------------------------------------------------------
 
@@ -1469,20 +1455,75 @@ int Note::transposition() const
       }
 
 //---------------------------------------------------------
+//   NoteEditData
+//---------------------------------------------------------
+
+class NoteEditData : public ElementEditData {
+   public:
+      int line;
+      };
+
+//---------------------------------------------------------
+//   startDrag
+//---------------------------------------------------------
+
+void Note::startDrag(EditData& ed)
+      {
+      NoteEditData* ned = new NoteEditData();
+      ned->e    = this;
+      ned->line = _line;
+      ned->pushProperty(P_ID::PITCH);
+      ned->pushProperty(P_ID::TPC1);
+      ned->pushProperty(P_ID::TPC2);
+
+      ed.addData(ned);
+      }
+
+//---------------------------------------------------------
+//   drag
+//---------------------------------------------------------
+
+QRectF Note::drag(EditData& ed)
+      {
+      if (staff()->isDrumStaff(tick()))
+            return QRect();
+
+      NoteEditData* ned = static_cast<NoteEditData*>(ed.getData(this));
+      int _tick      = chord()->tick();
+      qreal _spatium = spatium();
+      bool tab       = staff()->isTabStaff(_tick);
+      qreal step     = _spatium * (tab ? staff()->staffType(_tick)->lineDistance().val() : 0.5);
+      int lineOffset = lrint(ed.delta.y() / step);
+
+
+      if (staff()->isTabStaff(_tick)) {
+            // TODO
+            }
+      else {
+            Key key = staff()->key(_tick);
+            _pitch = line2pitch(ned->line + lineOffset, staff()->clef(_tick), key);
+            if (!concertPitch()) {
+                  Interval interval = staff()->part()->instrument(_tick)->transpose();
+                  _pitch += interval.chromatic;
+                  }
+            _tpc[0] = pitch2tpc(_pitch, key, Prefer::NEAREST);
+            _tpc[1] = pitch2tpc(_pitch - transposition(), key, Prefer::NEAREST);
+            }
+      triggerLayout();
+      return QRectF();
+      }
+
+//---------------------------------------------------------
 //   endDrag
 //---------------------------------------------------------
 
-void Note::endDrag()
+void Note::endDrag(EditData& ed)
       {
-      dragMode = false;
-      if (_lineOffset == 0)
-            return;
-
-      int staffIdx = chord()->vStaffIdx();
-      Staff* staff = score()->staff(staffIdx);
+      Staff* staff = score()->staff(chord()->vStaffIdx());
       int tick     = chord()->tick();
 
       if (staff->isTabStaff(tick)) {
+#if 0 // TODO
             // on TABLATURE staves, dragging a note keeps same pitch on a different string (if possible)
             // determine new string of dragged note (if tablature is upside down, invert _lineOffset)
             // and fret for the same pitch on the new string
@@ -1505,30 +1546,16 @@ void Note::endDrag()
                   if (refret)
                         strData->fretChords(nn->chord());
                   }
+#endif
             }
       else {
-            // on PITCHED / PERCUSSION staves, dragging a note changes the note pitch
-            int nLine   = _line + _lineOffset;
-            // get note context
-            ClefType clef = staff->clef(tick);
-            Key key       = staff->key(tick);
-            // determine new pitch of dragged note
-            int nPitch = line2pitch(nLine, clef, key);
-            if (!concertPitch()) {
-                  Interval interval = staff->part()->instrument(tick)->transpose();
-                  nPitch += interval.chromatic;
-                  }
-            int tpc1 = pitch2tpc(nPitch, key, Prefer::NEAREST);
-            int tpc2 = pitch2tpc(nPitch - transposition(), key, Prefer::NEAREST);
-            // undefined for non-tablature staves
+            NoteEditData* ned = static_cast<NoteEditData*>(ed.getData(this));
             for (Note* nn : tiedNotes()) {
-                  // score()->undoChangePitch(nn, nPitch, tpc1, tpc2);
-                  nn->undoChangeProperty(P_ID::PITCH, nPitch);
-                  nn->undoChangeProperty(P_ID::TPC1, tpc1);
-                  nn->undoChangeProperty(P_ID::TPC2, tpc2);
+                  for (PropertyData pd : ned->propertyData) {
+                        score()->undoPropertyChanged(nn, pd.id, pd.data);
+                        }
                   }
             }
-      _lineOffset = 0;
       score()->select(this, SelectType::SINGLE, 0);
       }
 
@@ -1536,105 +1563,107 @@ void Note::endDrag()
 //   acceptDrop
 //---------------------------------------------------------
 
-bool Note::acceptDrop(const DropData& data) const
+bool Note::acceptDrop(EditData& data) const
       {
       Element* e = data.element;
-      Element::Type type = e->type();
-      if (type == Element::Type::GLISSANDO) {
+      ElementType type = e->type();
+      if (type == ElementType::GLISSANDO) {
             for (auto e : _spannerFor)
-                  if (e->type() == Element::Type::GLISSANDO) {
+                  if (e->type() == ElementType::GLISSANDO) {
                         return false;
                   }
             return true;
             }
-      return (type == Element::Type::ARTICULATION
-         || type == Element::Type::CHORDLINE
-         || type == Element::Type::TEXT
-         || type == Element::Type::REHEARSAL_MARK
-         || type == Element::Type::FINGERING
-         || type == Element::Type::ACCIDENTAL
-         || type == Element::Type::BREATH
-         || type == Element::Type::ARPEGGIO
-         || type == Element::Type::NOTEHEAD
-         || type == Element::Type::NOTE
-         || type == Element::Type::TREMOLO
-         || type == Element::Type::STAFF_STATE
-         || type == Element::Type::INSTRUMENT_CHANGE
-         || type == Element::Type::IMAGE
-         || type == Element::Type::CHORD
-         || type == Element::Type::HARMONY
-         || type == Element::Type::DYNAMIC
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::ACCIACCATURA)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::APPOGGIATURA)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::GRACE4)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::GRACE16)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::GRACE32)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::GRACE8_AFTER)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::GRACE16_AFTER)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::GRACE32_AFTER)
-         || (noteType() == NoteType::NORMAL && type == Element::Type::BAGPIPE_EMBELLISHMENT)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::SBEAM)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::MBEAM)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::NBEAM)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::BEAM32)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::BEAM64)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::AUTOBEAM)
-         || (type == Element::Type::ICON && toIcon(e)->iconType() == IconType::BRACKETS)
-         || (type == Element::Type::SYMBOL)
-         || (type == Element::Type::CLEF)
-         || (type == Element::Type::KEYSIG)
-         || (type == Element::Type::TIMESIG)
-         || (type == Element::Type::BAR_LINE)
-         || (type == Element::Type::SLUR)
-         || (type == Element::Type::HAIRPIN)
-         || (type == Element::Type::STAFF_TEXT)
-         || (type == Element::Type::TEMPO_TEXT)
-         || (type == Element::Type::BEND)
-         || (type == Element::Type::TREMOLOBAR)
-         || (type == Element::Type::FRET_DIAGRAM)
-         || (type == Element::Type::FIGURED_BASS)
-         || (type == Element::Type::LYRICS));
+      bool isTablature = staff()->isTabStaff(tick());
+      bool tabFingering = staff()->staffType(tick())->showTabFingering();
+      return (type == ElementType::ARTICULATION
+         || type == ElementType::CHORDLINE
+         || type == ElementType::TEXT
+         || type == ElementType::REHEARSAL_MARK
+         || (type == ElementType::FINGERING && (!isTablature || tabFingering))
+         || type == ElementType::ACCIDENTAL
+         || type == ElementType::BREATH
+         || type == ElementType::ARPEGGIO
+         || type == ElementType::NOTEHEAD
+         || type == ElementType::NOTE
+         || type == ElementType::TREMOLO
+         || type == ElementType::STAFF_STATE
+         || type == ElementType::INSTRUMENT_CHANGE
+         || type == ElementType::IMAGE
+         || type == ElementType::CHORD
+         || type == ElementType::HARMONY
+         || type == ElementType::DYNAMIC
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::ACCIACCATURA)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::APPOGGIATURA)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::GRACE4)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::GRACE16)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::GRACE32)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::GRACE8_AFTER)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::GRACE16_AFTER)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::GRACE32_AFTER)
+         || (noteType() == NoteType::NORMAL && type == ElementType::BAGPIPE_EMBELLISHMENT)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::SBEAM)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::MBEAM)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::NBEAM)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::BEAM32)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::BEAM64)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::AUTOBEAM)
+         || (type == ElementType::ICON && toIcon(e)->iconType() == IconType::PARENTHESES)
+         || (type == ElementType::SYMBOL)
+         || (type == ElementType::CLEF)
+         || (type == ElementType::KEYSIG)
+         || (type == ElementType::TIMESIG)
+         || (type == ElementType::BAR_LINE)
+         || (type == ElementType::SLUR)
+         || (type == ElementType::HAIRPIN)
+         || (type == ElementType::STAFF_TEXT)
+         || (type == ElementType::SYSTEM_TEXT)
+         || (type == ElementType::TEMPO_TEXT)
+         || (type == ElementType::BEND)
+         || (type == ElementType::TREMOLOBAR)
+         || (type == ElementType::FRET_DIAGRAM)
+         || (type == ElementType::FIGURED_BASS)
+         || (type == ElementType::LYRICS));
       }
 
 //---------------------------------------------------------
 //   drop
 //---------------------------------------------------------
 
-Element* Note::drop(const DropData& data)
+Element* Note::drop(EditData& data)
       {
       Element* e = data.element;
-      bool fromPalette = (e->track() == -1);
 
+      bool isTablature = staff()->isTabStaff(tick());
+      bool tabFingering = staff()->staffType(tick())->showTabFingering();
       Chord* ch = chord();
+
       switch(e->type()) {
-            case Element::Type::REHEARSAL_MARK:
+            case ElementType::REHEARSAL_MARK:
                   return ch->drop(data);
 
-            case Element::Type::SYMBOL:
-            case Element::Type::IMAGE:
+            case ElementType::SYMBOL:
+            case ElementType::IMAGE:
                   e->setParent(this);
                   score()->undoAddElement(e);
                   return e;
 
-            case Element::Type::FINGERING:
-                  e->setParent(this);
-                  score()->undoAddElement(e);
-                  {
-                  // set style
-                  Fingering* f = toFingering(e);
-                  TextStyleType st = f->textStyleType();
-                  //f->setTextStyleType(st);
-                  if (st >= TextStyleType::DEFAULT && fromPalette)
-                        f->textStyle().restyle(MScore::baseStyle().textStyle(st), score()->textStyle(st));
-                  }
-                  return e;
+            case ElementType::FINGERING:
+                  if (!isTablature || tabFingering) {
+                        e->setParent(this);
+                        score()->undoAddElement(e);
+                        return e;
+                        }
+                  else
+                        delete e;
+                  return 0;
 
-            case Element::Type::SLUR:
+            case ElementType::SLUR:
                   delete e;
                   data.view->cmdAddSlur(this, 0);
                   return 0;
 
-            case Element::Type::HAIRPIN:
+            case ElementType::HAIRPIN:
                   {
                   Hairpin* hairpin = toHairpin(e);
                   data.view->cmdAddHairpin(hairpin->hairpinType());
@@ -1642,23 +1671,23 @@ Element* Note::drop(const DropData& data)
                   }
                   return 0;
 
-            case Element::Type::LYRICS:
+            case ElementType::LYRICS:
                   e->setParent(ch);
                   e->setTrack(track());
                   score()->undoAddElement(e);
                   return e;
 
-            case Element::Type::ACCIDENTAL:
+            case ElementType::ACCIDENTAL:
                   score()->changeAccidental(this, static_cast<Accidental*>(e)->accidentalType());
                   break;
 
-            case Element::Type::BEND:
+            case ElementType::BEND:
                   e->setParent(this);
                   e->setTrack(track());
                   score()->undoAddElement(e);
                   return e;
 
-            case Element::Type::NOTEHEAD:
+            case ElementType::NOTEHEAD:
                   {
                   NoteHead* s = toNoteHead(e);
                   NoteHead::Group group = s->headGroup();
@@ -1684,7 +1713,7 @@ Element* Note::drop(const DropData& data)
                   }
                   break;
 
-            case Element::Type::ICON:
+            case ElementType::ICON:
                   {
                   switch (toIcon(e)->iconType()) {
                         case IconType::ACCIACCATURA:
@@ -1719,8 +1748,8 @@ Element* Note::drop(const DropData& data)
                         case IconType::AUTOBEAM:
                               return ch->drop(data);
                               break;
-                        case IconType::BRACKETS:
-                              addBracket();
+                        case IconType::PARENTHESES:
+                              addParentheses();
                               break;
                         default:
                               break;
@@ -1729,7 +1758,7 @@ Element* Note::drop(const DropData& data)
                   delete e;
                   break;
 
-            case Element::Type::BAGPIPE_EMBELLISHMENT:
+            case ElementType::BAGPIPE_EMBELLISHMENT:
                   {
                   BagpipeEmbellishment* b = static_cast<BagpipeEmbellishment*>(e);
                   noteList nl = b->getNoteList();
@@ -1743,7 +1772,7 @@ Element* Note::drop(const DropData& data)
                   delete e;
                   break;
 
-            case Element::Type::NOTE:
+            case ElementType::NOTE:
                   {
                   Chord* ch = chord();
                   if (ch->noteType() != NoteType::NORMAL) {
@@ -1762,10 +1791,10 @@ Element* Note::drop(const DropData& data)
                   }
                   break;
 
-            case Element::Type::GLISSANDO:
+            case ElementType::GLISSANDO:
                   {
                   for (auto e : _spannerFor) {
-                        if (e->type() == Element::Type::GLISSANDO) {
+                        if (e->type() == ElementType::GLISSANDO) {
                               qDebug("there is already a glissando");
                               delete e;
                               return 0;
@@ -1800,7 +1829,7 @@ Element* Note::drop(const DropData& data)
                   }
                   break;
 
-            case Element::Type::CHORD:
+            case ElementType::CHORD:
                   {
                   Chord* c      = toChord(e);
                   Note* n       = c->upNote();
@@ -1826,10 +1855,10 @@ Element* Note::drop(const DropData& data)
       }
 
 //---------------------------------------------------------
-//   addBracket
+//   addParentheses
 //---------------------------------------------------------
 
-void Note::addBracket()
+void Note::addParentheses()
       {
       Symbol* s = new Symbol(score());
       s->setSym(SymId::noteheadParenthesisLeft);
@@ -2122,19 +2151,19 @@ QString Note::noteTypeUserName() const
       {
       switch (noteType()) {
             case NoteType::ACCIACCATURA:
-                  return tr("Acciaccatura");
+                  return QObject::tr("Acciaccatura");
             case NoteType::APPOGGIATURA:
-                  return tr("Appoggiatura");
+                  return QObject::tr("Appoggiatura");
             case NoteType::GRACE8_AFTER:
             case NoteType::GRACE16_AFTER:
             case NoteType::GRACE32_AFTER:
-                  return tr("Grace note after");
+                  return QObject::tr("Grace note after");
             case NoteType::GRACE4:
             case NoteType::GRACE16:
             case NoteType::GRACE32:
-                  return tr("Grace note before");
+                  return QObject::tr("Grace note before");
             default:
-                  return tr("Note");
+                  return QObject::tr("Note");
             }
       }
 
@@ -2227,10 +2256,7 @@ void Note::setSmall(bool val)
 
 int Note::line() const
       {
-      if (_fixed)
-            return _fixedLine;
-      else
-            return _line + _lineOffset;
+      return _fixed ? _fixedLine : _line;
       }
 
 //---------------------------------------------------------
@@ -2295,7 +2321,7 @@ int Note::customizeVelocity(int velo) const
 //   endEdit
 //---------------------------------------------------------
 
-void Note::endEdit()
+void Note::endEdit(EditData&)
       {
       Chord* ch = chord();
       if (ch->notes().size() == 1) {
@@ -2519,7 +2545,7 @@ bool Note::setProperty(P_ID propertyId, const QVariant& v)
                         return false;
                   break;
             }
-      score()->setLayout(tick());
+      triggerLayout();
       return true;
       }
 
@@ -2723,16 +2749,16 @@ void Note::setScore(Score* s)
 QString Note::accessibleInfo() const
       {
       QString duration = chord()->durationUserName();
-      QString voice = tr("Voice: %1").arg(QString::number(track() % VOICES + 1));
+      QString voice = QObject::tr("Voice: %1").arg(QString::number(track() % VOICES + 1));
       QString pitchName;
       const Drumset* drumset = part()->instrument()->drumset();
       if (fixed() && headGroup() == NoteHead::Group::HEAD_SLASH)
-            pitchName = chord()->noStem() ? tr("Beat Slash") : tr("Rhythm Slash");
+            pitchName = chord()->noStem() ? QObject::tr("Beat Slash") : QObject::tr("Rhythm Slash");
       else if (staff()->isDrumStaff(tick()) && drumset)
             pitchName = qApp->translate("drumset", drumset->name(pitch()).toUtf8().constData());
       else
             pitchName = tpcUserName(false);
-      return tr("%1; Pitch: %2; Duration: %3%4").arg(noteTypeUserName()).arg(pitchName).arg(duration).arg((chord()->isGrace() ? "" : QString("; %1").arg(voice)));
+      return QObject::tr("%1; Pitch: %2; Duration: %3%4").arg(noteTypeUserName()).arg(pitchName).arg(duration).arg((chord()->isGrace() ? "" : QString("; %1").arg(voice)));
       }
 
 //---------------------------------------------------------
@@ -2742,11 +2768,11 @@ QString Note::accessibleInfo() const
 QString Note::screenReaderInfo() const
       {
       QString duration = chord()->durationUserName();
-      QString voice = tr("Voice: %1").arg(QString::number(track() % VOICES + 1));
+      QString voice = QObject::tr("Voice: %1").arg(QString::number(track() % VOICES + 1));
       QString pitchName;
       const Drumset* drumset = part()->instrument()->drumset();
       if (fixed() && headGroup() == NoteHead::Group::HEAD_SLASH)
-            pitchName = chord()->noStem() ? tr("Beat Slash") : tr("Rhythm Slash");
+            pitchName = chord()->noStem() ? QObject::tr("Beat Slash") : QObject::tr("Rhythm Slash");
       else if (staff()->isDrumStaff(tick()) && drumset)
             pitchName = qApp->translate("drumset", drumset->name(pitch()).toUtf8().constData());
       else
@@ -2771,23 +2797,23 @@ QString Note::accessibleExtraInfo() const
                   }
             }
       if (tieFor())
-            rez = tr("%1 Start of %2").arg(rez).arg(tieFor()->screenReaderInfo());
+            rez = QObject::tr("%1 Start of %2").arg(rez).arg(tieFor()->screenReaderInfo());
 
       if (tieBack())
-            rez = tr("%1 End of %2").arg(rez).arg(tieBack()->screenReaderInfo());
+            rez = QObject::tr("%1 End of %2").arg(rez).arg(tieBack()->screenReaderInfo());
 
       if (!spannerFor().empty()) {
             for (Spanner* s : spannerFor()) {
                   if (!score()->selectionFilter().canSelect(s))
                         continue;
-                  rez = tr("%1 Start of %2").arg(rez).arg(s->screenReaderInfo());
+                  rez = QObject::tr("%1 Start of %2").arg(rez).arg(s->screenReaderInfo());
                   }
             }
       if (!spannerBack().empty()) {
             for (Spanner* s : spannerBack()) {
                   if (!score()->selectionFilter().canSelect(s))
                         continue;
-                  rez = tr("%1 End of %2").arg(rez).arg(s->screenReaderInfo());
+                  rez = QObject::tr("%1 End of %2").arg(rez).arg(s->screenReaderInfo());
                   }
             }
 
@@ -2873,6 +2899,8 @@ Note* Note::lastTiedNote() const
       notes.push_back(note);
       while (note->tieFor()) {
             if (std::find(notes.begin(), notes.end(), note->tieFor()->endNote()) != notes.end())
+                  break;
+            if (!note->tieFor()->endNote())
                   break;
             note = note->tieFor()->endNote();
             notes.push_back(note);

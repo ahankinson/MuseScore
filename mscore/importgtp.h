@@ -175,15 +175,15 @@ class GuitarPro {
       int key;
 
       QMap<int, QList<GPFermata>*> fermatas;
-      Ottava** ottava;
+      std::vector<Ottava*> ottava;
       Hairpin** hairpins;
       Score* score;
       QFile* f;
       int curPos;
       int previousTempo;
       int previousDynamic;
-      int ottavaFound;
-      QString ottavaValue;
+      std::vector<int> ottavaFound;
+      std::vector<QString> ottavaValue;
       int tempo;
       QMap<int,int> slides;
 
@@ -221,7 +221,7 @@ class GuitarPro {
       void createOttava(bool hasOttava, int track, ChordRest* cr, QString value);
       void createSlide(int slide, ChordRest* cr, int staffIdx);
       void createCrecDim(int staffIdx, int track, int tick, bool crec);
-      void addTextToNote(QString string, TextStyle textStyle, Note* note);
+      Text* addTextToNote(QString, Align, Note*);
       void addPalmMute(Note* note);
       void addLetRing(Note* note);
       void addTap(Note* note);

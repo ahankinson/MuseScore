@@ -102,140 +102,9 @@ void Image::setImageType(ImageType t)
 
 QSizeF Image::imageSize() const
       {
-      if (imageType == ImageType::RASTER)
-            return rasterDoc->size();
-      else
-            return svgDoc->defaultSize();
-      }
-
-//---------------------------------------------------------
-//   scaleFactor
-//---------------------------------------------------------
-
-qreal Image::scaleFactor() const
-      {
-      if (imageType == ImageType::RASTER)
-            return ( (_sizeIsSpatium ? spatium() : DPMM) / 0.4 );
-      else
-            return (_sizeIsSpatium ? 10.0 : DPMM);
-      }
-
-//---------------------------------------------------------
-//   scale
-//    return image scale in percent
-//---------------------------------------------------------
-
-QSizeF Image::scale() const
-      {
-      return scaleForSize(size());
-      }
-
-//---------------------------------------------------------
-//   setScale
-//---------------------------------------------------------
-
-void Image::setScale(const QSizeF& scale)
-      {
-      setSize(sizeForScale(scale));
-      }
-
-//---------------------------------------------------------
-//   scaleForSize
-//---------------------------------------------------------
-
-QSizeF Image::scaleForSize(const QSizeF& s) const
-      {
-      if(!isValid())
+      if (!isValid())
             return QSizeF();
-      QSizeF sz = s * scaleFactor();
-      return QSizeF(
-               (sz.width()  * 100.0)/ imageSize().width(),
-               (sz.height() * 100.0)/ imageSize().height()
-               );
-      }
-
-//---------------------------------------------------------
-//   sizeForScale
-//---------------------------------------------------------
-
-QSizeF Image::sizeForScale(const QSizeF& scale) const
-      {
-      QSizeF s = scale / 100.0;
-//      qreal sz = _sizeIsSpatium ? spatium() : DPMM;
-//      QSizeF oSize = imageSize() / sz;
-      QSizeF oSize = imageSize() / scaleFactor();
-      return QSizeF(s.width() * oSize.width(), s.height() * oSize.height());
-      }
-
-//---------------------------------------------------------
-//   getProperty
-//---------------------------------------------------------
-
-QVariant Image::getProperty(P_ID propertyId) const
-      {
-      switch(propertyId) {
-            case P_ID::AUTOSCALE:
-                  return autoScale();
-            case P_ID::SIZE:
-                  return size();
-            case P_ID::SCALE:
-                  return scale();
-            case P_ID::LOCK_ASPECT_RATIO:
-                  return lockAspectRatio();
-            case P_ID::SIZE_IS_SPATIUM:
-                  return sizeIsSpatium();
-            default:
-                  return Element::getProperty(propertyId);
-            }
-      }
-
-//---------------------------------------------------------
-//   setProperty
-//---------------------------------------------------------
-
-bool Image::setProperty(P_ID propertyId, const QVariant& v)
-      {
-      bool rv = true;
-      score()->addRefresh(canvasBoundingRect());
-      switch(propertyId) {
-            case P_ID::AUTOSCALE:
-                  setAutoScale(v.toBool());
-                  break;
-            case P_ID::SIZE:
-                  setSize(v.toSizeF());
-                  break;
-            case P_ID::SCALE:
-                  setScale(v.toSizeF());
-                  break;
-            case P_ID::LOCK_ASPECT_RATIO:
-                  setLockAspectRatio(v.toBool());
-                  break;
-            case P_ID::SIZE_IS_SPATIUM:
-                  setSizeIsSpatium(v.toBool());
-                  break;
-            default:
-                  rv = Element::setProperty(propertyId, v);
-                  break;
-            }
-      setGenerated(false);
-      score()->setLayoutAll();
-      return rv;
-      }
-
-//---------------------------------------------------------
-//   propertyDefault
-//---------------------------------------------------------
-
-QVariant Image::propertyDefault(P_ID id) const
-      {
-      switch(id) {
-            case P_ID::AUTOSCALE:             return defaultAutoScale;
-            case P_ID::SIZE:                  break;
-            case P_ID::LOCK_ASPECT_RATIO:     return defaultLockAspectRatio;
-            case P_ID::SIZE_IS_SPATIUM:       return defaultSizeIsSpatium;
-            default:                      return Element::propertyDefault(id);
-            }
-      return QVariant();
+      return imageType == ImageType::RASTER ? rasterDoc->size() : svgDoc->defaultSize();
       }
 
 //---------------------------------------------------------
@@ -261,8 +130,8 @@ void Image::draw(QPainter* painter) const
                         s = _size * spatium();
                   else
                         s = _size * DPMM;
-                  if (score()->printing()) {
-                        // use original image size for printing
+                  if (score()->printing() && !MScore::svgPrinting) {
+                        // use original image size for printing, but not for svg for reasonable file size.
                         painter->scale(s.width() / rasterDoc->width(), s.height() / rasterDoc->height());
                         painter->drawPixmap(QPointF(0, 0), QPixmap::fromImage(*rasterDoc));
                         }
@@ -480,10 +349,31 @@ bool Image::loadFromData(const QString& ss, const QByteArray& ba)
       }
 
 //---------------------------------------------------------
+//   ImageEditData
+//---------------------------------------------------------
+
+class ImageEditData : public ElementEditData {
+   public:
+      QSizeF size;
+      };
+
+//---------------------------------------------------------
+//   startDrag
+//---------------------------------------------------------
+
+void Image::startDrag(EditData& data)
+      {
+      ImageEditData* ed = new ImageEditData();
+      ed->e    = this;
+      ed->size = _size;
+      data.addData(ed);
+      }
+
+//---------------------------------------------------------
 //   editDrag
 //---------------------------------------------------------
 
-void Image::editDrag(const EditData& ed)
+void Image::editDrag(EditData& ed)
       {
       qreal ratio = _size.width() / _size.height();
       qreal dx = ed.delta.x();
@@ -511,15 +401,43 @@ void Image::editDrag(const EditData& ed)
       }
 
 //---------------------------------------------------------
+//   endEditDrag
+//---------------------------------------------------------
+
+void Image::endEditDrag(EditData& ed)
+      {
+      ImageEditData* ied = static_cast<ImageEditData*>(ed.getData(this));
+      if (_size != ied->size)
+            score()->undoPropertyChanged(this, P_ID::SIZE, ied->size);
+      }
+
+//---------------------------------------------------------
 //   updateGrips
 //---------------------------------------------------------
 
-void Image::updateGrips(Grip* defaultGrip, QVector<QRectF>& grip) const
+void Image::updateGrips(EditData& ed) const
       {
-      *defaultGrip = Grip(1);
       QRectF r(pageBoundingRect());
-      grip[0].translate(QPointF(r.x() + r.width(), r.y() + r.height() * .5));
-      grip[1].translate(QPointF(r.x() + r.width() * .5, r.y() + r.height()));
+      ed.grip[0].translate(QPointF(r.x() + r.width(), r.y() + r.height() * .5));
+      ed.grip[1].translate(QPointF(r.x() + r.width() * .5, r.y() + r.height()));
+      }
+
+//---------------------------------------------------------
+//   pixel2Size
+//---------------------------------------------------------
+
+QSizeF Image::pixel2size(const QSizeF& s) const
+      {
+      return s / (_sizeIsSpatium ? spatium() : DPMM);
+      }
+
+//---------------------------------------------------------
+//   size2pixel
+//---------------------------------------------------------
+
+QSizeF Image::size2pixel(const QSizeF& s) const
+      {
+      return s * (_sizeIsSpatium ? spatium() : DPMM);
       }
 
 //---------------------------------------------------------
@@ -530,38 +448,24 @@ void Image::layout()
       {
       setPos(0.0, 0.0);
       if (imageType == ImageType::SVG && !svgDoc) {
-            if (_storeItem) {
+            if (_storeItem)
                   svgDoc = new QSvgRenderer(_storeItem->buffer());
-                  if (svgDoc->isValid()) {
-                        if (_size.isNull()) {
-                              _size = svgDoc->defaultSize();
-                              if (_sizeIsSpatium)
-                                    _size /= 10.0;    // by convention
-                              }
-                        }
-                  }
             }
       else if (imageType == ImageType::RASTER && !rasterDoc) {
             if (_storeItem) {
                   rasterDoc = new QImage;
                   rasterDoc->loadFromData(_storeItem->buffer());
-                  if (!rasterDoc->isNull()) {
-                        if (_size.isNull()) {
-                              _size = rasterDoc->size() * 0.4;
-                              if (_sizeIsSpatium)
-                                    _size /= spatium();
-                              else
-                                    _size /= DPMM;
-                              }
+                  if (!rasterDoc->isNull())
                         _dirty = true;
-                        }
                   }
             }
+      if (_size.isNull())
+            _size = pixel2size(imageSize());
 
-      qreal f = _sizeIsSpatium ? spatium() : DPMM;
       // if autoscale && inside a box, scale to box relevant size
-      if (autoScale() && parent() && ((parent()->type() == Element::Type::HBOX || parent()->type() == Element::Type::VBOX))) {
+      if (autoScale() && parent() && ((parent()->isHBox() || parent()->isVBox()))) {
             if (_lockAspectRatio) {
+                  qreal f = _sizeIsSpatium ? spatium() : DPMM;
                   QSizeF size(imageSize());
                   qreal ratio = size.width() / size.height();
                   qreal w = parent()->width();
@@ -576,12 +480,98 @@ void Image::layout()
                         }
                   }
             else
-                  _size = parent()->bbox().size() / f;
+                  _size = pixel2size(parent()->bbox().size());
             }
 
       // in any case, adjust position relative to parent
       adjustReadPos();
-      bbox().setRect(0.0, 0.0, _size.width() * f, _size.height() * f);
+      setbbox(QRectF(QPointF(), size2pixel(_size)));
+      }
+
+//---------------------------------------------------------
+//   getProperty
+//---------------------------------------------------------
+
+QVariant Image::getProperty(P_ID propertyId) const
+      {
+      switch(propertyId) {
+            case P_ID::AUTOSCALE:
+                  return autoScale();
+            case P_ID::SIZE:
+                  return size();
+            case P_ID::LOCK_ASPECT_RATIO:
+                  return lockAspectRatio();
+            case P_ID::SIZE_IS_SPATIUM:
+                  return sizeIsSpatium();
+            default:
+                  return Element::getProperty(propertyId);
+            }
+      }
+
+//---------------------------------------------------------
+//   setProperty
+//---------------------------------------------------------
+
+bool Image::setProperty(P_ID propertyId, const QVariant& v)
+      {
+      bool rv = true;
+      score()->addRefresh(canvasBoundingRect());
+      switch(propertyId) {
+            case P_ID::AUTOSCALE:
+                  setAutoScale(v.toBool());
+                  break;
+            case P_ID::SIZE:
+                  setSize(v.toSizeF());
+                  break;
+            case P_ID::LOCK_ASPECT_RATIO:
+                  setLockAspectRatio(v.toBool());
+                  break;
+            case P_ID::SIZE_IS_SPATIUM:
+                  {
+                  QSizeF s = size2pixel(_size);
+                  setSizeIsSpatium(v.toBool());
+                  _size = pixel2size(s);
+                  }
+                  break;
+            default:
+                  rv = Element::setProperty(propertyId, v);
+                  break;
+            }
+      setGenerated(false);
+      _dirty = true;
+      triggerLayout();
+      return rv;
+      }
+
+//---------------------------------------------------------
+//   propertyDefault
+//---------------------------------------------------------
+
+QVariant Image::propertyDefault(P_ID id) const
+      {
+      switch(id) {
+            case P_ID::AUTOSCALE:
+                  return defaultAutoScale;
+            case P_ID::SIZE:
+                  return pixel2size(imageSize());
+            case P_ID::LOCK_ASPECT_RATIO:
+                  return defaultLockAspectRatio;
+            case P_ID::SIZE_IS_SPATIUM:
+                  return defaultSizeIsSpatium;
+            default:
+                  return Element::propertyDefault(id);
+            }
+      return QVariant();
+      }
+
+//---------------------------------------------------------
+//   startEdit
+//---------------------------------------------------------
+
+void Image::startEdit(EditData& ed)
+      {
+      ed.grips   = 2;
+      ed.curGrip = Grip(1);
       }
 
 }

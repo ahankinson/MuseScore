@@ -24,10 +24,10 @@ install(FILES
       DESTINATION ${Mscore_SHARE_NAME}${Mscore_INSTALL_NAME}templates
       )
 install(FILES
-      01-General/00-Blank.mscz
-      01-General/01-Treble_Clef.mscz
-      01-General/02-Bass_Clef.mscz
-      01-General/03-Grand_Staff.mscz
+      01-General/00-Blank.mscx
+      01-General/01-Treble_Clef.mscx
+      01-General/02-Bass_Clef.mscx
+      01-General/03-Grand_Staff.mscx
       DESTINATION ${Mscore_SHARE_NAME}${Mscore_INSTALL_NAME}templates/01-General
       )
 
@@ -72,16 +72,19 @@ install(FILES
 
 install(FILES
       06-Popular/01-Rock_Band.mscz
+      06-Popular/02-Bluegrass_Band.mscz
       DESTINATION ${Mscore_SHARE_NAME}${Mscore_INSTALL_NAME}templates/06-Popular
       )
 
 install(FILES
       07-Band_and_Percussion/01-Concert_Band.mscz
-      07-Band_and_Percussion/02-Brass_Band.mscz
-      07-Band_and_Percussion/03-Marching_Band.mscz
-      07-Band_and_Percussion/04-Battery_Percussion.mscz
-      07-Band_and_Percussion/05-Small_Pit_Percussion.mscz
-      07-Band_and_Percussion/06-Large_Pit_Percussion.mscz
+      07-Band_and_Percussion/02-Small_Concert_Band.mscz
+      07-Band_and_Percussion/03-Brass_Band.mscz
+      07-Band_and_Percussion/04-Marching_Band.mscz
+      07-Band_and_Percussion/05-Small_Marching_Band.mscz
+      07-Band_and_Percussion/06-Battery_Percussion.mscz
+      07-Band_and_Percussion/07-Large_Pit_Percussion.mscz
+      07-Band_and_Percussion/08-Small_Pit_Percussion.mscz
       DESTINATION ${Mscore_SHARE_NAME}${Mscore_INSTALL_NAME}templates/07-Band_and_Percussion
       )
 

@@ -31,6 +31,7 @@
 #include "stemslash.h"
 #include "groups.h"
 #include "xml.h"
+#include "spanner.h"
 
 namespace Ms {
 
@@ -62,10 +63,10 @@ Beam::Beam(Score* s)
       _grow1           = 1.0;
       _grow2           = 1.0;
       editFragment     = -1;
-      _isGrace          = false;
-      _cross            = false;
+      _isGrace         = false;
+      _cross           = false;
       _noSlope         = score()->styleB(StyleIdx::beamNoSlope);
-      noSlopeStyle     = PropertyStyle::STYLED;
+      noSlopeStyle     = PropertyFlags::STYLED;
       }
 
 //---------------------------------------------------------
@@ -175,7 +176,7 @@ void Beam::addChordRest(ChordRest* a)
                   for (int i = 0; i < _elements.size(); ++i) {
                         Segment* s = _elements[i]->segment();
                         if ((s->tick() > a->segment()->tick())
-                           || ((s->tick() == a->segment()->tick()) && (a->segment()->next(Segment::Type::ChordRest) == s))
+                           || ((s->tick() == a->segment()->tick()) && (a->segment()->next(SegmentType::ChordRest) == s))
                            )  {
                               _elements.insert(i, a);
                               return;
@@ -266,7 +267,7 @@ bool Beam::twoBeamedNotes()
       if ((dist1 == -dist2) || (-dist1 == dist2)) {
             _up = false;
             Segment* s = c1->segment();
-            s = s->prev1(Segment::Type::ChordRest);
+            s = s->prev1(SegmentType::ChordRest);
             if (s) {
                   Element* e = s->element(c1->track());
                   if (e && e->isChord()) {
@@ -587,7 +588,7 @@ bool Beam::slopeZero(const std::vector<ChordRest*>& cl)
             return true;
 
 //      for(const ChordRest* cr : cl) {
-//            if (cr->type() != Element::Type::CHORD)
+//            if (cr->type() != ElementType::CHORD)
 //                  return true;
 //            }
       int l1 = cl.front()->line();
@@ -622,7 +623,7 @@ bool Beam::slopeZero(const std::vector<ChordRest*>& cl)
             int l4 = cl[1]->line(_up);
             for (unsigned  i = 1; i < cl.size()-1; ++i) {
                   // Don't consider interior rests
-                  if (cl[i]->type() != Element::Type::CHORD)
+                  if (cl[i]->type() != ElementType::CHORD)
                         continue;
                   int l3 = cl[i]->line(_up);
                   if (l3 != l4)
@@ -636,7 +637,7 @@ bool Beam::slopeZero(const std::vector<ChordRest*>& cl)
                               return true;
                         }
                   }
-            if (sameLine && (l1 == l4 || le == l4) && cl[1]->type() == Element::Type::CHORD) {
+            if (sameLine && (l1 == l4 || le == l4) && cl[1]->type() == ElementType::CHORD) {
                   if (_up) {
                         if (l1 == l4 && l1 < le)
                               return true;
@@ -1555,7 +1556,7 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                   //
                   bool relayoutGrace = false;
                   for (int i = 0; i < n; ++i) {
-                        Chord* c = static_cast<Chord*>(crl.at(i));
+                        Chord* c = toChord(crl.at(i));
                         if (c->isRest())
                               continue;
                         QPointF p = c->upNote()->pagePos();
@@ -1606,7 +1607,7 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                   //
                   for (ChordRest* cr : crl) {
                         Chord* c = static_cast<Chord*>(cr);
-                        if (c->type() != Element::Type::CHORD)
+                        if (c->type() != ElementType::CHORD)
                               continue;
                         qreal y  = c->upNote()->pagePos().y();
                         bool nup = beamY < y;
@@ -1627,7 +1628,7 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
 
                   for (ChordRest* cr : crl) {
                         Chord* c = static_cast<Chord*>(cr);
-                        if (c->type() != Element::Type::CHORD)
+                        if (c->type() != ElementType::CHORD)
                               continue;
                         bool _up = c->up();
                         qreal y = (_up ? c->upNote() : c->downNote())->pagePos().y();
@@ -1672,7 +1673,7 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                   ChordRest* cr1 = crl[i];
                   int l = cr1->durationType().hooks() - 1;
 
-                  if ((cr1->type() == Element::Type::REST && i) || l < beamLevel) {
+                  if ((cr1->type() == ElementType::REST && i) || l < beamLevel) {
                         ++i;
                         continue;
                         }
@@ -1692,7 +1693,7 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                         b64 = (beamLevel >= 2) && (bm == Mode::BEGIN64);
 
                         if ((l >= beamLevel && (b32 || b64)) || (l < beamLevel)) {
-                              if (i > 1 && crl[i-1]->type() == Element::Type::REST) {
+                              if (i > 1 && crl[i-1]->type() == ElementType::REST) {
                                     --i;
                                     }
                               break;
@@ -1770,7 +1771,7 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                         }
                   else {
                         // create broken segment
-                        if (cr1->type() == Element::Type::REST)
+                        if (cr1->type() == ElementType::REST)
                               continue;
 
                         int n = crl.size();
@@ -2039,7 +2040,7 @@ void Beam::read(XmlReader& e)
                   setDistribute(e.readInt());
             else if (tag == "noSlope") {
                   setNoSlope(e.readInt());
-                  noSlopeStyle = PropertyStyle::UNSTYLED;
+                  noSlopeStyle = PropertyFlags::UNSTYLED;
                   }
             else if (tag == "growLeft")
                   setGrowLeft(e.readDouble());
@@ -2091,7 +2092,7 @@ void Beam::read(XmlReader& e)
 //   editDrag
 //---------------------------------------------------------
 
-void Beam::editDrag(const EditData& ed)
+void Beam::editDrag(EditData& ed)
       {
       int idx  = (_direction == Direction::AUTO || _direction == Direction::DOWN) ? 0 : 1;
       qreal dy = ed.delta.y();
@@ -2113,7 +2114,7 @@ void Beam::editDrag(const EditData& ed)
                   cr->tuplet()->layout();
             // TODO: would be nice to redraw stems while dragging beam,
             // the following is not sufficient - a full (?) relayout would still be needed
-            //if (cr->type() == Element::Type::CHORD)
+            //if (cr->type() == ElementType::CHORD)
             //      static_cast<Chord*>(cr)->layoutStem();
             }
       }
@@ -2122,9 +2123,8 @@ void Beam::editDrag(const EditData& ed)
 //   updateGrips
 //---------------------------------------------------------
 
-void Beam::updateGrips(Grip* defaultGrip, QVector<QRectF>& grip) const
+void Beam::updateGrips(EditData& ed) const
       {
-      *defaultGrip = Grip::END;
       int idx = (_direction == Direction::AUTO || _direction == Direction::DOWN) ? 0 : 1;
       BeamFragment* f = fragments[editFragment];
 
@@ -2145,8 +2145,8 @@ void Beam::updateGrips(Grip* defaultGrip, QVector<QRectF>& grip) const
             }
 
       int y = pagePos().y();
-      grip[0].translate(QPointF(c1->stemPosX() + c1->pageX(), f->py1[idx] + y));
-      grip[1].translate(QPointF(c2->stemPosX() + c2->pageX(), f->py2[idx] + y));
+      ed.grip[0].translate(QPointF(c1->stemPosX() + c1->pageX(), f->py1[idx] + y));
+      ed.grip[1].translate(QPointF(c2->stemPosX() + c2->pageX(), f->py2[idx] + y));
       }
 
 //---------------------------------------------------------
@@ -2178,8 +2178,8 @@ void Beam::reset()
             }
       if (beamDirection() != Direction::AUTO)
             undoChangeProperty(P_ID::STEM_DIRECTION, Direction(Direction::AUTO));
-      if (noSlopeStyle == PropertyStyle::UNSTYLED)
-            undoChangeProperty(P_ID::BEAM_NO_SLOPE, propertyDefault(P_ID::BEAM_NO_SLOPE), PropertyStyle::STYLED);
+      if (noSlopeStyle == PropertyFlags::UNSTYLED)
+            resetProperty(P_ID::BEAM_NO_SLOPE);       // TODO: make undoable
 
       setGenerated(true);
       }
@@ -2188,13 +2188,16 @@ void Beam::reset()
 //   startEdit
 //---------------------------------------------------------
 
-void Beam::startEdit(MuseScoreView*, const QPointF& p)
+void Beam::startEdit(EditData& ed)
       {
+      ed.grips   = 2;
+      ed.curGrip = Grip::END;
+
       undoPushProperty(P_ID::BEAM_POS);
       undoPushProperty(P_ID::USER_MODIFIED);
       undoPushProperty(P_ID::GENERATED);
 
-      QPointF pt(p - pagePos());
+      QPointF pt(ed.startMove - pagePos());
       qreal ydiff = 100000000.0;
       int idx = (_direction == Direction::AUTO || _direction == Direction::DOWN) ? 0 : 1;
       int i = 0;
@@ -2213,9 +2216,9 @@ void Beam::startEdit(MuseScoreView*, const QPointF& p)
 //   endEdit
 //---------------------------------------------------------
 
-void Beam::endEdit()
+void Beam::endEdit(EditData& ed)
       {
-      Element::endEdit();
+      Element::endEdit(ed);
       editFragment = -1;
       triggerLayout();
       }
@@ -2236,9 +2239,9 @@ void Beam::triggerLayout() const
 //   acceptDrop
 //---------------------------------------------------------
 
-bool Beam::acceptDrop(const DropData& data) const
+bool Beam::acceptDrop(EditData& data) const
       {
-      return (data.element->type() == Element::Type::ICON)
+      return (data.element->type() == ElementType::ICON)
          && ((static_cast<Icon*>(data.element)->iconType() == IconType::FBEAM1)
          || (static_cast<Icon*>(data.element)->iconType() == IconType::FBEAM2));
       }
@@ -2247,10 +2250,10 @@ bool Beam::acceptDrop(const DropData& data) const
 //   drop
 //---------------------------------------------------------
 
-Element* Beam::drop(const DropData& data)
+Element* Beam::drop(EditData& data)
       {
       Icon* e = static_cast<Icon*>(data.element);
-      if (e->type() != Element::Type::ICON)
+      if (e->type() != ElementType::ICON)
             return 0;
       qreal g1;
       qreal g2;
@@ -2371,7 +2374,7 @@ bool Beam::setProperty(P_ID propertyId, const QVariant& v)
                   break;
             case P_ID::BEAM_NO_SLOPE:
                   setNoSlope(v.toBool());
-                  noSlopeStyle = PropertyStyle::UNSTYLED;
+                  noSlopeStyle = PropertyFlags::UNSTYLED;
                   break;
             default:
                   if (!Element::setProperty(propertyId, v))
@@ -2405,17 +2408,17 @@ QVariant Beam::propertyDefault(P_ID id) const
       }
 
 //---------------------------------------------------------
-//   propertyStyle
+//   propertyFlags
 //---------------------------------------------------------
 
-PropertyStyle Beam::propertyStyle(P_ID id) const
+PropertyFlags Beam::propertyFlags(P_ID id) const
       {
       switch (id) {
             case P_ID::BEAM_NO_SLOPE:
                   return noSlopeStyle;
 
             default:
-                  return Element::propertyStyle(id);
+                  return Element::propertyFlags(id);
             }
       }
 
@@ -2428,7 +2431,7 @@ void Beam::resetProperty(P_ID id)
       switch (id) {
             case P_ID::BEAM_NO_SLOPE:
                   setNoSlope(score()->styleB(StyleIdx::beamNoSlope));
-                  noSlopeStyle = PropertyStyle::STYLED;
+                  noSlopeStyle = PropertyFlags::STYLED;
                   break;
 
             default:
@@ -2443,7 +2446,7 @@ void Beam::resetProperty(P_ID id)
 
 void Beam::styleChanged()
       {
-      if (noSlopeStyle == PropertyStyle::STYLED)
+      if (noSlopeStyle == PropertyFlags::STYLED)
             setNoSlope(score()->styleB(StyleIdx::beamNoSlope));
       }
 
@@ -2473,5 +2476,22 @@ StyleIdx Beam::getPropertyStyle(P_ID id) const
       return StyleIdx::NOSTYLE;
       }
 
+//---------------------------------------------------------
+//   tick
+//---------------------------------------------------------
+
+int Beam::tick() const
+      {
+      return _elements.empty() ? 0 : _elements.front()->tick();
+      }
+
+//---------------------------------------------------------
+//   rtick
+//---------------------------------------------------------
+
+int Beam::rtick() const
+      {
+      return _elements.empty() ? 0 : _elements.front()->rtick();
+      }
 }
 

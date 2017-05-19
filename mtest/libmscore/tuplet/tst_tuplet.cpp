@@ -115,7 +115,7 @@ void TestTuplet::tuplet(const char* p1, const char* p2)
       QVERIFY(m2 != 0);
       QVERIFY(m1 != m2);
 
-      Segment* s = m2->first(Segment::Type::ChordRest);
+      Segment* s = m2->first(SegmentType::ChordRest);
       QVERIFY(s != 0);
       Ms::Chord* c = static_cast<Ms::Chord*>(s->element(0));
       QVERIFY(c != 0);
@@ -137,7 +137,7 @@ void TestTuplet::split(const char* p1, const char* p2)
       TimeSig* ts = new TimeSig(score);
       ts->setSig(Fraction(3, 4), TimeSigType::NORMAL);
 
-      DropData dd;
+      EditData dd;
       dd.element = ts;
       dd.modifiers = 0;
       dd.dragOffset = QPointF();

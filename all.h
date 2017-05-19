@@ -21,6 +21,14 @@
 #ifndef __ALLQT_H__
 #define __ALLQT_H__
 
+#ifndef NDEBUG
+#define ABORTN(n) { static int k = 0; ++k; if (k == n) abort(); }
+#else
+#define ABORTN(a)
+#endif
+
+#if defined __cplusplus
+
 #include <stdio.h>
 #include <limits.h>
 #include <map>
@@ -29,12 +37,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <math.h>
+#include <array>
+#include <functional>
 
 #include <QtGui>
 #include <QLoggingCategory>
 #include <QModelIndex>
 
-#ifndef Q_OS_WIN
+#ifdef QT_WEBENGINE_LIB
 // no precompiled QtWebEngine in Qt 5.6 windows gcc
 #include <QWebEngineView>
 #endif
@@ -86,14 +96,16 @@
 #include <QToolBar>
 #include <QTreeWidget>
 #include <QFileDialog>
+#ifdef QT_PRINTSUPPORT_LIB
 #include <QPrintDialog>
+#include <QPrinter>
+#endif
 #include <QColorDialog>
 #include <QDockWidget>
 #include <QStackedWidget>
 #include <QStackedLayout>
 #include <QListWidget>
 #include <QMessageBox>
-#include <QPrinter>
 #include <QComboBox>
 #include <QMainWindow>
 #include <QMenu>
@@ -178,6 +190,8 @@
 #undef Q_ASSERT
 #define Q_ASSERT(a)
 #endif
+
+#endif  // __cplusplus
 
 #endif
 

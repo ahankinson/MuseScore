@@ -46,13 +46,12 @@ enum class AccidentalType : char;
 
 static const int MAX_DOTS = 4;
 
-
 //---------------------------------------------------------
 //   @@ NoteHead
 //---------------------------------------------------------
 
 class NoteHead : public Symbol {
-      Q_OBJECT
+      Q_GADGET
 
       Q_ENUMS(Group)
       Q_ENUMS(Type)
@@ -139,7 +138,7 @@ class NoteHead : public Symbol {
       NoteHead(Score* s = 0) : Symbol(s) {}
       NoteHead &operator=(const NoteHead&) = delete;
       virtual NoteHead* clone() const override    { return new NoteHead(*this); }
-      virtual Element::Type type() const override { return Element::Type::NOTEHEAD; }
+      virtual ElementType type() const override { return ElementType::NOTEHEAD; }
 
       Group headGroup() const;
 
@@ -205,12 +204,12 @@ static const int INVALID_LINE = -10000;
 //---------------------------------------------------------------------------------------
 
 class Note : public Element {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(Ms::Accidental*                accidental        READ accidental)
       Q_PROPERTY(int                            accidentalType    READ qmlAccidentalType  WRITE qmlSetAccidentalType)
-      Q_PROPERTY(QQmlListProperty<Ms::NoteDot>  dots              READ qmlDots)
+//      Q_PROPERTY(QQmlListProperty<Ms::NoteDot>  dots              READ qmlDots)
       Q_PROPERTY(int                            dotsCount         READ qmlDotsCount)
-      Q_PROPERTY(QQmlListProperty<Ms::Element>  elements          READ qmlElements)
+//      Q_PROPERTY(QQmlListProperty<Ms::Element>  elements          READ qmlElements)
       Q_PROPERTY(int                            fret              READ fret               WRITE undoSetFret)
       Q_PROPERTY(bool                           ghost             READ ghost              WRITE undoSetGhost)
       Q_PROPERTY(Ms::NoteHead::Group            headGroup         READ headGroup          WRITE undoSetHeadGroup)
@@ -227,8 +226,8 @@ class Note : public Element {
       Q_PROPERTY(Ms::Tie*                       tieBack           READ tieBack)
       Q_PROPERTY(Ms::Tie*                       tieFor            READ tieFor)
       Q_PROPERTY(int                            tpc               READ tpc)
-      Q_PROPERTY(int                            tpc1              READ tpc1               WRITE undoSetTpc1)
-      Q_PROPERTY(int                            tpc2              READ tpc2               WRITE undoSetTpc2)
+//      Q_PROPERTY(int                            tpc1              READ tpc1               WRITE undoSetTpc1)
+//      Q_PROPERTY(int                            tpc2              READ tpc2               WRITE undoSetTpc2)
       Q_PROPERTY(qreal                          tuning            READ tuning             WRITE undoSetTuning)
 //TODO-WS      Q_PROPERTY(Ms::MScore::Direction          userDotPosition   READ userDotPosition    WRITE undoSetUserDotPosition)
       Q_PROPERTY(Ms::MScore::DirectionH         userMirror        READ userMirror         WRITE undoSetUserMirror)
@@ -280,7 +279,6 @@ class Note : public Element {
 
       int _veloOffset     { 0 };    ///< velocity user offset in percent, or absolute velocity for this note
       int _fixedLine      { 0 };    // fixed line number if _fixed == true
-      int _lineOffset     { 0 };    ///< Used during mouse dragging.
       qreal _tuning       { 0.0 };  ///< pitch offset in cent, playable only by internal synthesizer
 
       Accidental* _accidental { 0 };
@@ -297,9 +295,10 @@ class Note : public Element {
       SymId _cachedNoteheadSym; // use in draw to avoid recomputing at every update
       SymId _cachedSymNull; // additional symbol for some transparent notehead
 
-      virtual QRectF drag(EditData*) override;
-      void endDrag();
-      void endEdit();
+      virtual void startDrag(EditData&) override;
+      virtual QRectF drag(EditData&) override;
+      virtual void endDrag(EditData&) override;
+      void endEdit(EditData&);
       void addSpanner(Spanner*);
       void removeSpanner(Spanner*);
       int concertPitchIdx() const;
@@ -314,7 +313,7 @@ class Note : public Element {
 
       Note& operator=(const Note&) = delete;
       virtual Note* clone() const override  { return new Note(*this, false); }
-      Element::Type type() const override   { return Element::Type::NOTE; }
+      ElementType type() const override   { return ElementType::NOTE; }
 
       virtual qreal mag() const override;
 
@@ -366,8 +365,8 @@ class Note : public Element {
       void setTpcFromPitch();
       int tpc1default(int pitch) const;
       int tpc2default(int pitch) const;
-      void undoSetTpc1(int tpc)      { undoChangeProperty(P_ID::TPC1, tpc); }
-      void undoSetTpc2(int tpc)      { undoChangeProperty(P_ID::TPC2, tpc); }
+//      void undoSetTpc1(int tpc)      { undoChangeProperty(P_ID::TPC1, tpc); }
+//      void undoSetTpc2(int tpc)      { undoChangeProperty(P_ID::TPC2, tpc); }
       int transposeTpc(int tpc);
 
       Accidental* accidental() const      { return _accidental; }
@@ -416,8 +415,8 @@ class Note : public Element {
       virtual bool readProperties(XmlReader&) override;
       virtual void write(XmlWriter&) const override;
 
-      bool acceptDrop(const DropData&) const override;
-      Element* drop(const DropData&);
+      bool acceptDrop(EditData&) const override;
+      Element* drop(EditData&);
 
       bool hidden() const                       { return _hidden; }
       void setHidden(bool val)                  { _hidden = val;  }
@@ -427,9 +426,9 @@ class Note : public Element {
       NoteType noteType() const;
       QString  noteTypeUserName() const;
 
-      ElementList el()                            { return _el; }
-      const ElementList el() const                { return _el; }
-      QQmlListProperty<Ms::Element> qmlElements() { return QmlListAccess<Ms::Element>(this, _el); }
+      ElementList& el()                           { return _el; }
+      const ElementList& el() const               { return _el; }
+//      QQmlListProperty<Ms::Element> qmlElements() { return QmlListAccess<Ms::Element>(this, _el); }
 
       int subchannel() const                    { return _subchannel; }
       void setSubchannel(int val)               { _subchannel = val;  }
@@ -452,11 +451,11 @@ class Note : public Element {
       void setOffTimeOffset(int v);
 
       int customizeVelocity(int velo) const;
-      NoteDot* dot(int n)                       { return _dots[n];          }
+      NoteDot* dot(int n)                         { return _dots[n];          }
       const QVector<NoteDot*>& dots() const       { return _dots;             }
       QVector<NoteDot*>& dots()                   { return _dots;             }
 
-      QQmlListProperty<Ms::NoteDot> qmlDots() { return QmlListAccess<Ms::NoteDot>(this, _dots);  }
+//      QQmlListProperty<Ms::NoteDot> qmlDots() { return QmlListAccess<Ms::NoteDot>(this, _dots);  }
 
       int qmlDotsCount();
       void updateAccidental(AccidentalState*);
@@ -502,7 +501,7 @@ class Note : public Element {
       virtual void setScore(Score* s) override;
       void setDotY(Direction);
 
-      void addBracket();
+      void addParentheses();
 
       static SymId noteHead(int direction, NoteHead::Group, NoteHead::Type, int tpc, Key key, NoteHeadScheme scheme);
       static SymId noteHead(int direction, NoteHead::Group, NoteHead::Type);

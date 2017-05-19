@@ -59,13 +59,13 @@ enum class PlayEventType : char    {
 //---------------------------------------------------------
 
 class Chord : public ChordRest {
-      Q_OBJECT
+      Q_GADGET
 
       Q_PROPERTY(Ms::Beam* beam                         READ beam)
-      Q_PROPERTY(QQmlListProperty<Ms::Chord> graceNotes READ qmlGraceNotes)
+//      Q_PROPERTY(QQmlListProperty<Ms::Chord> graceNotes READ qmlGraceNotes)
       Q_PROPERTY(Ms::Hook* hook                         READ hook)
-      Q_PROPERTY(QQmlListProperty<Ms::Lyrics> lyrics    READ qmlLyrics)
-      Q_PROPERTY(QQmlListProperty<Ms::Note> notes       READ qmlNotes)
+//      Q_PROPERTY(QQmlListProperty<Ms::Lyrics> lyrics    READ qmlLyrics)
+//      Q_PROPERTY(QQmlListProperty<Ms::Note> notes       READ qmlNotes)
       Q_PROPERTY(Ms::Stem* stem                         READ stem)
       Q_PROPERTY(Ms::StemSlash* stemSlash               READ stemSlash)
       Q_PROPERTY(int stemDirection                      READ stemDirection)
@@ -112,14 +112,13 @@ class Chord : public ChordRest {
       virtual void undoUnlink() override;
 
       virtual void setScore(Score* s);
-      virtual Element::Type type() const         { return Element::Type::CHORD; }
+      virtual ElementType type() const         { return ElementType::CHORD; }
       virtual qreal mag() const;
 
       virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
       virtual bool readProperties(XmlReader&) override;
-//      virtual void setSelected(bool f) override;
-      virtual Element* drop(const DropData&) override;
+      virtual Element* drop(EditData&) override;
 
       void setStemDirection(Direction d) { _stemDirection = d; }
       Direction stemDirection() const    { return _stemDirection; }
@@ -131,10 +130,6 @@ class Chord : public ChordRest {
       virtual void layoutStem1() override;
       void layoutStem();
       void layoutArpeggio2();
-
-      QQmlListProperty<Ms::Note> qmlNotes()           { return QmlListAccess<Ms::Note>(this, _notes); }
-      QQmlListProperty<Ms::Lyrics> qmlLyrics()        { return QmlListAccess<Ms::Lyrics>(this, _lyrics); }
-      QQmlListProperty<Ms::Chord> qmlGraceNotes()     { return QmlListAccess<Ms::Chord>(this, _graceNotes); }
 
       std::vector<Note*>& notes()                 { return _notes; }
       const std::vector<Note*>& notes() const     { return _notes; }

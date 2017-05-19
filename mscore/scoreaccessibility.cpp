@@ -6,6 +6,7 @@
 #include "libmscore/timesig.h"
 #include "libmscore/score.h"
 #include "libmscore/measure.h"
+#include "libmscore/spanner.h"
 #include "inspector/inspector.h"
 #include "selectionwindow.h"
 #include "playpanel.h"
@@ -16,31 +17,47 @@
 
 namespace Ms{
 
-AccessibleScoreView::AccessibleScoreView(ScoreView* scView) : QAccessibleWidget(scView){
+//---------------------------------------------------------
+//   AccessibleScoreView
+//---------------------------------------------------------
+
+AccessibleScoreView::AccessibleScoreView(ScoreView* scView)
+   : QAccessibleWidget(scView)
+      {
       s = scView;
       }
 
-int AccessibleScoreView::childCount() const{
+int AccessibleScoreView::childCount() const
+      {
       return 0;
       }
 
-QAccessibleInterface* AccessibleScoreView::child(int /*index*/) const{
+QAccessibleInterface* AccessibleScoreView::child(int /*index*/) const
+      {
       return 0;
       }
-QAccessibleInterface* AccessibleScoreView::parent() const{
+
+QAccessibleInterface* AccessibleScoreView::parent() const
+      {
       return QAccessibleWidget::parent();
       }
-QRect AccessibleScoreView::rect() const{
+
+QRect AccessibleScoreView::rect() const
+      {
       return s->rect();
       }
-QAccessible::Role AccessibleScoreView::role() const{
+
+QAccessible::Role AccessibleScoreView::role() const
+      {
       return QAccessible::NoRole;
       }
 
-QString AccessibleScoreView::text(QAccessible::Text t) const {
+QString AccessibleScoreView::text(QAccessible::Text t) const
+      {
       switch (t) {
             case QAccessible::Name:
-                  return tr("Score %1").arg(s->score()->name());
+//TODO                  return tr("Score %1").arg(s->score()->name());
+                  return "Score ???";
             case QAccessible::Value:
                   return s->score()->accessibleInfo();
             default:
@@ -114,12 +131,12 @@ void ScoreAccessibility::currentInfoChanged()
                   barsAndBeats += tr("Start Measure: %1; Start Beat: %2").arg(QString::number(bar_beat.first)).arg(QString::number(bar_beat.second));
                   Segment* seg = s->endSegment();
                   if(!seg)
-                        seg = score->lastSegment()->prev1MM(Segment::Type::ChordRest);
+                        seg = score->lastSegment()->prev1MM(SegmentType::ChordRest);
 
-                  if (seg->tick() != score->lastSegment()->prev1MM(Segment::Type::ChordRest)->tick() &&
-                      s->type() != Element::Type::SLUR                                               &&
-                      s->type() != Element::Type::TIE                                                )
-                        seg = seg->prev1MM(Segment::Type::ChordRest);
+                  if (seg->tick() != score->lastSegment()->prev1MM(SegmentType::ChordRest)->tick() &&
+                      s->type() != ElementType::SLUR                                               &&
+                      s->type() != ElementType::TIE                                                )
+                        seg = seg->prev1MM(SegmentType::ChordRest);
 
                   bar_beat = barbeat(seg);
                   barsAndBeats += "; " + tr("End Measure: %1; End Beat: %2").arg(QString::number(bar_beat.first)).arg(QString::number(bar_beat.second));
@@ -216,17 +233,17 @@ std::pair<int, float> ScoreAccessibility::barbeat(Element *e)
       int ticks = 0;
       TimeSigMap* tsm = e->score()->sigmap();
       Element* p = e;
-      while(p && p->type() != Element::Type::SEGMENT && p->type() != Element::Type::MEASURE)
+      while(p && p->type() != ElementType::SEGMENT && p->type() != ElementType::MEASURE)
             p = p->parent();
 
       if (!p) {
             return std::pair<int, float>(0, 0);
             }
-      else if (p->type() == Element::Type::SEGMENT) {
+      else if (p->type() == ElementType::SEGMENT) {
             Segment* seg = static_cast<Segment*>(p);
             tsm->tickValues(seg->tick(), &bar, &beat, &ticks);
             }
-      else if (p->type() == Element::Type::MEASURE) {
+      else if (p->type() == ElementType::MEASURE) {
             Measure* m = static_cast<Measure*>(p);
             bar = m->no();
             beat = -1;

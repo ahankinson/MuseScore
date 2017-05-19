@@ -129,12 +129,14 @@
             <subtype>0</subtype>
             <off2 x="-3.87097" y="0"/>
             </Segment>
-          <beginText>
-            <text>8va</text>
-            </beginText>
-          <continueText>
-            <text>(8va)</text>
-            </continueText>
+          <Segment>
+            <subtype>0</subtype>
+            <off2 x="0" y="0"/>
+            </Segment>
+          <Segment>
+            <subtype>0</subtype>
+            <off2 x="0" y="0"/>
+            </Segment>
           </Ottava>
         <Chord>
           <durationType>quarter</durationType>

@@ -140,7 +140,7 @@ void KeySig::layout()
 
 
       // Don't repeat naturals if shown in courtesy
-      if (prevMeasure && prevMeasure->findSegment(Segment::Type::KeySigAnnounce, segment()->tick())
+      if (prevMeasure && prevMeasure->findSegment(SegmentType::KeySigAnnounce, segment()->tick())
           && !segment()->isKeySigAnnounceType())
             naturalsOn = false;
       if (track() == -1)
@@ -267,19 +267,19 @@ void KeySig::draw(QPainter* p) const
 //   acceptDrop
 //---------------------------------------------------------
 
-bool KeySig::acceptDrop(const DropData& data) const
+bool KeySig::acceptDrop(EditData& data) const
       {
-      return data.element->type() == Element::Type::KEYSIG;
+      return data.element->type() == ElementType::KEYSIG;
       }
 
 //---------------------------------------------------------
 //   drop
 //---------------------------------------------------------
 
-Element* KeySig::drop(const DropData& data)
+Element* KeySig::drop(EditData& data)
       {
       KeySig* ks = static_cast<KeySig*>(data.element);
-      if (ks->type() != Element::Type::KEYSIG) {
+      if (ks->type() != ElementType::KEYSIG) {
             delete ks;
             return 0;
             }
@@ -574,7 +574,7 @@ QString KeySig::accessibleInfo() const
       if (isAtonal())
             return QString("%1: %2").arg(Element::accessibleInfo()).arg(qApp->translate("MuseScore", keyNames[15]));
       else if (isCustom())
-            return tr("%1: Custom").arg(Element::accessibleInfo());
+            return QObject::tr("%1: Custom").arg(Element::accessibleInfo());
 
       if (key() == Key::C)
             return QString("%1: %2").arg(Element::accessibleInfo()).arg(qApp->translate("MuseScore", keyNames[14]));

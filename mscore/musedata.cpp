@@ -76,7 +76,7 @@ void MuseData::musicalAttribute(QString s, Part* part)
                         Staff* staff = part->staff(0);
                         ts->setTrack(staff->idx() * VOICES);
                         Measure* measure = score->tick2measure(curTick);
-                        Segment* s = measure->getSegment(Segment::Type::TimeSig, curTick);
+                        Segment* s = measure->getSegment(SegmentType::TimeSig, curTick);
                         s->add(ts);
                         }
                   }
@@ -277,7 +277,7 @@ void MuseData::readNote(Part* part, const QString& s)
       d.setVal(ticks);
       chord->setDurationType(d);
 
-      Segment* segment = measure->getSegment(Segment::Type::ChordRest, tick);
+      Segment* segment = measure->getSegment(SegmentType::ChordRest, tick);
 
       voice = 0;
       for (; voice < VOICES; ++voice) {
@@ -392,7 +392,7 @@ void MuseData::readNote(Part* part, const QString& s)
             Dynamic* dyn = new Dynamic(score);
             dyn->setDynamicType(dynamics);
             dyn->setTrack(gstaff * VOICES);
-            Segment* s = measure->getSegment(Segment::Type::ChordRest, tick);
+            Segment* s = measure->getSegment(SegmentType::ChordRest, tick);
             s->add(dyn);
             }
 
@@ -466,7 +466,7 @@ void MuseData::readRest(Part* part, const QString& s)
       rest->setDuration(d.fraction());
       chordRest  = rest;
       rest->setTrack(gstaff * VOICES);
-      Segment* segment = measure->getSegment(Segment::Type::ChordRest, tick);
+      Segment* segment = measure->getSegment(SegmentType::ChordRest, tick);
 
       voice = 0;
       for (; voice < VOICES; ++voice) {
@@ -505,7 +505,7 @@ void MuseData::readBackup(const QString& s)
 Measure* MuseData::createMeasure()
       {
       for (MeasureBase* mb = score->first(); mb; mb = mb->next()) {
-            if (mb->type() != Element::Type::MEASURE)
+            if (mb->type() != ElementType::MEASURE)
                   continue;
             Measure* m = (Measure*)mb;
             int st = m->tick();
@@ -690,7 +690,7 @@ bool MuseData::read(const QString& name)
                         mpart->insertStaff(staff, i);
                         score->staves().push_back(staff);
                         if ((staves == 2) && (i == 0)) {
-                              staff->setBracket(0, BracketType::BRACE);
+                              staff->setBracketType(0, BracketType::BRACE);
                               staff->setBracketSpan(0, 2);
                               }
                         }

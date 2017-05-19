@@ -41,7 +41,7 @@ namespace Ms {
 class LyricsLine;
 
 class Lyrics : public Text {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(Ms::Lyrics::Syllabic syllabic READ syllabic WRITE setSyllabic)
       Q_ENUMS(Syllabic)
 
@@ -72,7 +72,7 @@ class Lyrics : public Text {
                               ///< (melisma)
       Syllabic _syllabic;
       LyricsLine* _separator;
-      PropertyStyle placementStyle;
+      PropertyFlags placementStyle;
 
    protected:
       int _no;                ///< row index
@@ -89,10 +89,10 @@ class Lyrics : public Text {
       Lyrics(const Lyrics&);
       ~Lyrics();
       virtual Lyrics* clone() const override          { return new Lyrics(*this); }
-      virtual Element::Type type() const override     { return Element::Type::LYRICS; }
+      virtual ElementType type() const override     { return ElementType::LYRICS; }
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
 
       Segment* segment() const                        { return (Segment*)parent()->parent(); }
       Measure* measure() const                        { return (Measure*)parent()->parent()->parent(); }
@@ -104,14 +104,14 @@ class Lyrics : public Text {
       virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
       virtual int subtype() const override            { return _no; }
-      virtual QString subtypeName() const override    { return tr("Verse %1").arg(_no + 1); }
+      virtual QString subtypeName() const override    { return QObject::tr("Verse %1").arg(_no + 1); }
       void setNo(int n);
       int no() const                                  { return _no; }
       void setSyllabic(Syllabic s)                    { _syllabic = s; }
       Syllabic syllabic() const                       { return _syllabic; }
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
-      virtual void endEdit() override;
+      virtual void endEdit(EditData&) override;
 
       int ticks() const                               { return _ticks;    }
       void setTicks(int tick)                         { _ticks = tick;    }
@@ -128,12 +128,12 @@ class Lyrics : public Text {
 #endif
 
       using Text::paste;
-      void paste(MuseScoreView * scoreview);
+      virtual void paste(EditData&) override;
 
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID id) const override;
-      virtual PropertyStyle propertyStyle(P_ID) const override;
+      virtual PropertyFlags propertyFlags(P_ID) const override;
       virtual StyleIdx getPropertyStyle(P_ID) const override;
       virtual void reset() override;
       virtual void styleChanged() override;
@@ -145,7 +145,7 @@ class Lyrics : public Text {
 //---------------------------------------------------------
 
 class LyricsLine : public SLine {
-      Q_OBJECT
+      Q_GADGET
 
    protected:
       Lyrics* _nextLyrics;
@@ -155,7 +155,7 @@ class LyricsLine : public SLine {
       LyricsLine(const LyricsLine&);
 
       virtual LyricsLine* clone() const override      { return new LyricsLine(*this); }
-      virtual Element::Type type() const override     { return Element::Type::LYRICSLINE; }
+      virtual ElementType type() const override     { return ElementType::LYRICSLINE; }
       virtual void layout() override;
       virtual LineSegment* createLineSegment() override;
       virtual void removeUnmanaged() override;
@@ -170,7 +170,7 @@ class LyricsLine : public SLine {
 //---------------------------------------------------------
 
 class LyricsLineSegment : public LineSegment {
-      Q_OBJECT
+      Q_GADGET
 
    protected:
       int   _numOfDashes;
@@ -180,7 +180,7 @@ public:
       LyricsLineSegment(Score* s);
 
       virtual LyricsLineSegment* clone() const override     { return new LyricsLineSegment(*this); }
-      virtual Element::Type type() const override           { return Element::Type::LYRICSLINE_SEGMENT; }
+      virtual ElementType type() const override           { return ElementType::LYRICSLINE_SEGMENT; }
       virtual void draw(QPainter*) const override;
       virtual void layout() override;
       LyricsLine* lyricsLine() const                        { return (LyricsLine*)spanner(); }

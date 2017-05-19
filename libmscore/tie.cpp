@@ -27,13 +27,22 @@ Note* Tie::editEndNote;
 //    return grip rectangles in page coordinates
 //---------------------------------------------------------
 
-void TieSegment::updateGrips(Grip* defaultGrip, QVector<QRectF>& r) const
+void TieSegment::updateGrips(EditData& ed) const
       {
-      *defaultGrip = Grip::END;
       QPointF p(pagePos());
       p -= QPointF(0.0, system()->staff(staffIdx())->y());   // ??
       for (int i = 0; i < int(Grip::GRIPS); ++i)
-            r[i].translate(_ups[i].p + _ups[i].off + p);
+            ed.grip[i].translate(_ups[i].p + _ups[i].off + p);
+      }
+
+//---------------------------------------------------------
+//   startEdit
+//---------------------------------------------------------
+
+void TieSegment::startEdit(EditData& ed)
+      {
+      ed.grips   = int(Grip::GRIPS);
+      ed.curGrip = Grip::END;
       }
 
 //---------------------------------------------------------
@@ -64,6 +73,13 @@ void TieSegment::draw(QPainter* painter) const
                   pen.setWidthF(score()->styleP(StyleIdx::SlurDottedWidth));
                   pen.setStyle(Qt::DashLine);
                   break;
+            case 3:
+                  painter->setBrush(Qt::NoBrush);
+                  pen.setWidthF(score()->styleP(StyleIdx::SlurDottedWidth));
+                  pen.setStyle(Qt::CustomDashLine);
+                  QVector<qreal> dashes { 5.0, 5.0 };
+                  pen.setDashPattern(dashes);
+                  break;
             }
       painter->setPen(pen);
       painter->drawPath(path);
@@ -74,17 +90,17 @@ void TieSegment::draw(QPainter* painter) const
 //    return true if event is accepted
 //---------------------------------------------------------
 
-bool TieSegment::edit(MuseScoreView*, Grip curGrip, int key, Qt::KeyboardModifiers, const QString&)
+bool TieSegment::edit(EditData& ed)
       {
       SlurTie* sl = tie();
 
-      if (key == Qt::Key_X) {
+      if (ed.key == Qt::Key_X) {
             sl->setSlurDirection(sl->up() ? Direction::DOWN : Direction::UP);
             sl->layout();
             return true;
             }
-      if (key == Qt::Key_Home) {
-            ups(curGrip).off = QPointF();
+      if (ed.key == Qt::Key_Home) {
+            ups(ed.curGrip).off = QPointF();
             sl->layout();
             return true;
             }
@@ -244,7 +260,7 @@ void TieSegment::setGrip(Grip n, const QPointF& pt)
 //   editDrag
 //---------------------------------------------------------
 
-void TieSegment::editDrag(const EditData& ed)
+void TieSegment::editDrag(EditData& ed)
       {
       Grip g = ed.curGrip;
       ups(g).off += ed.delta;
@@ -826,23 +842,23 @@ void Tie::layout()
 //   startEdit
 //---------------------------------------------------------
 
-void Tie::startEdit(MuseScoreView* v, const QPointF& p)
+void Tie::startEdit(EditData& ed)
       {
       editStartNote = startNote();
       editEndNote = endNote();
-      SlurTie::startEdit(v, p);
+      SlurTie::startEdit(ed);
       }
 
 //---------------------------------------------------------
 //   endEdit
 //---------------------------------------------------------
 
-void Tie::endEdit()
+void Tie::endEdit(EditData& ed)
       {
       if (editStartNote != startNote() || editEndNote != endNote()) {
             score()->undoStack()->push1(new ChangeSpannerElements(this, editStartNote, editEndNote));
             }
-      SlurTie::endEdit();
+      SlurTie::endEdit(ed);
       score()->setLayoutAll();
       }
 
@@ -862,7 +878,7 @@ void Tie::setStartNote(Note* note)
 
 Note* Tie::startNote() const
       {
-      Q_ASSERT(!startElement() || startElement()->type() == Element::Type::NOTE);
+      Q_ASSERT(!startElement() || startElement()->type() == ElementType::NOTE);
       return static_cast<Note*>(startElement());
       }
 
@@ -872,7 +888,7 @@ Note* Tie::startNote() const
 
 Note* Tie::endNote() const
       {
-      Q_ASSERT(!endElement() || endElement()->type() == Element::Type::NOTE);
+      Q_ASSERT(!endElement() || endElement()->type() == ElementType::NOTE);
       return static_cast<Note*>(endElement());
       }
 

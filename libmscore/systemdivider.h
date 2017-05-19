@@ -23,7 +23,7 @@ namespace Ms {
 //---------------------------------------------------------
 
 class SystemDivider : public Symbol {
-      Q_OBJECT
+      Q_GADGET
       Q_ENUMS(Type)
 
    public:
@@ -37,12 +37,12 @@ class SystemDivider : public Symbol {
       SystemDivider(const SystemDivider&);
 
       virtual SystemDivider* clone() const override   { return new SystemDivider(*this); }
-      virtual Element::Type type() const override     { return Element::Type::SYSTEM_DIVIDER; }
+      virtual ElementType type() const override     { return ElementType::SYSTEM_DIVIDER; }
 
       Type dividerType() const                        { return _dividerType; }
       void setDividerType(Type v);
 
-      virtual QRectF drag(EditData*) override;
+      virtual QRectF drag(EditData&) override;
       virtual void write(XmlWriter&) const override;
       virtual void read(XmlReader&) override;
       virtual void layout() override;

@@ -76,25 +76,24 @@ InspectorNote::InspectorNote(QWidget* parent)
             }
 
       const std::vector<InspectorItem> iiList = {
-            { P_ID::SMALL,          0, 0, n.small,         n.resetSmall         },
-            { P_ID::HEAD_GROUP,     0, 0, n.noteHeadGroup, n.resetNoteHeadGroup },
-            { P_ID::HEAD_TYPE,      0, 0, n.noteHeadType,  n.resetNoteHeadType  },
-            { P_ID::MIRROR_HEAD,    0, 0, n.mirrorHead,    n.resetMirrorHead    },
-            { P_ID::DOT_POSITION,   0, 0, n.dotPosition,   n.resetDotPosition   },
-            { P_ID::PLAY,           0, 0, n.play,          n.resetPlay          },
-            { P_ID::TUNING,         0, 0, n.tuning,        n.resetTuning        },
-            { P_ID::VELO_TYPE,      0, 0, n.velocityType,  n.resetVelocityType  },
-            { P_ID::VELO_OFFSET,    0, 0, n.velocity,      n.resetVelocity      },
-            { P_ID::FIXED,          0, 0, n.fixed,         n.resetFixed         },
-            { P_ID::FIXED_LINE,     0, 0, n.fixedLine,     n.resetFixedLine     },
+            { P_ID::SMALL,          0, n.small,         n.resetSmall         },
+            { P_ID::HEAD_GROUP,     0, n.noteHeadGroup, n.resetNoteHeadGroup },
+            { P_ID::HEAD_TYPE,      0, n.noteHeadType,  n.resetNoteHeadType  },
+            { P_ID::MIRROR_HEAD,    0, n.mirrorHead,    n.resetMirrorHead    },
+            { P_ID::DOT_POSITION,   0, n.dotPosition,   n.resetDotPosition   },
+            { P_ID::PLAY,           0, n.play,          n.resetPlay          },
+            { P_ID::TUNING,         0, n.tuning,        n.resetTuning        },
+            { P_ID::VELO_TYPE,      0, n.velocityType,  n.resetVelocityType  },
+            { P_ID::VELO_OFFSET,    0, n.velocity,      n.resetVelocity      },
+            { P_ID::FIXED,          0, n.fixed,         n.resetFixed         },
+            { P_ID::FIXED_LINE,     0, n.fixedLine,     n.resetFixedLine     },
 
-            { P_ID::USER_OFF,       0, 1, c.offsetX,       c.resetX             },
-            { P_ID::USER_OFF,       1, 1, c.offsetY,       c.resetY             },
-            { P_ID::SMALL,          0, 1, c.small,         c.resetSmall         },
-            { P_ID::NO_STEM,        0, 1, c.stemless,      c.resetStemless      },
-            { P_ID::STEM_DIRECTION, 0, 1, c.stemDirection, c.resetStemDirection },
+            { P_ID::USER_OFF,       1, c.offset,        c.resetOffset        },
+            { P_ID::SMALL,          1, c.small,         c.resetSmall         },
+            { P_ID::NO_STEM,        1, c.stemless,      c.resetStemless      },
+            { P_ID::STEM_DIRECTION, 1, c.stemDirection, c.resetStemDirection },
 
-            { P_ID::LEADING_SPACE,  0, 2, s.leadingSpace,  s.resetLeadingSpace  },
+            { P_ID::LEADING_SPACE,  2, s.leadingSpace,  s.resetLeadingSpace  },
             };
       const std::vector<InspectorPanel> ppList = {
             { s.title, s.panel },
@@ -149,8 +148,8 @@ void InspectorNote::dot1Clicked()
       if (note->dots().size() > 0) {
             NoteDot* dot = note->dot(0);
             dot->score()->select(dot);
-            inspector->setElement(dot);
             dot->score()->update();
+            inspector->update();
             }
       }
 
@@ -166,8 +165,8 @@ void InspectorNote::dot2Clicked()
       if (note->dots().size() > 1) {
             NoteDot* dot = note->dot(1);
             dot->score()->select(dot);
-            inspector->setElement(dot);
             dot->score()->update();
+            inspector->update();
             }
       }
 
@@ -183,8 +182,8 @@ void InspectorNote::dot3Clicked()
       if (note->dots().size() > 2) {
             NoteDot* dot = note->dot(2);
             dot->score()->select(dot);
-            inspector->setElement(dot);
             dot->score()->update();
+            inspector->update();
             }
       }
 
@@ -200,8 +199,8 @@ void InspectorNote::dot4Clicked()
       if (note->dots().size() > 3) {
             NoteDot* dot = note->dot(3);
             dot->score()->select(dot);
-            inspector->setElement(dot);
             dot->score()->update();
+            inspector->update();
             }
       }
 
@@ -217,8 +216,8 @@ void InspectorNote::hookClicked()
       Hook* hook = note->chord()->hook();
       if (hook) {
             note->score()->select(hook);
-            inspector->setElement(hook);
             note->score()->update();
+            inspector->update();
             }
       }
 
@@ -234,8 +233,8 @@ void InspectorNote::stemClicked()
       Stem* stem = note->chord()->stem();
       if (stem) {
             note->score()->select(stem);
-            inspector->setElement(stem);
             note->score()->update();
+            inspector->update();
             }
       }
 
@@ -251,8 +250,8 @@ void InspectorNote::beamClicked()
       Beam* beam = note->chord()->beam();
       if (beam) {
             note->score()->select(beam);
-            inspector->setElement(beam);
             note->score()->update();
+            inspector->update();
             }
       }
 
@@ -268,8 +267,8 @@ void InspectorNote::tupletClicked()
       Tuplet* tuplet = note->chord()->tuplet();
       if (tuplet) {
             note->score()->select(tuplet);
-            inspector->setElement(tuplet);
             note->score()->update();
+            inspector->update();
             }
       }
 

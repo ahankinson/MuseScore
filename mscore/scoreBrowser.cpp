@@ -135,7 +135,7 @@ ScoreItem* ScoreBrowser::genScoreItem(const QFileInfo& fi, ScoreListWidget* l)
       item->setTextAlignment(Qt::AlignHCenter | Qt::AlignBottom);
 
       QFont f = item->font();
-      f.setPointSize(f.pointSize() - 2.0);
+      f.setPixelSize(11);
       f.setBold(_boldTitle);
       if (fi.completeBaseName() == "00-Blank") {
             item->setText(tr("Choose Instruments"));
@@ -174,7 +174,7 @@ void ScoreBrowser::setScores(QFileInfoList& s)
 
       ScoreListWidget* sl = 0;
 
-      QStringList filter = { "*.mscz" };
+      QStringList filter = { "*.mscz", "*.mscx" };
 
       if (_showCustomCategory)
             std::sort(s.begin(), s.end(), [](QFileInfo a, QFileInfo b)->bool { return a.fileName() < b.fileName(); });

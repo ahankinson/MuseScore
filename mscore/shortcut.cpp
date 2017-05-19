@@ -165,7 +165,7 @@ Shortcut Shortcut::_sc[] = {
          },
       {
          MsWidget::MAIN_WINDOW,
-         STATE_NORMAL | STATE_NOTE_ENTRY | STATE_EDIT,
+         STATE_NORMAL | STATE_NOTE_ENTRY | STATE_EDIT | STATE_TEXT_EDIT | STATE_LYRICS_EDIT,
          "undo",
          QT_TRANSLATE_NOOP("action","Undo"),
          QT_TRANSLATE_NOOP("action","Undo"),
@@ -175,7 +175,7 @@ Shortcut Shortcut::_sc[] = {
          },
       {
          MsWidget::MAIN_WINDOW,
-         STATE_NORMAL | STATE_NOTE_ENTRY | STATE_EDIT,
+         STATE_NORMAL | STATE_NOTE_ENTRY | STATE_EDIT | STATE_TEXT_EDIT | STATE_LYRICS_EDIT,
          "redo",
          QT_TRANSLATE_NOOP("action","Redo"),
          QT_TRANSLATE_NOOP("action","Redo"),
@@ -597,6 +597,26 @@ Shortcut Shortcut::_sc[] = {
          "add-staccato",
          QT_TRANSLATE_NOOP("action","Staccato"),
          QT_TRANSLATE_NOOP("action","Toggle staccato"),
+         0,
+         Icons::Invalid_ICON,
+         Qt::WindowShortcut
+         },
+      {
+         MsWidget::SCORE_TAB,
+         STATE_NORMAL | STATE_NOTE_ENTRY,
+         "add-up-bow",
+         QT_TRANSLATE_NOOP("action","Up Bow"),
+         QT_TRANSLATE_NOOP("action","Toggle up bow"),
+         0,
+         Icons::Invalid_ICON,
+         Qt::WindowShortcut
+         },
+      {
+         MsWidget::SCORE_TAB,
+         STATE_NORMAL | STATE_NOTE_ENTRY,
+         "add-down-bow",
+         QT_TRANSLATE_NOOP("action","Down Bow"),
+         QT_TRANSLATE_NOOP("action","Toggle down bow"),
          0,
          Icons::Invalid_ICON,
          Qt::WindowShortcut
@@ -1933,6 +1953,13 @@ Shortcut Shortcut::_sc[] = {
       {
          MsWidget::SCORE_TAB,
          STATE_NORMAL | STATE_NOTE_ENTRY,
+         "fingering-text",
+         QT_TRANSLATE_NOOP("action","Fingering"),
+         QT_TRANSLATE_NOOP("action","Add fingering")
+         },
+      {
+         MsWidget::SCORE_TAB,
+         STATE_NORMAL | STATE_NOTE_ENTRY,
          "picture",
          QT_TRANSLATE_NOOP("action","Picture"),
          QT_TRANSLATE_NOOP("action","Add picture")
@@ -2403,17 +2430,6 @@ Shortcut Shortcut::_sc[] = {
       {
          MsWidget::SCORE_TAB,
          STATE_NORMAL | STATE_NOTE_ENTRY,
-         "edit-text-style",
-         QT_TRANSLATE_NOOP("action","Text Styles..."),
-         QT_TRANSLATE_NOOP("action","Edit text styles"),
-         0,
-         Icons::Invalid_ICON,
-         Qt::WindowShortcut,
-         ShortcutFlags::A_CMD
-         },
-      {
-         MsWidget::SCORE_TAB,
-         STATE_NORMAL | STATE_NOTE_ENTRY,
          "edit-harmony",
          QT_TRANSLATE_NOOP("action","Chord Symbols..."),
          QT_TRANSLATE_NOOP("action","Edit chord symbols style")
@@ -2465,6 +2481,26 @@ Shortcut Shortcut::_sc[] = {
          "half-duration",
          QT_TRANSLATE_NOOP("action","Half Duration"),
          QT_TRANSLATE_NOOP("action","Half duration"),
+         0,
+         Icons::Invalid_ICON,
+         Qt::WindowShortcut
+         },
+      {
+         MsWidget::SCORE_TAB,
+         STATE_NORMAL | STATE_NOTE_ENTRY_STAFF_PITCHED | STATE_NOTE_ENTRY_STAFF_DRUM /*| STATE_NOTE_ENTRY_TAB*/,
+         "inc-duration-dotted",
+         QT_TRANSLATE_NOOP("action","Increase Duration Dotted"),
+         QT_TRANSLATE_NOOP("action","Increase duration dotted"),
+         0,
+         Icons::Invalid_ICON,
+         Qt::WindowShortcut
+         },
+      {
+         MsWidget::SCORE_TAB,
+         STATE_NORMAL | STATE_NOTE_ENTRY_STAFF_PITCHED | STATE_NOTE_ENTRY_STAFF_DRUM /*| STATE_NOTE_ENTRY_TAB*/,
+         "dec-duration-dotted",
+         QT_TRANSLATE_NOOP("action","Decrease Duration Dotted"),
+         QT_TRANSLATE_NOOP("action","Decrease duration dotted"),
          0,
          Icons::Invalid_ICON,
          Qt::WindowShortcut
@@ -3241,6 +3277,16 @@ Shortcut Shortcut::_sc[] = {
          QT_TRANSLATE_NOOP("action","Add brackets to element"),
          0,
          Icons::brackets_ICON,
+         Qt::WindowShortcut
+         },
+      {
+         MsWidget::SCORE_TAB,
+         STATE_NORMAL | STATE_NOTE_ENTRY,
+         "add-parentheses",
+         QT_TRANSLATE_NOOP("action","Add Parentheses to Element"),
+         QT_TRANSLATE_NOOP("action","Add parentheses to element"),
+         0,
+         Icons::parentheses_ICON,
          Qt::WindowShortcut
          },
       {

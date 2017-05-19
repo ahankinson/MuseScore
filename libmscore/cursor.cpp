@@ -27,6 +27,35 @@
 namespace Ms {
 
 //---------------------------------------------------------
+//   ElementW
+//---------------------------------------------------------
+
+QString ElementW::type() const
+      {
+      return QString(e->name());
+      }
+
+QVariant ElementW::tick() const
+      {
+      return QVariant(((Element*)e)->tick());
+      }
+
+QVariant ElementW::get(const QString& s) const
+      {
+      QVariant val;
+      if (e) {
+            P_ID pid = propertyId(s);
+            val = e->getProperty(pid);
+            if (propertyType(pid) == P_TYPE::FRACTION) {
+                  Fraction f(val.value<Fraction>());
+                  FractionWrapper*  fw = new FractionWrapper(f);
+                  return QVariant::fromValue(fw);
+                  }
+            }
+      return val;
+      }
+
+//---------------------------------------------------------
 //   Cursor
 //---------------------------------------------------------
 
@@ -35,8 +64,13 @@ Cursor::Cursor(Score* s)
       {
       _track   = 0;
       _segment = 0;
+      _filter  = SegmentType::ChordRest;
       setScore(s);
       }
+
+//---------------------------------------------------------
+//   setScore
+//---------------------------------------------------------
 
 void Cursor::setScore(Score* s)
       {
@@ -53,6 +87,9 @@ void Cursor::setScore(Score* s)
 
 void Cursor::rewind(int type)
       {
+      //
+      // rewind to start of score
+      //
       if (type == 0) {
             _segment = 0;
             Measure* m = score()->firstMeasure();
@@ -61,11 +98,17 @@ void Cursor::rewind(int type)
                   nextInTrack();
                   }
             }
+      //
+      // rewind to start of selection
+      //
       else if (type == 1) {
             _segment  = score()->selection().startSegment();
             _track    = score()->selection().staffStart() * VOICES;
             nextInTrack();
             }
+      //
+      // rewind to end of selection
+      //
       else if (type == 2) {
             _segment  = score()->selection().endSegment();
             _track    = (score()->selection().staffEnd() * VOICES) - 1;  // be sure _track exists
@@ -107,8 +150,6 @@ bool Cursor::nextMeasure()
             return false;
             }
       _segment = m->first(_filter);
-//      while (seg && seg->element(_track) == 0)
-//            seg = seg->next1(_filter);
       nextInTrack();
       return _segment != 0;
       }
@@ -127,12 +168,12 @@ void Cursor::add(Element* s)
 
       if (s->isChordRest())
             s->score()->undoAddCR(static_cast<ChordRest*>(s), _segment->measure(), _segment->tick());
-      else if (s->type() == Element::Type::KEYSIG) {
-            Segment* ns = _segment->measure()->undoGetSegment(Segment::Type::KeySig, _segment->tick());
+      else if (s->type() == ElementType::KEYSIG) {
+            Segment* ns = _segment->measure()->undoGetSegment(SegmentType::KeySig, _segment->tick());
             s->setParent(ns);
             score()->undoAddElement(s);
             }
-      else if (s->type() == Element::Type::TIMESIG) {
+      else if (s->type() == ElementType::TIMESIG) {
             Measure* m = _segment->measure();
             int tick = m->tick();
             score()->cmdAddTimeSig(m, _track, static_cast<TimeSig*>(s), false);
@@ -140,7 +181,7 @@ void Cursor::add(Element* s)
             _segment = m->first(_filter);
             nextInTrack();
             }
-      else if (s->type() == Element::Type::LAYOUT_BREAK) {
+      else if (s->type() == ElementType::LAYOUT_BREAK) {
             Measure* m = _segment->measure();
             s->setParent(m);
             score()->undoAddElement(s);
@@ -201,21 +242,30 @@ qreal Cursor::tempo()
       }
 
 //---------------------------------------------------------
+//   segment
+//---------------------------------------------------------
+
+ElementW* Cursor::segment() const
+      {
+      return _segment ? new ElementW(_segment) : 0;
+      }
+
+//---------------------------------------------------------
 //   element
 //---------------------------------------------------------
 
-Element* Cursor::element() const
+ElementW* Cursor::element() const
       {
-      return _segment ? _segment->element(_track) : 0;
+      return _segment && _segment->element(_track) ? new ElementW(_segment->element(_track)) : 0;
       }
 
 //---------------------------------------------------------
 //   measure
 //---------------------------------------------------------
 
-Measure* Cursor::measure() const
+ElementW* Cursor::measure() const
       {
-      return _segment ? _segment->measure() : 0;
+      return _segment ? new ElementW(_segment->measure()) : 0;
       }
 
 //---------------------------------------------------------

@@ -17,7 +17,6 @@
 #include "symbol.h"
 #include "duration.h"
 #include "beam.h"
-#include "segment.h"
 #include "shape.h"
 
 namespace Ms {
@@ -38,6 +37,7 @@ class Articulation;
 class Lyrics;
 class TabDurationSymbol;
 class Spanner;
+enum class SegmentType;
 
 //-------------------------------------------------------------------
 //   @@ ChordRest
@@ -49,7 +49,7 @@ class Spanner;
 //-------------------------------------------------------------------
 
 class ChordRest : public DurationElement {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(Ms::Beam::Mode beamMode      READ beamMode           WRITE undoSetBeamMode)
       Q_PROPERTY(int            durationType  READ durationTypeTicks  WRITE setDurationType)
       Q_PROPERTY(bool           small         READ small              WRITE undoSetSmall)
@@ -80,9 +80,9 @@ class ChordRest : public DurationElement {
       ChordRest &operator=(const ChordRest&) = delete;
       ~ChordRest();
 
-      virtual Element::Type type() const = 0;
+      virtual ElementType type() const = 0;
 
-      virtual Element* drop(const DropData&) override;
+      virtual Element* drop(EditData&) override;
       virtual void undoUnlink() override;
 
       virtual Segment* segment() const  { return (Segment*)parent(); }
@@ -175,7 +175,7 @@ class ChordRest : public DurationElement {
       bool isGraceBefore() const;
       bool isGraceAfter() const;
       void writeBeam(XmlWriter& xml);
-      Segment* nextSegmentAfterCR(Segment::Type types) const;
+      Segment* nextSegmentAfterCR(SegmentType types) const;
 
       virtual void setScore(Score* s) override;
       virtual Element* nextElement() override;

@@ -110,14 +110,14 @@ void ElementItem::init()
       {
       QString s;
       switch(el->type()) {
-            case Element::Type::PAGE:
+            case ElementType::PAGE:
                   {
                   QString no;
                   no.setNum(((Page*)el)->no()+1);
                   s = "Page-" + no;
                   }
                   break;
-            case Element::Type::MEASURE:
+            case ElementType::MEASURE:
                   {
                   QString no;
                   no.setNum(((Measure*)el)->no()+1);
@@ -142,7 +142,7 @@ Debugger::Debugger(QWidget* parent)
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-      for (int i = 0; i < int(Element::Type::MAXTYPE); ++i)
+      for (int i = 0; i < int(ElementType::MAXTYPE); ++i)
             elementViews[i] = 0;
       curElement   = 0;
       cs           = 0;
@@ -262,7 +262,7 @@ static void addMeasureBaseToList(ElementItem* mi, MeasureBase* mb)
       {
       foreach(Element* e, mb->el()) {
             ElementItem* mmi = new ElementItem(mi, e);
-            if (e->type() == Element::Type::HBOX || e->type() == Element::Type::VBOX)
+            if (e->type() == ElementType::HBOX || e->type() == ElementType::VBOX)
                   addMeasureBaseToList(mmi, static_cast<MeasureBase*>(e));
             }
       }
@@ -316,7 +316,7 @@ static void addChord(ElementItem* sei, Chord* chord)
                   new ElementItem(ni, note->accidental());
                   }
             for (Element* f : note->el()) {
-                  if (f->type() == Element::Type::SYMBOL || f->type() == Element::Type::IMAGE) {
+                  if (f->type() == ElementType::SYMBOL || f->type() == ElementType::IMAGE) {
                         BSymbol* bs = static_cast<BSymbol*>(f);
                         addSymbol(ni, bs);
                         }
@@ -340,7 +340,7 @@ static void addChord(ElementItem* sei, Chord* chord)
             }
       for (Element* e : chord->el()) {
             ElementItem* ei = new ElementItem(sei, e);
-            if (e->type() == Element::Type::SLUR) {
+            if (e->type() == ElementType::SLUR) {
                   Slur* gs = static_cast<Slur*>(e);
                   for (SpannerSegment* sp : gs->spannerSegments())
                         new ElementItem(ei, sp);
@@ -387,10 +387,10 @@ void Debugger::addMeasure(ElementItem* mi, Measure* measure)
                   if (!e)
                         continue;
                   ElementItem* sei = new ElementItem(segItem, e);
-                  if (e->type() == Element::Type::CHORD)
-                        addChord(sei, static_cast<Chord*>(e));
+                  if (e->isChord())
+                        addChord(sei, toChord(e));
                   else if (e->isChordRest()) {
-                        ChordRest* cr = static_cast<ChordRest*>(e);
+                        ChordRest* cr = toChordRest(e);
                         if (cr->beam() && cr->beam()->elements().front() == cr)
                               new ElementItem(sei, cr->beam());
                         for (Lyrics* lyrics : cr->lyrics()) {
@@ -406,9 +406,9 @@ void Debugger::addMeasure(ElementItem* mi, Measure* measure)
                   }
 
             foreach(Element* s, segment->annotations()) {
-                  if (s->type() == Element::Type::SYMBOL || s->type() == Element::Type::IMAGE)
+                  if (s->type() == ElementType::SYMBOL || s->type() == ElementType::IMAGE)
                         addBSymbol(segItem, static_cast<BSymbol*>(s));
-                  else if (s->type() == Element::Type::FRET_DIAGRAM) {
+                  else if (s->type() == ElementType::FRET_DIAGRAM) {
                         ElementItem* fdi = new ElementItem(segItem, s);
                         FretDiagram* fd = static_cast<FretDiagram*>(s);
                         if (fd->harmony())
@@ -439,20 +439,20 @@ void Debugger::updateList(Score* s)
             return;
 
       if (s->masterScore()->movements()) {
-            QTreeWidgetItem* mi = new QTreeWidgetItem(list, int(Element::Type::INVALID));
+            QTreeWidgetItem* mi = new QTreeWidgetItem(list, int(ElementType::INVALID));
             mi->setText(0, "Movements");
             for (MasterScore* ms : *s->masterScore()->movements()) {
-                  QTreeWidgetItem* s = new QTreeWidgetItem(mi, int(Element::Type::INVALID));
+                  QTreeWidgetItem* s = new QTreeWidgetItem(mi, int(ElementType::INVALID));
                   s->setText(0, ms->metaTag("movementTitle"));
                   }
             }
 
 
-      QTreeWidgetItem* li = new QTreeWidgetItem(list, int(Element::Type::INVALID));
+      QTreeWidgetItem* li = new QTreeWidgetItem(list, int(ElementType::INVALID));
       li->setText(0, "Global");
       for (auto i : s->spanner()) {
             ElementItem* it = new ElementItem(li, i.second);
-            if (i.second->type() == Element::Type::TRILL) {
+            if (i.second->type() == ElementType::TRILL) {
                   Trill* trill = static_cast<Trill*>(i.second);
                   if (trill->accidental())
                         new ElementItem(it, trill->accidental());
@@ -481,7 +481,7 @@ void Debugger::updateList(Score* s)
                         ElementItem* mi = new ElementItem(si, mb);
                         addMeasureBaseToList(mi, mb);
 
-                        if (mb->type() != Element::Type::MEASURE)
+                        if (mb->type() != ElementType::MEASURE)
                               continue;
                         Measure* measure = (Measure*) mb;
                         if (cs->styleB(StyleIdx::concertPitch)) {
@@ -567,7 +567,7 @@ void Debugger::itemClicked(QTreeWidgetItem* i, int)
       {
       if (i == 0)
             return;
-      if (i->type() == int(Element::Type::INVALID))
+      if (i->type() == int(ElementType::INVALID))
             return;
       Element* el = static_cast<ElementItem*>(i)->element();
       if (curElement) {
@@ -607,63 +607,63 @@ void Debugger::updateElement(Element* el)
       if (!found)
             qDebug("Debugger: element not found %s", el->name());
 
-      setWindowTitle(QString("MuseScore: Debugger: ") + el->name());
+      setWindowTitle(QString("Debugger: ") + el->name());
 
       ShowElementBase* ew = elementViews[int(el->type())];
       if (ew == 0) {
             switch (el->type()) {
-                  case Element::Type::PAGE:             ew = new ShowPageWidget;      break;
-                  case Element::Type::SYSTEM:           ew = new SystemView;          break;
-                  case Element::Type::MEASURE:          ew = new MeasureView;         break;
-                  case Element::Type::CHORD:            ew = new ChordDebug;          break;
-                  case Element::Type::NOTE:             ew = new ShowNoteWidget;      break;
-                  case Element::Type::REST:             ew = new RestView;            break;
-                  case Element::Type::CLEF:             ew = new ClefView;            break;
-                  case Element::Type::TIMESIG:          ew = new TimeSigView;         break;
-                  case Element::Type::KEYSIG:           ew = new KeySigView;          break;
-                  case Element::Type::SEGMENT:          ew = new SegmentView;         break;
-                  case Element::Type::HAIRPIN:          ew = new HairpinView;         break;
-                  case Element::Type::BAR_LINE:         ew = new BarLineView;         break;
-                  case Element::Type::DYNAMIC:          ew = new DynamicView;         break;
-                  case Element::Type::TUPLET:           ew = new TupletView;          break;
-                  case Element::Type::SLUR:             ew = new SlurTieView;         break;
-                  case Element::Type::TIE:              ew = new TieView;             break;
-                  case Element::Type::VOLTA:            ew = new VoltaView;           break;
-                  case Element::Type::VOLTA_SEGMENT:    ew = new VoltaSegmentView;    break;
-                  case Element::Type::PEDAL:
-                  case Element::Type::TEXTLINE:         ew = new TextLineView;        break;
-                  case Element::Type::PEDAL_SEGMENT:
-                  case Element::Type::TEXTLINE_SEGMENT: ew = new TextLineSegmentView; break;
-                  case Element::Type::LYRICS:           ew = new LyricsView;          break;
-                  case Element::Type::BEAM:             ew = new BeamView;            break;
-                  case Element::Type::TREMOLO:          ew = new TremoloView;         break;
-                  case Element::Type::OTTAVA:           ew = new OttavaView;          break;
-                  case Element::Type::OTTAVA_SEGMENT:   ew = new TextLineSegmentView; break;
-                  case Element::Type::SLUR_SEGMENT:     ew = new SlurSegmentView;     break;
-                  case Element::Type::TIE_SEGMENT:      ew = new TieSegmentView;     break;
-                  case Element::Type::ACCIDENTAL:       ew = new AccidentalView;      break;
-                  case Element::Type::ARTICULATION:     ew = new ArticulationView;    break;
-                  case Element::Type::STEM:             ew = new StemView;            break;
-                  case Element::Type::VBOX:
-                  case Element::Type::HBOX:
-                  case Element::Type::FBOX:
-                  case Element::Type::TBOX:             ew = new BoxView;             break;
-                  case Element::Type::TRILL:            ew = new SpannerView;         break;
+                  case ElementType::PAGE:             ew = new ShowPageWidget;      break;
+                  case ElementType::SYSTEM:           ew = new SystemView;          break;
+                  case ElementType::MEASURE:          ew = new MeasureView;         break;
+                  case ElementType::CHORD:            ew = new ChordDebug;          break;
+                  case ElementType::NOTE:             ew = new ShowNoteWidget;      break;
+                  case ElementType::REST:             ew = new RestView;            break;
+                  case ElementType::CLEF:             ew = new ClefView;            break;
+                  case ElementType::TIMESIG:          ew = new TimeSigView;         break;
+                  case ElementType::KEYSIG:           ew = new KeySigView;          break;
+                  case ElementType::SEGMENT:          ew = new SegmentView;         break;
+                  case ElementType::HAIRPIN:          ew = new HairpinView;         break;
+                  case ElementType::BAR_LINE:         ew = new BarLineView;         break;
+                  case ElementType::DYNAMIC:          ew = new DynamicView;         break;
+                  case ElementType::TUPLET:           ew = new TupletView;          break;
+                  case ElementType::SLUR:             ew = new SlurTieView;         break;
+                  case ElementType::TIE:              ew = new TieView;             break;
+                  case ElementType::VOLTA:            ew = new VoltaView;           break;
+                  case ElementType::VOLTA_SEGMENT:    ew = new VoltaSegmentView;    break;
+                  case ElementType::PEDAL:
+                  case ElementType::TEXTLINE:         ew = new TextLineView;        break;
+                  case ElementType::PEDAL_SEGMENT:
+                  case ElementType::TEXTLINE_SEGMENT: ew = new TextLineSegmentView; break;
+                  case ElementType::LYRICS:           ew = new LyricsView;          break;
+                  case ElementType::BEAM:             ew = new BeamView;            break;
+                  case ElementType::TREMOLO:          ew = new TremoloView;         break;
+                  case ElementType::OTTAVA:           ew = new OttavaView;          break;
+                  case ElementType::OTTAVA_SEGMENT:   ew = new TextLineSegmentView; break;
+                  case ElementType::SLUR_SEGMENT:     ew = new SlurSegmentView;     break;
+                  case ElementType::TIE_SEGMENT:      ew = new TieSegmentView;     break;
+                  case ElementType::ACCIDENTAL:       ew = new AccidentalView;      break;
+                  case ElementType::ARTICULATION:     ew = new ArticulationView;    break;
+                  case ElementType::STEM:             ew = new StemView;            break;
+                  case ElementType::VBOX:
+                  case ElementType::HBOX:
+                  case ElementType::FBOX:
+                  case ElementType::TBOX:             ew = new BoxView;             break;
+                  case ElementType::TRILL:            ew = new SpannerView;         break;
 
-                  case Element::Type::INSTRUMENT_NAME:
-                  case Element::Type::FINGERING:
-                  case Element::Type::MARKER:
-                  case Element::Type::JUMP:
-                  case Element::Type::TEXT:
-                  case Element::Type::STAFF_TEXT:
-                  case Element::Type::REHEARSAL_MARK:
+                  case ElementType::INSTRUMENT_NAME:
+                  case ElementType::FINGERING:
+                  case ElementType::MARKER:
+                  case ElementType::JUMP:
+                  case ElementType::TEXT:
+                  case ElementType::STAFF_TEXT:
+                  case ElementType::REHEARSAL_MARK:
                         ew = new TextView;
                         break;
-                  case Element::Type::HARMONY:
+                  case ElementType::HARMONY:
                         ew = new HarmonyView;
                         break;
-                  case Element::Type::TRILL_SEGMENT:
-                  case Element::Type::HAIRPIN_SEGMENT:
+                  case ElementType::TRILL_SEGMENT:
+                  case ElementType::HAIRPIN_SEGMENT:
                         ew = new LineSegmentView; break;
                         break;
                   default:
@@ -1361,19 +1361,15 @@ void TextView::textChanged()
 
 void TextView::setElement(Element* e)
       {
-      Text* te = (Text*)e;
+      Text* te = static_cast<Text*>(e);
 
-      tb.textStyle->clear();
-      for (int i = 0; i < int(TextStyleType::TEXT_STYLES); ++i)
-            tb.textStyle->addItem(e->score()->textStyle(TextStyleType(i)).name());
+      tb.subStyle->setText(subStyleName(te->subStyle()));
 
-      TextStyle ts = te->textStyle();
       ShowElementBase::setElement(e);
       tb.text->setPlainText(te->xmlText());
-      tb.xoffset->setValue(ts.offset().x());
-      tb.yoffset->setValue(ts.offset().y());
-      tb.offsetType->setCurrentIndex(int(ts.offsetType()));
-      tb.textStyle->setCurrentIndex(int(te->textStyleType()));
+      tb.xoffset->setValue(te->offset().x());
+      tb.yoffset->setValue(te->offset().y());
+      tb.offsetType->setCurrentIndex(int(te->offsetType()));
       tb.layoutToParentWidth->setChecked(te->layoutToParentWidth());
       }
 
@@ -1395,13 +1391,14 @@ HarmonyView::HarmonyView()
 //   setElement
 //---------------------------------------------------------
 
-void HarmonyView::setElement(Element* e)
+void HarmonyView::setElement(Element* /*e*/)
       {
+#if 0
       Harmony* harmony = (Harmony*)e;
 
-      tb.textStyle->clear();
-      for (int i = 0; i < int(TextStyleType::TEXT_STYLES); ++i)
-            tb.textStyle->addItem(e->score()->textStyle(TextStyleType(i)).name());
+//      tb.textStyle->clear();
+//      for (int i = 0; i < int(TextStyleType::TEXT_STYLES); ++i)
+//            tb.textStyle->addItem(e->score()->textStyle(TextStyleType(i)).name());
 
       const TextStyle& ts = harmony->textStyle();
       ShowElementBase::setElement(e);
@@ -1450,6 +1447,7 @@ void HarmonyView::setElement(Element* e)
             hb.degreeTab->setItem(i, 1, new QTableWidgetItem(QVariant(d.value()).toString()));
             hb.degreeTab->setItem(i, 2, new QTableWidgetItem(QVariant(d.alter()).toString()));
             }
+#endif
       }
 
 void HarmonyView::on_leftParen_clicked(bool checked)
@@ -1587,18 +1585,12 @@ DynamicView::DynamicView()
 
 void DynamicView::setElement(Element* e)
       {
-      Dynamic* dynamic = (Dynamic*)e;
+      Dynamic* dynamic = toDynamic(e);
 
-      tb.textStyle->clear();
-      for (int i = int(TextStyleType::DEFAULT); i < int(TextStyleType::TEXT_STYLES); ++i)
-            tb.textStyle->addItem(e->score()->textStyle(TextStyleType(i)).name());
-
-      const TextStyle& ts = dynamic->textStyle();
       tb.text->setPlainText(dynamic->xmlText());
-      tb.xoffset->setValue(ts.offset().x());
-      tb.yoffset->setValue(ts.offset().y());
-      tb.offsetType->setCurrentIndex(int(ts.offsetType()));
-//TODO      tb.textStyle->setCurrentIndex(dynamic->textStyleType());
+      tb.xoffset->setValue(dynamic->offset().x());
+      tb.yoffset->setValue(dynamic->offset().y());
+      tb.offsetType->setCurrentIndex(int(dynamic->offsetType()));
       tb.layoutToParentWidth->setChecked(dynamic->layoutToParentWidth());
 
       ShowElementBase::setElement(e);
@@ -1987,7 +1979,7 @@ void VoltaView::segmentClicked(QTreeWidgetItem* item)
 
 void VoltaView::beginTextClicked()
       {
-      emit elementChanged(static_cast<Volta*>(element())->beginTextElement());
+//TODO      emit elementChanged(static_cast<Volta*>(element())->beginTextElement());
       }
 
 //---------------------------------------------------------
@@ -1996,7 +1988,7 @@ void VoltaView::beginTextClicked()
 
 void VoltaView::continueTextClicked()
       {
-      emit elementChanged(static_cast<Volta*>(element())->continueTextElement());
+//TODO      emit elementChanged(static_cast<Volta*>(element())->continueTextElement());
       }
 
 //---------------------------------------------------------
@@ -2005,7 +1997,7 @@ void VoltaView::continueTextClicked()
 
 void VoltaView::endTextClicked()
       {
-      emit elementChanged(static_cast<Volta*>(element())->endTextElement());
+//TODO      emit elementChanged(static_cast<Volta*>(element())->endTextElement());
       }
 
 //---------------------------------------------------------
@@ -2062,9 +2054,9 @@ void VoltaView::setElement(Element* e)
       sp.endElement->setEnabled(volta->endElement() != 0);
       sp.anchor->setCurrentIndex(int(volta->anchor()));
 
-      tlb.beginText->setEnabled(volta->beginTextElement());
-      tlb.continueText->setEnabled(volta->continueTextElement());
-      tlb.endText->setEnabled(volta->endTextElement());
+//TODO      tlb.beginText->setEnabled(volta->beginTextElement());
+//      tlb.continueText->setEnabled(volta->continueTextElement());
+//      tlb.endText->setEnabled(volta->endTextElement());
       }
 
 //---------------------------------------------------------
@@ -2448,7 +2440,7 @@ void AccidentalView::setElement(Element* e)
       Accidental* s = static_cast<Accidental*>(e);
       ShowElementBase::setElement(e);
 
-      acc.hasBracket->setChecked(s->hasBracket());
+//TODO      acc.hasBracket->setChecked(s->hasBracket());
       acc.accAuto->setChecked(s->role() == AccidentalRole::AUTO);
       acc.accUser->setChecked(s->role() == AccidentalRole::USER);
       acc.small->setChecked(s->small());
@@ -2614,9 +2606,9 @@ void TextLineView::setElement(Element* e)
       tlb.lineWidth->setValue(volta->lineWidth().val());
       lb.diagonal->setChecked(volta->diagonal());
 
-      tlb.beginText->setEnabled(volta->beginTextElement());
-      tlb.continueText->setEnabled(volta->continueTextElement());
-      tlb.endText->setEnabled(volta->endTextElement());
+//      tlb.beginText->setEnabled(volta->beginTextElement());
+//      tlb.continueText->setEnabled(volta->continueTextElement());
+//      tlb.endText->setEnabled(volta->endTextElement());
       }
 
 //---------------------------------------------------------
@@ -2625,8 +2617,8 @@ void TextLineView::setElement(Element* e)
 
 void TextLineView::beginTextClicked()
       {
-      Volta* volta = (Volta*)element();
-      emit elementChanged(volta->beginTextElement());
+//      Volta* volta = (Volta*)element();
+//      emit elementChanged(volta->beginTextElement());
       }
 
 //---------------------------------------------------------
@@ -2635,8 +2627,8 @@ void TextLineView::beginTextClicked()
 
 void TextLineView::continueTextClicked()
       {
-      Volta* volta = (Volta*)element();
-      emit elementChanged(volta->continueTextElement());
+//      Volta* volta = (Volta*)element();
+//      emit elementChanged(volta->continueTextElement());
       }
 
 //---------------------------------------------------------
@@ -2645,10 +2637,9 @@ void TextLineView::continueTextClicked()
 
 void TextLineView::endTextClicked()
       {
-      Volta* volta = (Volta*)element();
-      emit elementChanged(volta->endTextElement());
+//      Volta* volta = (Volta*)element();
+//      emit elementChanged(volta->endTextElement());
       }
-
 
 //---------------------------------------------------------
 //   TextLineSegmentView

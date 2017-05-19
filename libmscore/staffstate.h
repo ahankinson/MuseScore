@@ -31,7 +31,7 @@ enum class StaffStateType : char {
 //---------------------------------------------------------
 
 class StaffState : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       StaffStateType _staffStateType;
       qreal lw;
@@ -48,15 +48,15 @@ class StaffState : public Element {
       ~StaffState();
 
       virtual StaffState* clone() const  { return new StaffState(*this); }
-      virtual Element::Type type() const { return Element::Type::STAFF_STATE; }
+      virtual ElementType type() const { return ElementType::STAFF_STATE; }
 
       void setStaffStateType(const QString&);
       void setStaffStateType(StaffStateType st) { _staffStateType = st; }
       StaffStateType staffStateType() const     { return _staffStateType; }
       QString staffStateTypeName() const;
 
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&);
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&);
       virtual void write(XmlWriter&) const;
       virtual void read(XmlReader&);
       Instrument* instrument() const           { return _instrument; }

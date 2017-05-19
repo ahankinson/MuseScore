@@ -75,6 +75,7 @@
 #include "utils.h"
 #include "glissando.h"
 #include "stafflines.h"
+#include "bracket.h"
 
 //      Q_LOGGING_CATEGORY(undoRedo, "undoRedo")
 
@@ -94,7 +95,7 @@ void updateNoteLines(Segment* segment, int track)
       if (staff->isDrumStaff(segment->tick()) || staff->isTabStaff(segment->tick()))
             return;
       for (Segment* s = segment->next1(); s; s = s->next1()) {
-            if ((s->segmentType() & (Segment::Type::Clef | Segment::Type::HeaderClef)) && s->element(track) && !s->element(track)->generated())
+            if ((s->segmentType() & (SegmentType::Clef | SegmentType::HeaderClef)) && s->element(track) && !s->element(track)->generated())
                   break;
             if (!s->isChordRestType())
                   continue;
@@ -139,28 +140,28 @@ void UndoCommand::cleanup(bool undo)
 //   undo
 //---------------------------------------------------------
 
-void UndoCommand::undo()
+void UndoCommand::undo(EditData& ed)
       {
       int n = childList.size();
       for (int i = n-1; i >= 0; --i) {
             qCDebug(undoRedo) << "<" << childList[i]->name() << ">";
-            childList[i]->undo();
+            childList[i]->undo(ed);
             }
-      flip();
+      flip(ed);
       }
 
 //---------------------------------------------------------
 //   redo
 //---------------------------------------------------------
 
-void UndoCommand::redo()
+void UndoCommand::redo(EditData& ed)
       {
       int n = childList.size();
       for (int i = 0; i < n; ++i) {
             qCDebug(undoRedo) << "<" << childList[i]->name() << ">";
-            childList[i]->redo();
+            childList[i]->redo(ed);
             }
-      flip();
+      flip(ed);
       }
 
 //---------------------------------------------------------
@@ -169,9 +170,11 @@ void UndoCommand::redo()
 
 void UndoCommand::unwind()
       {
+      EditData ed;
+      ed.init();
       while (!childList.empty()) {
             UndoCommand* c = childList.takeLast();
-            c->undo();
+            c->undo(ed);
             delete c;
             }
       }
@@ -243,11 +246,15 @@ void UndoStack::endMacro(bool rollback)
 
 void UndoStack::push(UndoCommand* cmd)
       {
+      EditData ed;
+      ed.init();
+
       if (!curCmd) {
             // this can happen for layout() outside of a command (load)
             // qWarning("UndoStack:push(): no active command, UndoStack %p", this);
 
-            cmd->redo();
+
+            cmd->redo(ed);
             delete cmd;
             return;
             }
@@ -261,7 +268,7 @@ void UndoStack::push(UndoCommand* cmd)
             }
 #endif
       curCmd->appendChild(cmd);
-      cmd->redo();
+      cmd->redo(ed);
       }
 
 //---------------------------------------------------------
@@ -286,8 +293,10 @@ void UndoStack::pop()
             qWarning("UndoStack:pop(): no active command");
             return;
             }
+      EditData ed;
+      ed.init();
       UndoCommand* cmd = curCmd->removeChild();
-      cmd->undo();
+      cmd->undo(ed);
       }
 
 //---------------------------------------------------------
@@ -303,13 +312,13 @@ void UndoStack::setClean()
 //   undo
 //---------------------------------------------------------
 
-void UndoStack::undo()
+void UndoStack::undo(EditData& ed)
       {
       qCDebug(undoRedo) << "===";
       if (curIdx) {
             --curIdx;
             Q_ASSERT(curIdx >= 0);
-            list[curIdx]->undo();
+            list[curIdx]->undo(ed);
             }
       }
 
@@ -317,11 +326,11 @@ void UndoStack::undo()
 //   redo
 //---------------------------------------------------------
 
-void UndoStack::redo()
+void UndoStack::redo(EditData& ed)
       {
       qCDebug(undoRedo) << "===";
       if (canRedo())
-            list[curIdx++]->redo();
+            list[curIdx++]->redo(ed);
       }
 
 //---------------------------------------------------------
@@ -332,485 +341,23 @@ SaveState::SaveState(Score* s)
    : undoInputState(s), redoInputState(s->inputState())
       {
       score          = s;
-      redoSelection  = score->selection();
+//      redoSelection  = score->selection();
       }
 
-void SaveState::undo()
+void SaveState::undo(EditData&)
       {
       redoInputState = score->inputState();
-      redoSelection  = score->selection();
+//      redoSelection  = score->selection();
       score->setInputState(undoInputState);
-      score->setSelection(undoSelection);
+//      score->setSelection(undoSelection);
       }
 
-void SaveState::redo()
+void SaveState::redo(EditData&)
       {
       undoInputState = score->inputState();
-      undoSelection  = score->selection();
+//      undoSelection  = score->selection();
       score->setInputState(redoInputState);
-      score->setSelection(redoSelection);
-      }
-
-//---------------------------------------------------------
-//   undoChangeProperty
-//---------------------------------------------------------
-
-void Score::undoChangeProperty(ScoreElement* e, P_ID t, const QVariant& st, PropertyStyle ps)
-      {
-      if (propertyLink(t)) {
-            for (ScoreElement* ee : e->linkList()) {
-                  if (ee->getProperty(t) != st || ee->propertyStyle(t) != ps)
-                        undo(new ChangeProperty(ee, t, st, ps));
-                  }
-            }
-      else {
-            if (e->getProperty(t) != st || e->propertyStyle(t) != ps)
-                  undo(new ChangeProperty(e, t, st, ps));
-            }
-      }
-
-//---------------------------------------------------------
-//   undoPropertyChanged
-//---------------------------------------------------------
-
-void Score::undoPropertyChanged(Element* e, P_ID t, const QVariant& st)
-      {
-      if (propertyLink(t) && e->links()) {
-            foreach (ScoreElement* ee, *e->links()) {
-                  if (ee == e) {
-                        if (ee->getProperty(t) != st)
-                              undoStack()->push1(new ChangeProperty(ee, t, st));
-                        }
-                  else {
-                        // property in linked element has not changed yet
-                        // push() calls redo() to change it
-                        if (ee->getProperty(t) != e->getProperty(t))
-                              undoStack()->push(new ChangeProperty(ee, t, e->getProperty(t)));
-                        }
-                  }
-            }
-      else {
-            if (e->getProperty(t) != st) {
-                  undoStack()->push1(new ChangeProperty(e, t, st));
-                  }
-            }
-      }
-
-void Score::undoPropertyChanged(ScoreElement* e, P_ID t, const QVariant& st)
-      {
-      if (e->getProperty(t) != st)
-            undoStack()->push1(new ChangeProperty(e, t, st));
-      }
-
-//---------------------------------------------------------
-//   undoChangeElement
-//---------------------------------------------------------
-
-void Score::undoChangeElement(Element* oldElement, Element* newElement)
-      {
-      if (!oldElement)
-            undoAddElement(newElement);
-      else
-            undo(new ChangeElement(oldElement, newElement));
-      }
-
-//---------------------------------------------------------
-//   undoChangePitch
-//---------------------------------------------------------
-
-void Score::undoChangePitch(Note* note, int pitch, int tpc1, int tpc2)
-      {
-      for (ScoreElement* e : note->linkList()) {
-            Note* n = static_cast<Note*>(e);
-            undoStack()->push(new ChangePitch(n, pitch, tpc1, tpc2));
-            }
-      }
-
-//---------------------------------------------------------
-//   undoChangeFretting
-//
-//    To use with tablatures to force a specific note fretting;
-//    Pitch, string and fret must be changed all together; otherwise,
-//    if they are not consistent among themselves, the refretting algorithm may re-assign
-//    fret and string numbers for (potentially) all the notes of all the chords of a segment.
-//---------------------------------------------------------
-
-void Score::undoChangeFretting(Note* note, int pitch, int string, int fret, int tpc1, int tpc2)
-      {
-      const LinkedElements* l = note->links();
-      if (l) {
-            for (ScoreElement* e : *l) {
-                  Note* n = static_cast<Note*>(e);
-                  undoStack()->push(new ChangeFretting(n, pitch, string, fret, tpc1, tpc2));
-                  }
-            }
-      else
-            undoStack()->push(new ChangeFretting(note, pitch, string, fret, tpc1, tpc2));
-      }
-
-//---------------------------------------------------------
-//   undoChangeKeySig
-//---------------------------------------------------------
-
-void Score::undoChangeKeySig(Staff* ostaff, int tick, KeySigEvent key)
-      {
-      KeySig* lks = 0;
-
-      for (Staff* staff : ostaff->staffList()) {
-            if (staff->isDrumStaff(tick))
-                  continue;
-
-            Score* score = staff->score();
-            Measure* measure = score->tick2measure(tick);
-            if (!measure) {
-                  qWarning("measure for tick %d not found!", tick);
-                  continue;
-                  }
-            Segment* s   = measure->undoGetSegment(Segment::Type::KeySig, tick);
-            int staffIdx = staff->idx();
-            int track    = staffIdx * VOICES;
-            KeySig* ks   = toKeySig(s->element(track));
-
-            Interval interval = staff->part()->instrument(tick)->transpose();
-            KeySigEvent nkey  = key;
-            bool concertPitch = score->styleB(StyleIdx::concertPitch);
-            if (interval.chromatic && !concertPitch && !nkey.custom() && !nkey.isAtonal()) {
-                  interval.flip();
-                  nkey.setKey(transposeKey(key.key(), interval));
-                  }
-            if (ks) {
-                  ks->undoChangeProperty(P_ID::GENERATED, false);
-                  undo(new ChangeKeySig(ks, nkey, ks->showCourtesy()));
-                  }
-            else {
-                  // do not create empty keysig unless custom or atonal
-                  if (tick != 0 || nkey.key() != Key::C || nkey.custom() || nkey.isAtonal()) {
-                        KeySig* nks = new KeySig(score);
-                        nks->setParent(s);
-                        nks->setTrack(track);
-                        nks->setKeySigEvent(nkey);
-                        undo(new AddElement(nks));
-                        if (lks)
-                              undo(new Link(lks, nks));
-                        else
-                              lks = nks;
-                        }
-                  }
-            }
-      }
-
-//---------------------------------------------------------
-//   undoChangeClef
-//    change clef if seg contains a clef
-//    else
-//    create a clef before segment seg
-//---------------------------------------------------------
-
-void Score::undoChangeClef(Staff* ostaff, Segment* seg, ClefType ct)
-      {
-      Segment::Type st;
-      if (seg->isHeaderClefType())
-            st = Segment::Type::HeaderClef;
-      else if (seg->isClefType())
-            st = Segment::Type::Clef;
-      else if (seg->rtick() == 0)
-            st = Segment::Type::HeaderClef;
-      else
-            st = Segment::Type::Clef;
-
-      bool moveClef = (st == Segment::Type::HeaderClef) && seg->measure()->prevMeasure();
-      bool small = !seg->header() || moveClef;
-
-      Clef* gclef = 0;
-      int tick = seg->tick();
-      int rtick = seg->rtick();
-      for (Staff* staff : ostaff->staffList()) {
-            if (staff->staffType(tick)->group() != ClefInfo::staffGroup(ct))
-                  continue;
-
-            Score* score     = staff->score();
-            Measure* measure = score->tick2measure(tick);
-
-            if (!measure) {
-                  qWarning("measure for tick %d not found!", tick);
-                  continue;
-                  }
-
-            Segment* destSeg;
-            int rt;
-            if (moveClef) {            // if at start of measure and there is a previous measure
-                  measure = measure->prevMeasure();
-                  rt      = measure->ticks();
-                  }
-            else
-                  rt = rtick;
-            destSeg = measure->undoGetSegmentR(st, rt);
-
-            int staffIdx = staff->idx();
-            int track    = staffIdx * VOICES;
-            Clef* clef   = toClef(destSeg->element(track));
-
-            if (clef) {
-                  //
-                  // for transposing instruments, differentiate
-                  // clef type for concertPitch
-                  //
-                  Instrument* i = staff->part()->instrument(tick);
-                  ClefType cp, tp;
-                  if (i->transpose().isZero()) {
-                        cp = ct;
-                        tp = ct;
-                        }
-                  else {
-                        bool concertPitch = clef->concertPitch();
-                        if (concertPitch) {
-                              cp = ct;
-                              tp = clef->transposingClef();
-                              }
-                        else {
-                              cp = clef->concertClef();
-                              tp = ct;
-                              }
-                        }
-                  clef->setGenerated(false);
-                  score->undo(new ChangeClefType(clef, cp, tp));
-                  // change the clef in the mmRest if any
-                  if (measure->hasMMRest()) {
-                        Measure* mmMeasure = measure->mmRest();
-                        Segment* mmDestSeg = mmMeasure->findSegment(Segment::Type::Clef, tick);
-                        if (mmDestSeg) {
-                              Clef* mmClef = toClef(mmDestSeg->element(clef->track()));
-                              if (mmClef)
-                                    score->undo(new ChangeClefType(mmClef, cp, tp));
-                              }
-                        }
-                  }
-            else {
-                  if (gclef) {
-                        clef = toClef(gclef->linkedClone());
-                        clef->setScore(score);
-                        }
-                  else {
-                        clef = new Clef(score);
-                        gclef = clef;
-                        }
-                  clef->setTrack(track);
-                  clef->setClefType(ct);
-                  clef->setParent(destSeg);
-                  score->undo(new AddElement(clef));
-                  clef->layout();
-                  }
-            clef->setSmall(small);
-            }
-      }
-
-//---------------------------------------------------------
-//   findLinkedVoiceElement
-//---------------------------------------------------------
-
-static Element* findLinkedVoiceElement(Element* e, Staff* nstaff)
-      {
-      Excerpt* se = e->score()->excerpt();
-      Excerpt* de = nstaff->score()->excerpt();
-      int strack = e->track();
-      int dtrack = nstaff->idx() * VOICES + e->voice();
-
-      if (se)
-            strack = se->tracks().key(strack);
-
-      if (de) {
-            QList<int> l = de->tracks().values(strack);
-            if (l.isEmpty())
-                  return 0;
-            for (int i : l) {
-                  if (nstaff->idx() * VOICES <= i && (nstaff->idx() + 1) * VOICES > i) {
-                        dtrack = i;
-                        break;
-                        }
-                  }
-            }
-
-      Score* score     = nstaff->score();
-      Segment* segment = toSegment(e->parent());
-      Measure* measure = segment->measure();
-      Measure* m       = score->tick2measure(measure->tick());
-      Segment* s       = m->findSegment(segment->segmentType(), segment->tick());
-      return s->element(dtrack);
-      }
-
-//---------------------------------------------------------
-//   findLinkedChord
-//---------------------------------------------------------
-
-static Chord* findLinkedChord(Chord* c, Staff* nstaff)
-      {
-      Excerpt* se = c->score()->excerpt();
-      Excerpt* de = nstaff->score()->excerpt();
-      int strack = c->track();
-      int dtrack = nstaff->idx() * VOICES + c->voice();
-
-      if (se)
-            strack = se->tracks().key(strack);
-
-      if (de) {
-            QList<int> l = de->tracks().values(strack);
-            if (l.isEmpty())
-                  return 0;
-            for (int i : l) {
-                  if (nstaff->idx() * VOICES <= i && (nstaff->idx() + 1) * VOICES > i) {
-                        dtrack = i;
-                        break;
-                        }
-                  }
-            }
-
-      Segment* s  = c->segment();
-      Measure* nm = nstaff->score()->tick2measure(s->tick());
-      Segment* ns = nm->findSegment(s->segmentType(), s->tick());
-      Element* ne = ns->element(dtrack);
-      if (!ne->isChord())
-            return 0;
-      Chord* nc = toChord(ne);
-      if (c->isGrace()) {
-            Chord* pc = toChord(c->parent());
-            int index = 0;
-            for (Chord* gc : pc->graceNotes()) {
-                  if (c == gc)
-                        break;
-                  index++;
-                  }
-            if (index < nc->graceNotes().length())
-                  nc = nc->graceNotes().at(index);
-            }
-      return nc;
-      }
-
-//---------------------------------------------------------
-//   undoChangeChordRestLen
-//---------------------------------------------------------
-
-void Score::undoChangeChordRestLen(ChordRest* cr, const TDuration& d)
-      {
-      auto sl = cr->staff()->staffList();
-      for (Staff* staff : sl) {
-            ChordRest *ncr;
-            if (cr->isGrace())
-                  ncr = findLinkedChord(toChord(cr), staff);
-            else
-                  ncr = toChordRest(findLinkedVoiceElement(cr, staff));
-            if (!ncr)
-                  continue;
-            ncr->undoChangeProperty(P_ID::DURATION_TYPE, QVariant::fromValue(d));
-            ncr->undoChangeProperty(P_ID::DURATION, QVariant::fromValue(d.fraction()));
-            }
-      }
-
-//---------------------------------------------------------
-//   undoTransposeHarmony
-//---------------------------------------------------------
-
-void Score::undoTransposeHarmony(Harmony* h, int rootTpc, int baseTpc)
-      {
-      undo(new TransposeHarmony(h, rootTpc, baseTpc));
-      }
-
-//---------------------------------------------------------
-//   undoExchangeVoice
-//---------------------------------------------------------
-
-void Score::undoExchangeVoice(Measure* measure, int v1, int v2, int staff1, int staff2)
-      {
-      int tick = measure->tick();
-
-      for (int staffIdx = staff1; staffIdx < staff2; ++staffIdx) {
-            QSet<Staff*> sl;
-            for (Staff* s : staff(staffIdx)->staffList())
-                  sl.insert(s);
-
-            int sTrack = staffIdx * VOICES;
-            int s = sTrack + v1;
-            int d = sTrack + v2;
-            int diff = v2 - v1;
-
-            //handle score and complete measures first
-            undo(new ExchangeVoice(measure, s, d, staffIdx));
-
-            for (Staff* st : sl) {
-                  int stTrack = st->idx() * VOICES;
-                  Measure* m = st->score()->tick2measure(tick);
-                  Excerpt* ex = st->score()->excerpt();
-                  if (ex) {
-                        QMultiMap<int, int> t = ex->tracks();
-                        QList<int> ts = t.values(s);
-                        QList<int> td = t.values(d);
-
-                        for (int tss : ts) {
-                              if (!(stTrack <= tss) || !(tss < stTrack + VOICES))
-                                    continue;
-
-                              int temp = t.key(tss);
-                              QList<int> test = t.values(temp + diff);
-                              bool hasVoice = false;
-                              for (int te : test) {
-                                    if (stTrack <= te && te < stTrack + VOICES && td.contains(te))
-                                          hasVoice = true;
-                                    }
-
-                              if (!hasVoice) {
-                                    undo(new CloneVoice(measure->first(), m->endTick(), m->first(), temp, tss, temp + diff));
-                                    ts.removeOne(tss);
-                                    }
-                              }
-
-                        for (int tdd : td) {
-                              if (!(stTrack <= tdd) || !(tdd < stTrack + VOICES))
-                                    continue;
-
-                              int temp = t.key(tdd);
-                              QList<int> test = t.values(temp - diff);
-                              bool hasVoice = false;
-                              for (int te : test) {
-                                    if (stTrack <= te && te < stTrack + VOICES &&
-                                        ts.contains(te))
-                                          hasVoice = true;
-                                    }
-
-                              if (!hasVoice) {
-                                    undo(new CloneVoice(measure->first(), m->endTick(), m->first(), temp, tdd, temp - diff));
-                                    td.removeOne(tdd);
-                                    }
-                              }
-                        }
-
-                  }
-            }
-
-      // make sure voice 0 is complete
-
-      if (v1 == 0 || v2 == 0) {
-            for (int staffIdx = staff1; staffIdx < staff2; ++staffIdx) {
-                  // check for complete timeline of voice 0
-                  int ctick  = measure->tick();
-                  int track = staffIdx * VOICES;
-                  for (Segment* s = measure->first(Segment::Type::ChordRest); s; s = s->next(Segment::Type::ChordRest)) {
-                        ChordRest* cr = toChordRest(s->element(track));
-                        if (cr == 0)
-                              continue;
-                        if (ctick < s->tick()) {
-                              // fill gap
-                              int ticks = s->tick() - ctick;
-                              setRest(ctick, track, Fraction::fromTicks(ticks), false, 0);
-                              }
-                        ctick = s->tick() + cr->actualTicks();
-                        }
-                  int etick = measure->tick() + measure->ticks();
-                  if (ctick < etick) {
-                        // fill gap
-                        int ticks = etick - ctick;
-                        setRest(ctick, track, Fraction::fromTicks(ticks), false, 0);
-                        }
-                  }
-            }
+//      score->setSelection(redoSelection);
       }
 
 //---------------------------------------------------------
@@ -829,7 +376,7 @@ CloneVoice::CloneVoice(Segment* _sf, int _lTick, Segment* _d, int _strack, int _
                               // if false add elements in every linked staff
       }
 
-void CloneVoice::undo()
+void CloneVoice::undo(EditData&)
       {
       Score* s = d->score();
       int ticks = d->tick() + lTick - sf->tick();
@@ -876,7 +423,7 @@ void CloneVoice::undo()
       first = false;
       }
 
-void CloneVoice::redo()
+void CloneVoice::redo(EditData&)
       {
       Score* s = d->score();
       int ticks = d->tick() + lTick - sf->tick();
@@ -914,780 +461,6 @@ void CloneVoice::redo()
             }
       else
             s->cloneVoice(strack, dtrack, sf, ticks, linked, first);
-      }
-
-//---------------------------------------------------------
-//   undoRemovePart
-//---------------------------------------------------------
-
-void Score::undoRemovePart(Part* part, int idx)
-      {
-      undo(new RemovePart(part, idx));
-      }
-
-//---------------------------------------------------------
-//   undoInsertPart
-//---------------------------------------------------------
-
-void Score::undoInsertPart(Part* part, int idx)
-      {
-      undo(new InsertPart(part, idx));
-      }
-
-//---------------------------------------------------------
-//   undoRemoveStaff
-//    idx - index of staff in part
-//---------------------------------------------------------
-
-void Score::undoRemoveStaff(Staff* staff)
-      {
-      int idx = staff->idx();
-      Q_ASSERT(idx >= 0);
-      //
-      //    adjust measures
-      //
-      for (Measure* m = staff->score()->firstMeasure(); m; m = m->nextMeasure()) {
-            m->cmdRemoveStaves(idx, idx+1);
-            if (m->hasMMRest())
-                  m->mmRest()->cmdRemoveStaves(idx, idx+1);
-            }
-
-      undo(new RemoveStaff(staff));
-      }
-
-//---------------------------------------------------------
-//   undoInsertStaff
-//    idx - index of staff in part
-//---------------------------------------------------------
-
-void Score::undoInsertStaff(Staff* staff, int ridx, bool createRests)
-      {
-      undo(new InsertStaff(staff, ridx));
-      int idx = staffIdx(staff->part()) + ridx;
-      for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
-            m->cmdAddStaves(idx, idx+1, createRests);
-            if (m->hasMMRest())
-                  m->mmRest()->cmdAddStaves(idx, idx+1, false);
-            }
-      // when newly adding an instrument,
-      // this was already set when we created the staff
-      // we don't have any better info at this point
-      // and it dooesn't work to adjust bracket & barlines until all staves are added
-      // TODO: adjust brackets only when appropriate
-      //adjustBracketsIns(idx, idx+1);
-      }
-
-//---------------------------------------------------------
-//   undoChangeBracketSpan
-//---------------------------------------------------------
-
-void Score::undoChangeBracketSpan(Staff* staff, int column, int span)
-      {
-      undo(new ChangeBracketSpan(staff, column, span));
-      }
-
-//---------------------------------------------------------
-//   undoChangeInvisible
-//---------------------------------------------------------
-
-void Score::undoChangeInvisible(Element* e, bool v)
-      {
-      undoChangeProperty(e, P_ID::VISIBLE, v);
-      e->setGenerated(false);
-      }
-
-//---------------------------------------------------------
-//   undoAddElement
-//---------------------------------------------------------
-
-void Score::undoAddElement(Element* element)
-      {
-      QList<Staff* > staffList;
-      Staff* ostaff = element->staff();
-      int strack = -1;
-      if (ostaff) {
-            if (ostaff->score()->excerpt() && strack > -1)
-                  strack = ostaff->score()->excerpt()->tracks().key(strack, -1);
-            else
-                  strack = ostaff->idx() * VOICES + element->track() % VOICES;
-            }
-
-      Element::Type et = element->type();
-
-      //
-      // some elements are replicated for all parts regardless of
-      // linking:
-      //
-
-      if ((et == Element::Type::REHEARSAL_MARK)
-         || ((et == Element::Type::STAFF_TEXT) && toStaffText(element)->systemFlag())
-         || (et == Element::Type::JUMP)
-         || (et == Element::Type::MARKER)
-         || (et == Element::Type::TEMPO_TEXT)
-         || (et == Element::Type::VOLTA)
-         ) {
-            foreach(Score* s, scoreList())
-                  staffList.append(s->staff(0));
-
-            foreach (Staff* staff, staffList) {
-                  Score* score  = staff->score();
-                  int staffIdx  = staff->idx();
-                  int ntrack    = staffIdx * VOICES;
-                  Element* ne;
-
-                  if (staff->score() == ostaff->score())
-                        ne = element;
-                  else {
-                        // only create linked volta for first staff
-                        if (et == Element::Type::VOLTA && element->track() != 0)
-                              continue;
-                        ne = element->linkedClone();
-                        ne->setScore(score);
-                        ne->setSelected(false);
-                        ne->setTrack(staffIdx * VOICES + element->voice());
-                        }
-
-                  if (et == Element::Type::VOLTA) {
-                        Spanner* nsp = static_cast<Spanner*>(ne);
-                        Spanner* sp = static_cast<Spanner*>(element);
-                        int staffIdx1 = sp->track() / VOICES;
-                        int staffIdx2 = sp->track2() / VOICES;
-                        int diff = staffIdx2 - staffIdx1;
-                        nsp->setTrack2((staffIdx + diff) * VOICES + (sp->track2() % VOICES));
-                        undo(new AddElement(nsp));
-                        }
-                  else if (et == Element::Type::MARKER || et == Element::Type::JUMP) {
-                        Measure* om = toMeasure(element->parent());
-                        Measure* m  = score->tick2measure(om->tick());
-                        ne->setTrack(element->track());
-                        ne->setParent(m);
-                        undo(new AddElement(ne));
-                        }
-                  else {
-                        Segment* segment  = toSegment(element->parent());
-                        int tick          = segment->tick();
-                        Measure* m        = score->tick2measure(tick);
-                        Segment* seg      = m->undoGetSegment(Segment::Type::ChordRest, tick);
-                        ne->setTrack(ntrack);
-                        ne->setParent(seg);
-                        undo(new AddElement(ne));
-                        }
-                  }
-            return;
-            }
-
-      if (et == Element::Type::FINGERING
-         || (et == Element::Type::IMAGE  && !element->parent()->isSegment())
-         || (et == Element::Type::SYMBOL && !element->parent()->isSegment())
-         || et == Element::Type::NOTE
-         || et == Element::Type::TEXT
-         || et == Element::Type::GLISSANDO
-         || et == Element::Type::BEND
-         || (et == Element::Type::CHORD && toChord(element)->isGrace())
-            ) {
-            Element* parent       = element->parent();
-            const LinkedElements* links = parent->links();
-            // don't link part name
-            if (et == Element::Type::TEXT) {
-                  Text* t = static_cast<Text*>(element);
-                  if (t->textStyleType() == TextStyleType::INSTRUMENT_EXCERPT)
-                        links = 0;
-                  }
-            if (links == 0) {
-                  undo(new AddElement(element));
-                  if (element->isFingering() && !element->isNudged())
-                        element->score()->layoutFingering(toFingering(element));
-#ifndef QT_NO_DEBUG
-                  else if (element->isChord()) {
-                        for (Note* n : toChord(element)->notes()) {
-                        //      if(n->tpc() == Tpc::TPC_INVALID)
-                        //            n->setTpcFromPitch();
-                              Q_ASSERT(n->tpc() != Tpc::TPC_INVALID);
-                              }
-                        }
-#endif
-                  return;
-                  }
-            foreach (ScoreElement* ee, *links) {
-                  Element* e = static_cast<Element*>(ee);
-                  Element* ne;
-                  if (e == parent)
-                        ne = element;
-                  else {
-                        if (element->isGlissando()) {    // and other spanners with Anchor::NOTE
-                              Note* newEnd = Spanner::endElementFromSpanner(static_cast<Glissando*>(element), e);
-                              if (newEnd) {
-                                    ne = element->linkedClone();
-                                    static_cast<Spanner*>(ne)->setNoteSpan(toNote(e), newEnd);
-                                    }
-                              else              //couldn't find suitable start note
-                                    continue;
-                              }
-                        else
-                              ne = element->linkedClone();
-                        }
-                  ne->setScore(e->score());
-                  ne->setSelected(false);
-                  ne->setParent(e);
-                  undo(new AddElement(ne));
-                  if (ne->isFingering())
-                        e->score()->layoutFingering(toFingering(ne));
-#ifndef QT_NO_DEBUG
-                  else if (ne->isChord()) {
-                        for (Note* n : toChord(ne)->notes()) {
-                              Q_ASSERT(n->tpc() != Tpc::TPC_INVALID);
-                        //      n->setTpcFromPitch();
-                              }
-                        }
-#endif
-                  }
-            return;
-            }
-
-      if (et == Element::Type::LAYOUT_BREAK) {
-            LayoutBreak* lb = toLayoutBreak(element);
-            if (lb->layoutBreakType() == LayoutBreak::Type::SECTION) {
-                  Measure* m = lb->measure();
-                  for (Score* s : scoreList()) {
-                        if (s == lb->score())
-                              undo(new AddElement(lb));
-                        else {
-                              Element* e = lb->linkedClone();
-                              e->setScore(s);
-                              Measure* nm = s->tick2measure(m->tick());
-                              e->setParent(nm);
-                              undo(new AddElement(e));
-                              }
-                        }
-                  return;
-                  }
-            }
-
-      if (ostaff == 0 || (
-         et    != Element::Type::ARTICULATION
-         && et != Element::Type::CHORDLINE
-         && et != Element::Type::LYRICS
-         && et != Element::Type::SLUR
-         && et != Element::Type::TIE
-         && et != Element::Type::NOTE
-         && et != Element::Type::INSTRUMENT_CHANGE
-         && et != Element::Type::HAIRPIN
-         && et != Element::Type::OTTAVA
-         && et != Element::Type::TRILL
-         && et != Element::Type::TEXTLINE
-         && et != Element::Type::PEDAL
-         && et != Element::Type::BREATH
-         && et != Element::Type::DYNAMIC
-         && et != Element::Type::STAFF_TEXT
-         && et != Element::Type::TREMOLO
-         && et != Element::Type::ARPEGGIO
-         && et != Element::Type::SYMBOL
-         && et != Element::Type::TREMOLOBAR
-         && et != Element::Type::FRET_DIAGRAM
-         && et != Element::Type::HARMONY)
-            ) {
-            undo(new AddElement(element));
-            return;
-            }
-
-      foreach (Staff* staff, ostaff->staffList()) {
-            Score* score = staff->score();
-            int staffIdx = staff->idx();
-
-            QList<int> tr;
-            if (staff->score()->excerpt() && strack > -1)
-                  tr = staff->score()->excerpt()->tracks().values(strack);
-            else
-                  tr.append(strack);
-
-            // Some elements in voice 1 of a staff should be copied to every track which has a linked voice in this staff
-            if (tr.isEmpty() && (element->isSymbol()
-                || element->isImage()
-                || element->isTremoloBar()
-                || element->isDynamic()
-                || element->isStaffText()
-                || element->isFretDiagram()
-                || element->isHarmony()
-                || element->isHairpin()
-                || element->isOttava()
-                || element->isTrill()
-                || element->isTextLine()
-                || element->isPedal())) {
-                  tr.append(staffIdx * VOICES);
-                  }
-
-            int it = 0;
-            for (int ntrack : tr) {
-                  if ((ntrack & ~3) != staffIdx * VOICES) {
-                        it++;
-                        continue;
-                        }
-
-                  Element* ne;
-                  if (staff == ostaff)
-                        ne = element;
-                  else {
-                        if (staff->rstaff() != ostaff->rstaff()) {
-                              switch (element->type()) {
-                                    // exclude certain element types except on corresponding staff in part
-                                    // this should be same list excluded in cloneStaff()
-                                    case Element::Type::STAFF_TEXT:
-                                    case Element::Type::FRET_DIAGRAM:
-                                    case Element::Type::HARMONY:
-                                    case Element::Type::FIGURED_BASS:
-                                    case Element::Type::DYNAMIC:
-                                    case Element::Type::LYRICS:   // not normally segment-attached
-                                          continue;
-                                    default:
-                                          break;
-                                    }
-                              }
-                        ne = element->linkedClone();
-                        ne->setScore(score);
-                        ne->setSelected(false);
-                        ne->setTrack(staffIdx * VOICES + element->voice());
-                        }
-
-                  if (element->isArticulation()) {
-                        Articulation* a  = toArticulation(element);
-                        Segment* segment;
-                        Segment::Type st;
-                        Measure* m;
-                        int tick;
-                        if (a->parent()->isChordRest()) {
-                              ChordRest* cr = a->chordRest();
-                              segment       = cr->segment();
-                              st            = Segment::Type::ChordRest;
-                              tick          = segment->tick();
-                              m             = score->tick2measure(tick);
-                              }
-                        else {
-                              segment  = toSegment(a->parent()->parent());
-                              st       = Segment::Type::EndBarLine;
-                              tick     = segment->tick();
-                              m        = score->tick2measure(tick);
-                              if (m->tick() == tick)
-                                    m = m->prevMeasure();
-                              }
-                        Segment* seg = m->findSegment(st, tick);
-                        if (seg == 0) {
-                              qWarning("undoAddSegment: segment not found");
-                              break;
-                              }
-                        Articulation* na = toArticulation(ne);
-                        na->setTrack(ntrack);
-                        if (a->parent()->isChordRest()) {
-                              ChordRest* cr = a->chordRest();
-                              ChordRest* ncr;
-                              if (cr->isGrace())
-                                    ncr = findLinkedChord(toChord(cr), score->staff(staffIdx));
-                              else
-                                    ncr = toChordRest(seg->element(ntrack));
-                              na->setParent(ncr);
-                              }
-                        else {
-                              BarLine* bl = toBarLine(seg->element(ntrack));
-                              na->setParent(bl);
-                              }
-                        undo(new AddElement(na));
-                        }
-                  else if (element->isChordLine() || element->isLyrics()) {
-                        ChordRest* cr    = toChordRest(element->parent());
-                        Segment* segment = cr->segment();
-                        int tick         = segment->tick();
-                        Measure* m       = score->tick2measure(tick);
-                        Segment* seg     = m->findSegment(Segment::Type::ChordRest, tick);
-                        if (seg == 0) {
-                              qWarning("undoAddSegment: segment not found");
-                              break;
-                              }
-                        ne->setTrack(ntrack);
-                        ChordRest* ncr = toChordRest(seg->element(ntrack));
-                        ne->setParent(ncr);
-                        undo(new AddElement(ne));
-                        }
-                  //
-                  // elements with Segment as parent
-                  //
-                  else if (element->isSymbol()
-                     || element->isImage()
-                     || element->isTremoloBar()
-                     || element->isDynamic()
-                     || element->isStaffText()
-                     || element->isFretDiagram()
-                     || element->isHarmony()) {
-                        Segment* segment = toSegment(element->parent());
-                        int tick         = segment->tick();
-                        Measure* m       = score->tick2measure(tick);
-                        Segment* seg     = m->undoGetSegment(Segment::Type::ChordRest, tick);
-                        ne->setTrack(ntrack);
-                        ne->setParent(seg);
-                        undo(new AddElement(ne));
-                        // transpose harmony if necessary
-                        if (element->isHarmony() && ne != element) {
-                              Harmony* h = toHarmony(ne);
-                              if (score->styleB(StyleIdx::concertPitch) != element->score()->styleB(StyleIdx::concertPitch)) {
-                                    Part* partDest = h->part();
-                                    Interval interval = partDest->instrument(tick)->transpose();
-                                    if (!interval.isZero()) {
-                                          if (!score->styleB(StyleIdx::concertPitch))
-                                                interval.flip();
-                                          int rootTpc = transposeTpc(h->rootTpc(), interval, true);
-                                          int baseTpc = transposeTpc(h->baseTpc(), interval, true);
-                                          score->undoTransposeHarmony(h, rootTpc, baseTpc);
-                                          }
-                                    }
-                              }
-                        }
-                  else if (element->isSlur()
-                     || element->isHairpin()
-                     || element->isOttava()
-                     || element->isTrill()
-                     || element->isTextLine()
-                     || element->isPedal()) {
-                        Spanner* sp   = static_cast<Spanner*>(element);
-                        Spanner* nsp  = static_cast<Spanner*>(ne);
-                        int staffIdx1 = sp->track() / VOICES;
-                        int staffIdx2 = sp->track2() / VOICES;
-                        int diff      = staffIdx2 - staffIdx1;
-                        nsp->setTrack2((staffIdx + diff) * VOICES + (sp->track2() % VOICES));
-                        nsp->setTrack(ntrack);
-
-                        QList<int> tl2;
-                        if (staff->score()->excerpt() && element->isSlur()) {
-                              nsp->setTrack(ntrack);
-                                    tl2 = staff->score()->excerpt()->tracks().values(sp->track2());
-                                    if (tl2.isEmpty()) {
-                                          it++;
-                                          continue;
-                                          }
-                                   nsp->setTrack2(tl2.at(it));
-                              }
-                        else if (!element->isSlur())
-                              nsp->setTrack(ntrack & ~3);
-
-                        // determine start/end element for slurs
-                        // this is only necessary if start/end element is
-                        //   a grace note, otherwise the element can be set to zero
-                        //   and will later be calculated from tick/track values
-                        //
-                        if (element->isSlur() && sp != nsp) {
-                              if (sp->startElement()) {
-                                    QList<ScoreElement*> sel = sp->startElement()->linkList();
-                                    for (ScoreElement* ee : sel) {
-                                          Element* e = static_cast<Element*>(ee);
-                                          if (e->score() == nsp->score() && e->track() == nsp->track()) {
-                                                nsp->setStartElement(e);
-                                                break;
-                                                }
-                                          }
-                                    }
-                              if (sp->endElement()) {
-                                    QList<ScoreElement*> eel = sp->endElement()->linkList();
-                                    for (ScoreElement* ee : eel) {
-                                          Element* e = static_cast<Element*>(ee);
-                                          if (e->score() == nsp->score() && e->track() == nsp->track2()) {
-                                                nsp->setEndElement(e);
-                                                break;
-                                                }
-                                          }
-                                    }
-                              }
-                        undo(new AddElement(nsp));
-                        }
-                  else if (et == Element::Type::GLISSANDO)
-                        undo(new AddElement(static_cast<Spanner*>(ne)));
-                  else if (element->isTremolo() && toTremolo(element)->twoNotes()) {
-                        Tremolo* tremolo = toTremolo(element);
-                        ChordRest* cr1 = toChordRest(tremolo->chord1());
-                        ChordRest* cr2 = toChordRest(tremolo->chord2());
-                        Segment* s1    = cr1->segment();
-                        Segment* s2    = cr2->segment();
-                        Measure* m1    = s1->measure();
-                        Measure* m2    = s2->measure();
-                        Measure* nm1   = score->tick2measure(m1->tick());
-                        Measure* nm2   = score->tick2measure(m2->tick());
-                        Segment* ns1   = nm1->findSegment(s1->segmentType(), s1->tick());
-                        Segment* ns2   = nm2->findSegment(s2->segmentType(), s2->tick());
-                        Chord* c1      = static_cast<Chord*>(ns1->element(staffIdx * VOICES + cr1->voice()));
-                        Chord* c2      = static_cast<Chord*>(ns2->element(staffIdx * VOICES + cr2->voice()));
-                        Tremolo* ntremolo = static_cast<Tremolo*>(ne);
-                        ntremolo->setChords(c1, c2);
-                        ntremolo->setParent(c1);
-                        undo(new AddElement(ntremolo));
-                        }
-                  else if (element->isTremolo() && !toTremolo(element)->twoNotes()) {
-                        Chord* cr = toChord(element->parent());
-                        Chord* c1 = findLinkedChord(cr, score->staff(staffIdx));
-                        ne->setParent(c1);
-                        undo(new AddElement(ne));
-                        }
-                  else if (element->isArpeggio()) {
-                        ChordRest* cr = toChordRest(element->parent());
-                        Segment* s    = cr->segment();
-                        Measure* m    = s->measure();
-                        Measure* nm   = score->tick2measure(m->tick());
-                        Segment* ns   = nm->findSegment(s->segmentType(), s->tick());
-                        Chord* c1     = static_cast<Chord*>(ns->element(staffIdx * VOICES + cr->voice()));
-                        ne->setParent(c1);
-                        undo(new AddElement(ne));
-                        }
-                  else if (element->isTie()) {
-                        Tie* tie       = toTie(element);
-                        Note* n1       = tie->startNote();
-                        Note* n2       = tie->endNote();
-                        Chord* cr1     = n1->chord();
-                        Chord* cr2     = n2 ? n2->chord() : 0;
-
-                        // find corresponding notes in linked staff
-                        // accounting for grace notes and cross-staff notation
-                        int sm = 0;
-                        if (cr1->staffIdx() != cr2->staffIdx())
-                              sm = cr2->staffIdx() - cr1->staffIdx();
-                        Chord* c1 = findLinkedChord(cr1, score->staff(staffIdx));
-                        Chord* c2 = findLinkedChord(cr2, score->staff(staffIdx + sm));
-                        Note* nn1 = c1->findNote(n1->pitch());
-                        Note* nn2 = c2 ? c2->findNote(n2->pitch()) : 0;
-
-                        // create tie
-                        Tie* ntie = static_cast<Tie*>(ne);
-                        QList<SpannerSegment*>& segments = ntie->spannerSegments();
-                        foreach (SpannerSegment* segment, segments)
-                              delete segment;
-                        segments.clear();
-                        ntie->setTrack(c1->track());
-                        ntie->setStartNote(nn1);
-                        ntie->setEndNote(nn2);
-                        undo(new AddElement(ntie));
-                        }
-                  else if (element->isInstrumentChange()) {
-                        InstrumentChange* is = static_cast<InstrumentChange*>(element);
-                        Segment* s1    = is->segment();
-                        Measure* m1    = s1->measure();
-                        Measure* nm1   = score->tick2measure(m1->tick());
-                        Segment* ns1   = nm1->findSegment(s1->segmentType(), s1->tick());
-                        InstrumentChange* nis = static_cast<InstrumentChange*>(ne);
-                        nis->setParent(ns1);
-                        // ws: instrument should not be changed here
-                        if (is->instrument()->channel().empty() || is->instrument()->channel(0)->program == -1)
-                              nis->setInstrument(*staff->part()->instrument(s1->tick()));
-                        else if (nis != is)
-                              nis->setInstrument(*is->instrument());
-                        undo(new AddElement(nis));
-                        }
-                  else if (element->isBreath()) {
-                        Breath* breath   = static_cast<Breath*>(element);
-                        int tick         = breath->segment()->tick();
-                        Measure* m       = score->tick2measure(tick);
-                        // breath appears before barline
-                        if (m->tick() == tick)
-                              m = m->prevMeasure();
-                        Segment* seg     = m->undoGetSegment(Segment::Type::Breath, tick);
-                        Breath* nbreath  = static_cast<Breath*>(ne);
-                        nbreath->setScore(score);
-                        nbreath->setTrack(ntrack);
-                        nbreath->setParent(seg);
-                        undo(new AddElement(nbreath));
-                        }
-                  else
-                        qWarning("undoAddElement: unhandled: <%s>", element->name());
-                  it++;
-                  }
-            }
-      }
-
-//---------------------------------------------------------
-//   undoAddCR
-//---------------------------------------------------------
-
-void Score::undoAddCR(ChordRest* cr, Measure* measure, int tick)
-      {
-      Q_ASSERT(cr->type() != Element::Type::CHORD || !(static_cast<Chord*>(cr)->notes()).empty());
-      Q_ASSERT(cr->isChordRest());
-
-      Staff* ostaff = cr->staff();
-      int strack = ostaff->idx() * VOICES + cr->voice();
-
-      if (ostaff->score()->excerpt() && !ostaff->score()->excerpt()->tracks().isEmpty())
-            strack = ostaff->score()->excerpt()->tracks().key(strack, -1);
-
-      Segment::Type segmentType = Segment::Type::ChordRest;
-
-      Tuplet* t = cr->tuplet();
-
-      foreach (Staff* staff, ostaff->staffList()) {
-            QList<int> tracks;
-            if (staff->score()->excerpt() && !staff->score()->excerpt()->tracks().isEmpty())
-                  tracks = staff->score()->excerpt()->tracks().values(strack);
-            else
-                  tracks.append(staff->idx() * VOICES + cr->voice());
-
-            for (int ntrack : tracks) {
-                  if (ntrack < staff->part()->startTrack() || ntrack >= staff->part()->endTrack())
-                        continue;
-
-                  Score* score = staff->score();
-                  Measure* m   = (score == this) ? measure : score->tick2measure(tick);
-                  if (!m)  {
-                        qDebug("measure not found");
-                        break;
-                        }
-                  Segment* seg = m->undoGetSegment(segmentType, tick);
-
-                  Q_ASSERT(seg->segmentType() == segmentType);
-
-                  ChordRest* newcr = (staff == ostaff) ? cr : toChordRest(cr->linkedClone());
-                  newcr->setScore(score);
-
-                  newcr->setTrack(ntrack);
-                  newcr->setParent(seg);
-
-#ifndef QT_NO_DEBUG
-                  if (newcr->isChord()) {
-                        Chord* chord = toChord(newcr);
-                        // setTpcFromPitch needs to know the note tick position
-                        foreach(Note* note, chord->notes()) {
-                              // if (note->tpc() == Tpc::TPC_INVALID)
-                              //      note->setTpcFromPitch();
-                              Q_ASSERT(note->tpc() != Tpc::TPC_INVALID);
-                              }
-                        }
-#endif
-                  if (t) {
-                        if (staff != ostaff) {
-                              Tuplet* nt = 0;
-                              if (t->elements().empty() || t->elements().front() == cr) {
-                                    for (ScoreElement* e : t->linkList()) {
-                                          Tuplet* nt1 = static_cast<Tuplet*>(e);
-                                          if (nt1 == t)
-                                                continue;
-                                          if (nt1->score() == score && nt1->track() == newcr->track()) {
-                                                nt = nt1;
-                                                break;
-                                                }
-                                          }
-                                    if (!nt) {
-                                          nt = static_cast<Tuplet*>(t->linkedClone());
-                                          nt->setTuplet(0);
-                                          nt->setScore(score);
-                                          nt->setTrack(newcr->track());
-                                          }
-
-                                    Tuplet* t2  = t;
-                                    Tuplet* nt2 = nt;
-                                    while (t2->tuplet()) {
-                                          Tuplet* t = t2->tuplet();
-                                          Tuplet* nt3 = 0;
-
-                                          for (auto i : t->linkList()) {
-                                                Tuplet* tt = static_cast<Tuplet*>(i);
-                                                if (tt != t && tt->score() == score && tt->track() == t2->track()) {
-                                                      nt3 = tt;
-                                                      break;
-                                                      }
-                                                }
-                                          if (nt3 == 0) {
-                                                nt3 = static_cast<Tuplet*>(t->linkedClone());
-                                                nt3->setScore(score);
-                                                nt3->setTrack(nt2->track());
-                                                }
-                                          nt3->add(nt2);
-                                          nt2->setTuplet(nt3);
-
-                                          t2 = t;
-                                          nt2 = nt3;
-                                          }
-
-                                    }
-                              else {
-                                    const LinkedElements* le = t->links();
-                                    // search the linked tuplet
-                                    if (le) {
-                                          for (ScoreElement* ee : *le) {
-                                                Element* e = static_cast<Element*>(ee);
-                                                if (e->score() == score && e->track() == ntrack) {
-                                                      nt = static_cast<Tuplet*>(e);
-                                                      break;
-                                                      }
-                                                }
-                                          }
-                                    if (nt == 0)
-                                          qWarning("linked tuplet not found");
-                                    }
-                              newcr->setTuplet(nt);
-                              }
-                        }
-
-                  if (newcr->isRest() && (toRest(newcr)->isGap()) && !(toRest(newcr)->track() % VOICES))
-                        toRest(newcr)->setGap(false);
-
-                  undo(new AddElement(newcr));
-                  }
-            }
-      }
-
-//---------------------------------------------------------
-//   undoRemoveElement
-//---------------------------------------------------------
-
-void Score::undoRemoveElement(Element* element)
-      {
-      QList<Segment*> segments;
-      for (ScoreElement* ee : element->linkList()) {
-            Element* e = static_cast<Element*>(ee);
-            undo(new RemoveElement(e));
-            if (e->parent() && (e->parent()->isSegment())) {
-                  Segment* s = toSegment(e->parent());
-                  if (!segments.contains(s))
-                        segments.append(s);
-                  }
-            }
-      for (Segment* s : segments) {
-            if (s->empty())
-                  undo(new RemoveElement(s));
-            }
-      }
-
-//---------------------------------------------------------
-//   undoChangeTuning
-//---------------------------------------------------------
-
-void Score::undoChangeTuning(Note* n, qreal v)
-      {
-      undoChangeProperty(n, P_ID::TUNING, v);
-      }
-
-void Score::undoChangeUserMirror(Note* n, MScore::DirectionH d)
-      {
-      undoChangeProperty(n, P_ID::MIRROR_HEAD, int(d));
-      }
-
-//---------------------------------------------------------
-//   undoChangePageFormat
-//---------------------------------------------------------
-
-void Score::undoChangePageFormat(PageFormat* p)
-      {
-      undoChangePageFormat(p, spatium(), pageNumberOffset());
-      }
-
-//---------------------------------------------------------
-//   undoChangePageFormat
-//---------------------------------------------------------
-
-void Score::undoChangePageFormat(PageFormat* p, qreal v, int pageOffset)
-      {
-      undo(new ChangePageFormat(this, p, v, pageOffset));
-      }
-
-//---------------------------------------------------------
-//   undoChangeTpc
-//    TODO-TPC: check
-//---------------------------------------------------------
-
-void Score::undoChangeTpc(Note* note, int v)
-      {
-      note->undoChangeProperty(P_ID::TPC1, v);
       }
 
 //---------------------------------------------------------
@@ -1759,7 +532,7 @@ void AddElement::endUndoRedo(bool isUndo) const
 //   undo
 //---------------------------------------------------------
 
-void AddElement::undo()
+void AddElement::undo(EditData&)
       {
       if (!element->isTuplet())
             element->score()->removeElement(element);
@@ -1770,7 +543,7 @@ void AddElement::undo()
 //   redo
 //---------------------------------------------------------
 
-void AddElement::redo()
+void AddElement::redo(EditData&)
       {
       if (!element->isTuplet())
             element->score()->addElement(element);
@@ -1847,7 +620,7 @@ void RemoveElement::cleanup(bool undo)
 //   undo
 //---------------------------------------------------------
 
-void RemoveElement::undo()
+void RemoveElement::undo(EditData&)
       {
       if (!element->isTuplet())
             element->score()->addElement(element);
@@ -1863,17 +636,17 @@ void RemoveElement::undo()
                   }
             undoAddTuplet(toChordRest(element));
             }
-      else if (element->isClef()) {
-            element->score()->setLayout(element->tick());
+      else if (element->isClef())
             element->score()->setLayout(element->staff()->nextClefTick(element->tick()));
-            }
+      else if (element->isKeySig())
+            element->score()->setLayout(element->staff()->nextKeyTick(element->tick()));
       }
 
 //---------------------------------------------------------
 //   redo
 //---------------------------------------------------------
 
-void RemoveElement::redo()
+void RemoveElement::redo(EditData&)
       {
       if (!element->isTuplet())
             element->score()->removeElement(element);
@@ -1888,10 +661,10 @@ void RemoveElement::redo()
                         }
                   }
             }
-      else if (element->isClef()) {
-            element->score()->setLayout(element->tick());
+      else if (element->isClef())
             element->score()->setLayout(element->staff()->nextClefTick(element->tick()));
-            }
+      else if (element->isKeySig())
+            element->score()->setLayout(element->staff()->nextKeyTick(element->tick()));
       }
 
 //---------------------------------------------------------
@@ -1921,12 +694,12 @@ InsertPart::InsertPart(Part* p, int i)
       idx  = i;
       }
 
-void InsertPart::undo()
+void InsertPart::undo(EditData&)
       {
       part->score()->removePart(part);
       }
 
-void InsertPart::redo()
+void InsertPart::redo(EditData&)
       {
       part->score()->insertPart(part, idx);
       }
@@ -1941,12 +714,12 @@ RemovePart::RemovePart(Part* p, int i)
       idx  = i;
       }
 
-void RemovePart::undo()
+void RemovePart::undo(EditData&)
       {
       part->score()->insertPart(part, idx);
       }
 
-void RemovePart::redo()
+void RemovePart::redo(EditData&)
       {
       part->score()->removePart(part);
       }
@@ -1961,12 +734,12 @@ InsertStaff::InsertStaff(Staff* p, int _ridx)
       ridx  = _ridx;
       }
 
-void InsertStaff::undo()
+void InsertStaff::undo(EditData&)
       {
       staff->score()->removeStaff(staff);
       }
 
-void InsertStaff::redo()
+void InsertStaff::redo(EditData&)
       {
       staff->score()->insertStaff(staff, ridx);
       }
@@ -1981,12 +754,12 @@ RemoveStaff::RemoveStaff(Staff* p)
       ridx  = staff->rstaff();
       }
 
-void RemoveStaff::undo()
+void RemoveStaff::undo(EditData&)
       {
       staff->score()->insertStaff(staff, ridx);
       }
 
-void RemoveStaff::redo()
+void RemoveStaff::redo(EditData&)
       {
       staff->score()->removeStaff(staff);
       }
@@ -2002,12 +775,12 @@ InsertMStaff::InsertMStaff(Measure* m, MStaff* ms, int i)
       idx     = i;
       }
 
-void InsertMStaff::undo()
+void InsertMStaff::undo(EditData&)
       {
       measure->removeMStaff(mstaff, idx);
       }
 
-void InsertMStaff::redo()
+void InsertMStaff::redo(EditData&)
       {
       measure->insertMStaff(mstaff, idx);
       }
@@ -2023,12 +796,12 @@ RemoveMStaff::RemoveMStaff(Measure* m, MStaff* ms, int i)
       idx     = i;
       }
 
-void RemoveMStaff::undo()
+void RemoveMStaff::undo(EditData&)
       {
       measure->insertMStaff(mstaff, idx);
       }
 
-void RemoveMStaff::redo()
+void RemoveMStaff::redo(EditData&)
       {
       measure->removeMStaff(mstaff, idx);
       }
@@ -2047,12 +820,12 @@ SortStaves::SortStaves(Score* s, QList<int> l)
       list  = l;
       }
 
-void SortStaves::redo()
+void SortStaves::redo(EditData&)
       {
       score->sortStaves(list);
       }
 
-void SortStaves::undo()
+void SortStaves::undo(EditData&)
       {
       score->sortStaves(rlist);
       }
@@ -2069,7 +842,7 @@ ChangePitch::ChangePitch(Note* _note, int _pitch, int _tpc1, int _tpc2)
       tpc2  = _tpc2;
       }
 
-void ChangePitch::flip()
+void ChangePitch::flip(EditData&)
       {
       int f_pitch = note->pitch();
       int f_tpc1  = note->tpc1();
@@ -2105,7 +878,7 @@ ChangeFretting::ChangeFretting(Note* _note, int _pitch, int _string, int _fret, 
       tpc2  = _tpc2;
       }
 
-void ChangeFretting::flip()
+void ChangeFretting::flip(EditData&)
       {
       int f_pitch = note->pitch();
       int f_string= note->string();
@@ -2138,7 +911,7 @@ ChangeElement::ChangeElement(Element* oe, Element* ne)
       newElement = ne;
       }
 
-void ChangeElement::flip()
+void ChangeElement::flip(EditData&)
       {
       const LinkedElements* links = oldElement->links();
       if (links) {
@@ -2195,12 +968,12 @@ InsertStaves::InsertStaves(Measure* m, int _a, int _b)
       b       = _b;
       }
 
-void InsertStaves::undo()
+void InsertStaves::undo(EditData&)
       {
       measure->removeStaves(a, b);
       }
 
-void InsertStaves::redo()
+void InsertStaves::redo(EditData&)
       {
       measure->insertStaves(a, b);
       }
@@ -2216,12 +989,12 @@ RemoveStaves::RemoveStaves(Measure* m, int _a, int _b)
       b       = _b;
       }
 
-void RemoveStaves::undo()
+void RemoveStaves::undo(EditData&)
       {
       measure->insertStaves(a, b);
       }
 
-void RemoveStaves::redo()
+void RemoveStaves::redo(EditData&)
       {
       measure->removeStaves(a, b);
       }
@@ -2230,7 +1003,7 @@ void RemoveStaves::redo()
 //   ChangeKeySig::flip
 //---------------------------------------------------------
 
-void ChangeKeySig::flip()
+void ChangeKeySig::flip(EditData&)
       {
       KeySigEvent oe = keysig->keySigEvent();
       bool sc        = keysig->showCourtesy();
@@ -2259,7 +1032,7 @@ ChangeMeasureLen::ChangeMeasureLen(Measure* m, Fraction l)
       len         = l;
       }
 
-void ChangeMeasureLen::flip()
+void ChangeMeasureLen::flip(EditData&)
       {
       Fraction oLen = measure->len();
 
@@ -2269,8 +1042,8 @@ void ChangeMeasureLen::flip()
       //
       int endTick = measure->tick() + len.ticks();
       for (Segment* segment = measure->first(); segment; segment = segment->next()) {
-            if (segment->segmentType() != Segment::Type::EndBarLine
-               && segment->segmentType() != Segment::Type::TimeSigAnnounce)
+            if (segment->segmentType() != SegmentType::EndBarLine
+               && segment->segmentType() != SegmentType::TimeSigAnnounce)
                   continue;
             segment->setTick(endTick);
             }
@@ -2290,7 +1063,7 @@ TransposeHarmony::TransposeHarmony(Harmony* h, int rtpc, int btpc)
       baseTpc = btpc;
       }
 
-void TransposeHarmony::flip()
+void TransposeHarmony::flip(EditData&)
       {
       int baseTpc1 = harmony->baseTpc();
       int rootTpc1 = harmony->rootTpc();
@@ -2313,13 +1086,13 @@ ExchangeVoice::ExchangeVoice(Measure* m, int _val1, int _val2, int _staff)
       staff   = _staff;
       }
 
-void ExchangeVoice::undo()
+void ExchangeVoice::undo(EditData&)
       {
       measure->exchangeVoice(val2, val1, staff);
       measure->checkMultiVoices(staff);
       }
 
-void ExchangeVoice::redo()
+void ExchangeVoice::redo(EditData&)
       {
       measure->exchangeVoice(val1, val2, staff);
       }
@@ -2335,7 +1108,7 @@ ChangeInstrumentShort::ChangeInstrumentShort(int _tick, Part* p, QList<StaffName
       text = t;
       }
 
-void ChangeInstrumentShort::flip()
+void ChangeInstrumentShort::flip(EditData&)
       {
       QList<StaffName> s = part->shortNames(tick);
       part->setShortNames(text, tick);
@@ -2354,7 +1127,7 @@ ChangeInstrumentLong::ChangeInstrumentLong(int _tick, Part* p, QList<StaffName> 
       text = t;
       }
 
-void ChangeInstrumentLong::flip()
+void ChangeInstrumentLong::flip(EditData&)
       {
       QList<StaffName> s = part->longNames(tick);
       part->setLongNames(text, tick);
@@ -2363,29 +1136,10 @@ void ChangeInstrumentLong::flip()
       }
 
 //---------------------------------------------------------
-//   ChangeBracketSpan
-//---------------------------------------------------------
-
-ChangeBracketSpan::ChangeBracketSpan(Staff* s, int c, int sp)
-      {
-      staff  = s;
-      column = c;
-      span   = sp;
-      }
-
-void ChangeBracketSpan::flip()
-      {
-      int oSpan  = staff->bracketSpan(column);
-      staff->setBracketSpan(column, span);
-      span = oSpan;
-      staff->score()->setLayoutAll();
-      }
-
-//---------------------------------------------------------
 //   EditText::undo
 //---------------------------------------------------------
 
-void EditText::undo()
+void EditText::undo(EditData&)
       {
 /*      if (!text->styled()) {
             for (int i = 0; i < undoLevel; ++i)
@@ -2399,7 +1153,7 @@ void EditText::undo()
 //   EditText::redo
 //---------------------------------------------------------
 
-void EditText::redo()
+void EditText::redo(EditData&)
       {
 /*
       if (!text->styled()) {
@@ -2426,7 +1180,7 @@ void EditText::undoRedo()
 //   ChangePatch
 //---------------------------------------------------------
 
-void ChangePatch::flip()
+void ChangePatch::flip(EditData&)
       {
       MidiPatch op;
       op.prog          = channel->program;
@@ -2469,47 +1223,6 @@ void ChangePatch::flip()
       }
 
 //---------------------------------------------------------
-//   ChangePageFormat
-//---------------------------------------------------------
-
-ChangePageFormat::ChangePageFormat(Score* cs, PageFormat* p, qreal s, int po)
-      {
-      score      = cs;
-      pf         = new PageFormat;
-      *pf        = *p;
-      spatium    = s;
-      pageOffset = po;
-      }
-
-ChangePageFormat::~ChangePageFormat()
-      {
-      delete pf;
-      }
-
-//---------------------------------------------------------
-//   flip
-//---------------------------------------------------------
-
-void ChangePageFormat::flip()
-      {
-      PageFormat f = *(score->pageFormat());
-      qreal os     = score->spatium();
-      int po       = score->pageNumberOffset();
-
-      score->setPageFormat(*pf);
-      if (os != spatium) {
-            score->setSpatium(spatium);
-            score->spatiumChanged(os, spatium);
-            }
-      score->setPageNumberOffset(pageOffset);
-      score->setLayoutAll();
-
-      *pf         = f;
-      spatium    = os;
-      pageOffset = po;
-      }
-
-//---------------------------------------------------------
 //   ChangeStaff
 //---------------------------------------------------------
 
@@ -2526,21 +1239,10 @@ ChangeStaff::ChangeStaff(Staff* _staff,  bool _invisible,
       }
 
 //---------------------------------------------------------
-//   notifyTimeSigs
-//    mark timesigs for layout
-//---------------------------------------------------------
-
-static void notifyTimeSigs(void*, Element* e)
-      {
-      if (e->isTimeSig())
-            toTimeSig(e)->setNeedLayout(true);
-      }
-
-//---------------------------------------------------------
 //   flip
 //---------------------------------------------------------
 
-void ChangeStaff::flip()
+void ChangeStaff::flip(EditData&)
       {
       bool invisibleChanged = staff->invisible() != invisible;
 
@@ -2574,15 +1276,13 @@ void ChangeStaff::flip()
       staff->score()->setLayoutAll();
       staff->masterScore()->rebuildMidiMapping();
       staff->score()->setPlaylistDirty();
-
-      score->scanElements(0, notifyTimeSigs);
       }
 
 //---------------------------------------------------------
 //   ChangeStaffType::flip
 //---------------------------------------------------------
 
-void ChangeStaffType::flip()
+void ChangeStaffType::flip(EditData&)
       {
       StaffType st = *staff->staffType(0);      // TODO
 
@@ -2592,7 +1292,6 @@ void ChangeStaffType::flip()
 
       Score* score = staff->score();
       score->setLayoutAll();
-      score->scanElements(0, notifyTimeSigs);
       }
 
 //---------------------------------------------------------
@@ -2610,7 +1309,7 @@ ChangePart::ChangePart(Part* _part, Instrument* i, const QString& s)
 //   flip
 //---------------------------------------------------------
 
-void ChangePart::flip()
+void ChangePart::flip(EditData&)
       {
       Instrument* oi = part->instrument();
       QString s      = part->partName();
@@ -2632,64 +1331,6 @@ void ChangePart::flip()
       }
 
 //---------------------------------------------------------
-//   ChangeTextStyle
-//---------------------------------------------------------
-
-ChangeTextStyle::ChangeTextStyle(Score* s, const TextStyle& st)
-      {
-      score = s;
-      style = st;
-      }
-
-//---------------------------------------------------------
-//   updateTextStyle
-//---------------------------------------------------------
-
-static void updateTextStyle(void* a, Element* e)
-      {
-      QString s = *(QString*)a;
-      if (e->isText()) {
-            Text* text = static_cast<Text*>(e);
-            if (text->textStyle().name() == s) {
-                  text->setTextStyle(text->score()->textStyle(s));
-                  text->styleChanged();
-                  }
-            }
-      }
-
-//---------------------------------------------------------
-//   flip
-//---------------------------------------------------------
-
-void ChangeTextStyle::flip()
-      {
-      TextStyle os = score->style().textStyle(style.name());
-      score->style().setTextStyle(style);
-      QString s(style.name());
-      score->scanElements(&s, updateTextStyle);
-      style = os;
-      score->setLayoutAll();
-      }
-
-//---------------------------------------------------------
-//   AddTextStyle::undo
-//---------------------------------------------------------
-
-void AddTextStyle::undo()
-      {
-      score->style().removeTextStyle(style);
-      }
-
-//---------------------------------------------------------
-//   AddTextStyle::redo
-//---------------------------------------------------------
-
-void AddTextStyle::redo()
-      {
-      score->style().addTextStyle(style);
-      }
-
-//---------------------------------------------------------
 //   ChangeStyle
 //---------------------------------------------------------
 
@@ -2698,19 +1339,11 @@ ChangeStyle::ChangeStyle(Score* s, const MStyle& st)
       {
       }
 
-static void updateTimeSigs(void*, Element* e)
-      {
-      if (e->isTimeSig()) {
-            TimeSig* ts = toTimeSig(e);
-            ts->setNeedLayout(true);
-            }
-      }
-
 //---------------------------------------------------------
 //   flip
 //---------------------------------------------------------
 
-void ChangeStyle::flip()
+void ChangeStyle::flip(EditData&)
       {
       MStyle tmp = score->style();
 
@@ -2718,7 +1351,6 @@ void ChangeStyle::flip()
             score->cmdConcertPitchChanged(style.value(StyleIdx::concertPitch).toBool(), true);
       if (score->styleV(StyleIdx::MusicalSymbolFont) != style.value(StyleIdx::MusicalSymbolFont)) {
             score->setScoreFont(ScoreFont::fontFactory(style.value(StyleIdx::MusicalSymbolFont).toString()));
-            score->scanElements(0, updateTimeSigs);
             }
       score->setStyle(style);
       score->styleChanged();
@@ -2729,7 +1361,7 @@ void ChangeStyle::flip()
 //   ChangeStyleVal::flip
 //---------------------------------------------------------
 
-void ChangeStyleVal::flip()
+void ChangeStyleVal::flip(EditData&)
       {
       QVariant v = score->styleV(idx);
       if (v != value) {
@@ -2752,7 +1384,7 @@ ChangeChordStaffMove::ChangeChordStaffMove(ChordRest* cr, int v)
       {
       }
 
-void ChangeChordStaffMove::flip()
+void ChangeChordStaffMove::flip(EditData&)
       {
       int v = chordRest->staffMove();
       for (ScoreElement* e : chordRest->linkList()) {
@@ -2772,7 +1404,7 @@ ChangeVelocity::ChangeVelocity(Note* n, Note::ValueType t, int o)
       {
       }
 
-void ChangeVelocity::flip()
+void ChangeVelocity::flip(EditData&)
       {
       Note::ValueType t = note->veloType();
       int o       = note->veloOffset();
@@ -2795,7 +1427,7 @@ ChangeMStaffProperties::ChangeMStaffProperties(Measure* m, int i, bool v, bool s
 //   flip
 //---------------------------------------------------------
 
-void ChangeMStaffProperties::flip()
+void ChangeMStaffProperties::flip(EditData&)
       {
       bool v = measure->visible(staffIdx);
       bool s = measure->slashStyle(staffIdx);
@@ -2803,161 +1435,6 @@ void ChangeMStaffProperties::flip()
       measure->setStaffSlashStyle(staffIdx, slashStyle);
       visible    = v;
       slashStyle = s;
-      }
-
-//---------------------------------------------------------
-//   undoInsertTime
-//   acts on the linked scores as well
-//---------------------------------------------------------
-
-void Score::undoInsertTime(int tick, int len)
-      {
-      if (len == 0)
-            return;
-
-      QList<Spanner*> sl;
-      for (auto i : _spanner.map()) {
-            Spanner* s = i.second;
-            if (s->tick2() < tick)
-                  continue;
-            bool append = false;
-            if (len > 0) {
-                  if (tick > s->tick() && tick < s->tick2())
-                        append = true;
-                  else if (tick <= s->tick())
-                        append = true;
-                  }
-            else {
-                  int tick2 = tick - len;
-                  if (s->tick() >= tick2)
-                        append = true;
-                  else if ((s->tick() < tick) && (s->tick2() > tick2)) {
-                        int t2 = s->tick2() + len;
-                        if (t2 > s->tick())
-                              append = true;
-                        }
-                  else if (s->tick() >= tick && s->tick2() <= tick2)
-                        append = true;
-                  else if (s->tick() > tick && s->tick2() > tick2)
-                        append = true;
-                  }
-            for (Spanner* ss : sl) {
-                  if (ss->linkList().contains(s)) {
-                        append = false;
-                        break;
-                        }
-                  }
-            if (append)
-                  sl.append(s);
-            }
-      for (Spanner* s : sl) {
-            if (len > 0) {
-                  if (tick > s->tick() && tick < s->tick2()) {
-                        //
-                        //  case a:
-                        //  +----spanner--------+
-                        //    +---add---
-                        //
-                        undoChangeProperty(s, P_ID::SPANNER_TICKS, s->ticks() + len);
-                        }
-                  else if (tick <= s->tick()) {
-                        //
-                        //  case b:
-                        //       +----spanner--------
-                        //  +---add---
-                        // and
-                        //            +----spanner--------
-                        //  +---add---+
-                        undoChangeProperty(s, P_ID::SPANNER_TICK, s->tick() + len);
-                        }
-                  }
-            else {
-                  int tick2 = tick - len;
-                  if (s->tick() >= tick2) {
-                        //
-                        //  case A:
-                        //  +----remove---+ +---spanner---+
-                        //
-                        int t = s->tick() + len;
-                        if (t < 0)
-                              t = 0;
-                        undoChangeProperty(s, P_ID::SPANNER_TICK, t);
-                        }
-                  else if ((s->tick() < tick) && (s->tick2() > tick2)) {
-                        //
-                        //  case B:
-                        //  +----spanner--------+
-                        //    +---remove---+
-                        //
-                        int t2 = s->tick2() + len;
-                        if (t2 > s->tick()) {
-                              undoChangeProperty(s, P_ID::SPANNER_TICKS, s->ticks() + len);
-                              }
-                        }
-//                  else if (s->tick() >= tick && s->tick2() < tick2) {
-                  else if (s->tick() >= tick && s->tick2() <= tick2) {
-                        //
-                        //  case C:
-                        //    +---spanner---+
-                        //  +----remove--------+
-                        //
-                        undoRemoveElement(s);
-                        }
-                  else if (s->tick() > tick && s->tick2() > tick2) {
-                        //
-                        //  case D:
-                        //       +----spanner--------+
-                        //  +---remove---+
-                        //
-                        int d1 = s->tick() - tick;
-                        int d2 = tick2 - s->tick();
-                        int len = s->ticks() - d2;
-                        if (len == 0) {
-                              undoRemoveElement(s);
-                              }
-                        else {
-                              undoChangeProperty(s, P_ID::SPANNER_TICK, s->tick() - d1);
-                              undoChangeProperty(s, P_ID::SPANNER_TICKS, len);
-                              }
-                        }
-                  }
-            }
-
-      for (auto i = _unmanagedSpanner.begin(); i != _unmanagedSpanner.end();) {
-            auto ni = i;
-            ++ni;
-            (*i)->undoInsertTimeUnmanaged(tick, len); // may remove spanner from list
-            i = ni;
-            }
-      }
-
-//---------------------------------------------------------
-//   undoRemoveMeasures
-//---------------------------------------------------------
-
-void Score::undoRemoveMeasures(Measure* m1, Measure* m2)
-      {
-      //
-      //  handle ties which start before m1 and end in (m1-m2)
-      //
-      for (Segment* s = m1->first(); s != m2->last(); s = s->next1()) {
-            if (s->segmentType() != Segment::Type::ChordRest)
-                  continue;
-            for (int track = 0; track < ntracks(); ++track) {
-                  Chord* c = static_cast<Chord*>(s->element(track));
-                  if (c == 0 || !c->isChord())
-                        continue;
-                  for (Note* n : c->notes()) {
-                        Tie* t = n->tieBack();
-                        if (t && (t->startNote()->chord()->tick() < m1->tick()))
-                              undoRemoveElement(t);
-                        t = n->tieFor();
-                        if (t && (t->endNote()->chord()->tick() >= m2->endTick()))
-                              undoRemoveElement(t);
-                        }
-                  }
-            }
-      undo(new RemoveMeasures(m1, m2));
       }
 
 //---------------------------------------------------------
@@ -2972,7 +1449,7 @@ void InsertRemoveMeasures::insertMeasures()
       if (fm->isMeasure()) {
             score->setPlaylistDirty();
             for (Segment* s = toMeasure(fm)->first(); s != toMeasure(lm)->last(); s = s->next1()) {
-                  if (!(s->segmentType() & (Segment::Type::Clef | Segment::Type::KeySig)))
+                  if (!(s->segmentType() & (SegmentType::Clef | SegmentType::KeySig)))
                         continue;
                   for (int track = 0; track < score->ntracks(); track += VOICES) {
                         Element* e = s->element(track);
@@ -3045,7 +1522,24 @@ void InsertRemoveMeasures::removeMeasures()
 
       int tick1 = fm->tick();
       int tick2 = lm->endTick();
+
+      QList<System*> systemList;
+      for (MeasureBase* mb = lm;; mb = mb->prev()) {
+            System* system = mb->system();
+            if (system) {
+                  if (!systemList.contains(system)) {
+                        systemList.push_back(system);
+                        }
+                  auto i = std::find(system->measures().begin(), system->measures().end(), mb);
+                  if (i != system->measures().end())
+                        system->measures().erase(i);
+                  }
+            if (mb == fm)
+                  break;
+            }
       score->measures()->remove(fm, lm);
+
+      //      if (score->firstMeasure())    // any measures left?
       score->fixTicks();
       if (fm->isMeasure()) {
             score->setPlaylistDirty();
@@ -3055,7 +1549,7 @@ void InsertRemoveMeasures::removeMeasures()
 
             if (lm->isMeasure()) {
                   Measure* m = toMeasure(lm);
-                  Segment* s = m->findSegment(Segment::Type::Clef, tick2);
+                  Segment* s = m->findSegment(SegmentType::Clef, tick2);
                   if (s) {
                         for (Element* e : s->elist()) {
                               Clef* clef = toClef(e);
@@ -3064,15 +1558,37 @@ void InsertRemoveMeasures::removeMeasures()
                               }
                         }
                   }
-
-            score->insertTime(tick1, -(tick2 - tick1));
-            score->setLayoutAll();
+            if (score->firstMeasure())
+                  score->insertTime(tick1, -(tick2 - tick1));
             for (Spanner* sp : score->unmanagedSpanners()) {
                   if ((sp->tick() >= tick1 && sp->tick() < tick2) || (sp->tick2() >= tick1 && sp->tick2() < tick2))
                         sp->removeUnmanaged();
                   }
             score->connectTies(true);   // ??
             }
+
+      // remove empty systems
+
+      for (System* s : systemList) {
+            if (s->measures().empty()) {
+qDebug("remove system");
+                  Page* page = s->page();
+                  if (page) {
+                        // erase system from page
+                        QList<System*>& systemList = page->systems();
+                        auto i = std::find(systemList.begin(), systemList.end(), s);
+                        if (i != systemList.end())
+                              systemList.erase(i);
+                        // erase system from score
+                        auto k = std::find(score->systems().begin(), score->systems().end(), s);
+                        if (k != score->systems().end())
+                              score->systems().erase(k);
+                        // finally delete system
+                        score->deleteLater(s);
+                        }
+                  }
+            }
+
       score->setLayoutAll();
       }
 
@@ -3080,7 +1596,7 @@ void InsertRemoveMeasures::removeMeasures()
 //   flip
 //---------------------------------------------------------
 
-void ChangeImage::flip()
+void ChangeImage::flip(EditData&)
       {
       bool _lockAspectRatio = image->lockAspectRatio();
       bool _autoScale       = image->autoScale();
@@ -3097,7 +1613,7 @@ void ChangeImage::flip()
 //   AddExcerpt::undo
 //---------------------------------------------------------
 
-void AddExcerpt::undo()
+void AddExcerpt::undo(EditData&)
       {
       excerpt->oscore()->removeExcerpt(excerpt);
       }
@@ -3106,7 +1622,7 @@ void AddExcerpt::undo()
 //   AddExcerpt::redo
 //---------------------------------------------------------
 
-void AddExcerpt::redo()
+void AddExcerpt::redo(EditData&)
       {
       excerpt->oscore()->addExcerpt(excerpt);
       }
@@ -3115,7 +1631,7 @@ void AddExcerpt::redo()
 //   RemoveExcerpt::undo()
 //---------------------------------------------------------
 
-void RemoveExcerpt::undo()
+void RemoveExcerpt::undo(EditData&)
       {
       excerpt->oscore()->addExcerpt(excerpt);
       }
@@ -3124,26 +1640,26 @@ void RemoveExcerpt::undo()
 //   RemoveExcerpt::redo()
 //---------------------------------------------------------
 
-void RemoveExcerpt::redo()
+void RemoveExcerpt::redo(EditData&)
       {
       excerpt->oscore()->removeExcerpt(excerpt);
       }
 
 //---------------------------------------------------------
-//   SwapExcerpt::flip()
+//   SwapExcerpt::flip
 //---------------------------------------------------------
 
-void SwapExcerpt::flip()
+void SwapExcerpt::flip(EditData&)
       {
       score->excerpts().swap(pos1, pos2);
       score->setExcerptsChanged(true);
       }
 
 //---------------------------------------------------------
-//   ChangeExcerptTitle::flip()
+//   ChangeExcerptTitle::flip
 //---------------------------------------------------------
 
-void ChangeExcerptTitle::flip()
+void ChangeExcerptTitle::flip(EditData&)
       {
       QString s = title;
       title = excerpt->title();
@@ -3155,7 +1671,7 @@ void ChangeExcerptTitle::flip()
 //   flip
 //---------------------------------------------------------
 
-void ChangeBend::flip()
+void ChangeBend::flip(EditData&)
       {
       QList<PitchValue> pv = bend->points();
       bend->score()->addRefresh(bend->canvasBoundingRect());
@@ -3169,7 +1685,7 @@ void ChangeBend::flip()
 //   flip
 //---------------------------------------------------------
 
-void ChangeTremoloBar::flip()
+void ChangeTremoloBar::flip(EditData&)
       {
       QList<PitchValue> pv = bend->points();
       bend->setPoints(points);
@@ -3180,7 +1696,7 @@ void ChangeTremoloBar::flip()
 //   ChangeNoteEvents::flip
 //---------------------------------------------------------
 
-void ChangeNoteEvents::flip()
+void ChangeNoteEvents::flip(EditData&)
       {
 /*TODO:      QList<NoteEvent*> e = chord->playEvents();
       chord->setPlayEvents(events);
@@ -3192,7 +1708,7 @@ void ChangeNoteEvents::flip()
 //   ChangeInstrument::flip
 //---------------------------------------------------------
 
-void ChangeInstrument::flip()
+void ChangeInstrument::flip(EditData&)
       {
       Instrument* oi = is->instrument();  //new Instrument(*is->instrument());
       is->setInstrument(instrument);      //*instrument
@@ -3218,7 +1734,7 @@ void ChangeInstrument::flip()
 //   flip
 //---------------------------------------------------------
 
-void SwapCR::flip()
+void SwapCR::flip(EditData&)
       {
       Segment* s1 = cr1->segment();
       Segment* s2 = cr2->segment();
@@ -3246,7 +1762,7 @@ ChangeClefType::ChangeClefType(Clef* c, ClefType cl, ClefType tc)
 //   ChangeClefType::flip
 //---------------------------------------------------------
 
-void ChangeClefType::flip()
+void ChangeClefType::flip(EditData&)
       {
       ClefType ocl = clef->concertClef();
       ClefType otc = clef->transposingClef();
@@ -3269,7 +1785,7 @@ void ChangeClefType::flip()
 //   flip
 //---------------------------------------------------------
 
-void MoveStaff::flip()
+void MoveStaff::flip(EditData&)
       {
       Part* oldPart = staff->part();
       int idx = staff->rstaff();
@@ -3284,7 +1800,7 @@ void MoveStaff::flip()
 //   ChangeStaffUserDist::flip
 //---------------------------------------------------------
 
-void ChangeStaffUserDist::flip()
+void ChangeStaffUserDist::flip(EditData&)
       {
       qreal v = staff->userDist();
       staff->setUserDist(dist);
@@ -3296,7 +1812,7 @@ void ChangeStaffUserDist::flip()
 //   ChangeProperty::flip
 //---------------------------------------------------------
 
-void ChangeProperty::flip()
+void ChangeProperty::flip(EditData&)
       {
       qCDebug(undoRedo) << element->name() << propertyName(id) << element->getProperty(id) << "->" << property;
 
@@ -3304,11 +1820,10 @@ void ChangeProperty::flip()
 //            static_cast<Element*>(element)->score()->removeSpanner(static_cast<Spanner*>(element));
 
       QVariant v       = element->getProperty(id);
-      PropertyStyle ps = element->propertyStyle(id);
-      if (propertyStyle == PropertyStyle::STYLED)
-            element->resetProperty(id);
-      else
-            element->setProperty(id, property);
+      PropertyFlags ps = element->propertyFlags(id);
+
+      element->setProperty(id, property);
+      element->setPropertyFlags(id, flags);
 
 #if 0
       if (id == P_ID::SPANNER_TICK) {
@@ -3317,28 +1832,24 @@ void ChangeProperty::flip()
             // and expects to find the Ottava spanner(s) in the score lists;
             // thus, the above (re)setProperty() left the staff pitchOffset map in a wrong state
             // as the spanner has been removed from the score lists; redo the map here
-            if (static_cast<Element*>(element)->type() == Element::Type::OTTAVA)
+            if (static_cast<Element*>(element)->type() == ElementType::OTTAVA)
                   static_cast<Element*>(element)->staff()->updateOttava();
             }
 #endif
       property = v;
-      propertyStyle = ps;
+      flags = ps;
       }
 
 //---------------------------------------------------------
 //   ChangeMetaText::flip
 //---------------------------------------------------------
 
-void ChangeMetaText::flip()
+void ChangeMetaText::flip(EditData&)
       {
       QString s = score->metaTag(id);
       score->setMetaTag(id, text);
       text = s;
       }
-
-      PlayEventType eventListType = PlayEventType::User;
-
-      void flip();
 
 //---------------------------------------------------------
 //   ChangeEventList
@@ -3354,7 +1865,7 @@ ChangeEventList::ChangeEventList(Chord* c, const QList<NoteEventList> l)
 //   ChangeEventList::flip
 //---------------------------------------------------------
 
-void ChangeEventList::flip()
+void ChangeEventList::flip(EditData&)
       {
       int n = chord->notes().size();
       for (int i = 0; i < n; ++i) {
@@ -3370,51 +1881,33 @@ void ChangeEventList::flip()
 //   ChangeSynthesizerState::flip
 //---------------------------------------------------------
 
-void ChangeSynthesizerState::flip()
+void ChangeSynthesizerState::flip(EditData&)
       {
       std::swap(state, score->_synthesizerState);
       }
 
-//---------------------------------------------------------
-//   undoAddBracket
-//---------------------------------------------------------
-
-void Score::undoAddBracket(Staff* staff, int level, BracketType type, int span)
+void AddBracket::redo(EditData&)
       {
-      undo(new AddBracket(staff, level, type, span));
-      }
-
-//---------------------------------------------------------
-//   undoRemoveBracket
-//---------------------------------------------------------
-
-void Score::undoRemoveBracket(Bracket* b)
-      {
-      undo(new RemoveBracket(b->staff(), b->level(), b->bracketType(), b->span()));
-      }
-
-void AddBracket::redo()
-      {
-      staff->setBracket(level, type);
+      staff->setBracketType(level, type);
       staff->setBracketSpan(level, span);
       staff->score()->setLayoutAll();
       }
 
-void AddBracket::undo()
+void AddBracket::undo(EditData&)
       {
-      staff->setBracket(level, BracketType::NO_BRACKET);
+      staff->setBracketType(level, BracketType::NO_BRACKET);
       staff->score()->setLayoutAll();
       }
 
-void RemoveBracket::redo()
+void RemoveBracket::redo(EditData&)
       {
-      staff->setBracket(level, BracketType::NO_BRACKET);
+      staff->setBracketType(level, BracketType::NO_BRACKET);
       staff->score()->setLayoutAll();
       }
 
-void RemoveBracket::undo()
+void RemoveBracket::undo(EditData&)
       {
-      staff->setBracket(level, type);
+      staff->setBracketType(level, type);
       staff->setBracketSpan(level, span);
       staff->score()->setLayoutAll();
       }
@@ -3423,7 +1916,7 @@ void RemoveBracket::undo()
 //   ChangeSpannerElements
 //---------------------------------------------------------
 
-void ChangeSpannerElements::flip()
+void ChangeSpannerElements::flip(EditData&)
       {
       Element*    oldStartElement   = spanner->startElement();
       Element*    oldEndElement     = spanner->endElement();
@@ -3504,7 +1997,7 @@ void ChangeSpannerElements::flip()
 //   ChangeParent
 //---------------------------------------------------------
 
-void ChangeParent::flip()
+void ChangeParent::flip(EditData&)
       {
       Element* p = element->parent();
       int si = element->staffIdx();
@@ -3520,7 +2013,7 @@ void ChangeParent::flip()
 //   ChangeMMRest
 //---------------------------------------------------------
 
-void ChangeMMRest::flip()
+void ChangeMMRest::flip(EditData&)
       {
       Measure* mmr = m->mmRest();
       m->setMMRest(mmrest);
@@ -3531,12 +2024,12 @@ void ChangeMMRest::flip()
 //   InsertTime
 //---------------------------------------------------------
 
-void InsertTime::redo()
+void InsertTime::redo(EditData&)
       {
       score->insertTime(tick, len);
       }
 
-void InsertTime::undo()
+void InsertTime::undo(EditData&)
       {
       score->insertTime(tick, -len);
       }
@@ -3545,7 +2038,7 @@ void InsertTime::undo()
 //   ChangeNoteEvent::flip
 //---------------------------------------------------------
 
-void ChangeNoteEvent::flip()
+void ChangeNoteEvent::flip(EditData&)
       {
       note->score()->setPlaylistDirty();
       NoteEvent e = *oldEvent;
@@ -3598,16 +2091,16 @@ void LinkUnlink::doUnlink()
             qWarning("nothing found to unlink");
       }
 
-void LinkStaff::redo()   { s1->linkTo(s2); } // s1 is added
-void LinkStaff::undo()   { s2->unlink(s1); } // s1 is removed
-void UnlinkStaff::redo() { s1->unlink(s2); } // s2 is removed
-void UnlinkStaff::undo() { s2->linkTo(s1); } // s2 is added
+void LinkStaff::redo(EditData&)   { s1->linkTo(s2); } // s1 is added
+void LinkStaff::undo(EditData&)   { s2->unlink(s1); } // s1 is removed
+void UnlinkStaff::redo(EditData&) { s1->unlink(s2); } // s2 is removed
+void UnlinkStaff::undo(EditData&) { s2->linkTo(s1); } // s2 is added
 
 //---------------------------------------------------------
 //   ChangeStartEndSpanner::flip
 //---------------------------------------------------------
 
-void ChangeStartEndSpanner::flip()
+void ChangeStartEndSpanner::flip(EditData&)
       {
       Element* s = spanner->startElement();
       Element* e = spanner->endElement();
@@ -3621,7 +2114,7 @@ void ChangeStartEndSpanner::flip()
 //   ChangeMetaTags::flip
 //---------------------------------------------------------
 
-void ChangeMetaTags::flip()
+void ChangeMetaTags::flip(EditData&)
       {
       QMap<QString,QString> t = score->metaTags();
       score->setMetaTags(metaTags);
@@ -3632,7 +2125,7 @@ void ChangeMetaTags::flip()
 //   ChangeDrumset::flip
 //---------------------------------------------------------
 
-void ChangeDrumset::flip()
+void ChangeDrumset::flip(EditData&)
       {
       Drumset d = *instrument->drumset();
       instrument->setDrumset(&drumset);
@@ -3640,82 +2133,29 @@ void ChangeDrumset::flip()
       }
 
 //---------------------------------------------------------
-//   undoChangeBarLine
-//---------------------------------------------------------
-
-void Score::undoChangeBarLine(Measure* measure, BarLineType barType, bool beginBarLine)
-      {
-      int tick = measure->tick();
-
-      for (Score* s : scoreList()) {
-            Measure* m  = s->tick2measure(tick);
-            Measure* nm = m->nextMeasure();
-
-            switch (barType) {
-                  case BarLineType::END:
-                  case BarLineType::NORMAL:
-                  case BarLineType::DOUBLE:
-                  case BarLineType::BROKEN:
-                  case BarLineType::DOTTED: {
-                        Segment* segment;
-                        if (!beginBarLine) {
-                              s->undoChangeProperty(m, P_ID::REPEAT_END, false);
-                              if (nm)
-                                    s->undoChangeProperty(nm, P_ID::REPEAT_START, false);
-                              segment = m->findSegment(Segment::Type::EndBarLine, m->endTick());
-                              if (segment) {
-                                    for (Element* e : segment->elist()) {
-                                          if (e) {
-                                                e->undoChangeProperty(P_ID::BARLINE_TYPE, QVariant::fromValue(barType));
-                                                e->undoChangeProperty(P_ID::GENERATED, false);
-                                                }
-                                          }
-                                    }
-                              }
-                        else {
-                              segment = m->undoGetSegment(Segment::Type::BeginBarLine, tick);
-                              for (Element* e : segment->elist()) {
-                                    if (e) {
-                                          e->undoChangeProperty(P_ID::BARLINE_TYPE, QVariant::fromValue(barType));
-                                          e->undoChangeProperty(P_ID::GENERATED, false);
-                                          }
-                                    else {
-                                          BarLine* bl = new BarLine(s);
-                                          bl->setBarLineType(barType);
-                                          bl->setParent(segment);
-                                          bl->setTrack(0);
-                                          bl->setSpanStaff(s->nstaves());
-                                          undo(new AddElement(bl));
-                                          }
-                                    }
-                              }
-                        }
-                        break;
-                  case BarLineType::START_REPEAT:
-                        s->undoChangeProperty(m, P_ID::REPEAT_START, true);
-                        break;
-                  case BarLineType::END_REPEAT:
-                        s->undoChangeProperty(m, P_ID::REPEAT_END, true);
-                        break;
-                  case BarLineType::END_START_REPEAT:
-                        s->undoChangeProperty(m, P_ID::REPEAT_END, true);
-                        if (nm)
-                              s->undoChangeProperty(nm, P_ID::REPEAT_START, true);
-                        break;
-                  case BarLineType::UNKNOWN:
-                        break;
-                  }
-            }
-      }
-
-//---------------------------------------------------------
 //   undoChangeGap
 //---------------------------------------------------------
 
-void ChangeGap::flip()
+void ChangeGap::flip(EditData&)
       {
       rest->setGap(v);
       v = !v;
+      }
+
+//---------------------------------------------------------
+//  ChangeText
+//---------------------------------------------------------
+
+void ChangeText::insertText(EditData& ed)
+      {
+      ed.view->startEditMode(c.text());
+      c.text()->undoRedoInsertText(ed, this);
+      }
+
+void ChangeText::removeText(EditData& ed)
+      {
+      ed.view->startEditMode(c.text());
+      c.text()->undoRedoRemoveText(ed, this);
       }
 
 }

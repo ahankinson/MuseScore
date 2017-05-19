@@ -79,7 +79,7 @@ QList<Element*> Page::items(const QPointF& p)
 
 //---------------------------------------------------------
 //   appendSystem
-//---------------------------------------------------------
+//--------e-------------------------------------------------
 
 void Page::appendSystem(System* s)
       {
@@ -151,12 +151,26 @@ void Page::drawHeaderFooter(QPainter* p, int area, const QString& ss) const
       QString s = replaceTextMacros(ss);
       if (s.isEmpty())
             return;
-      Text text(score());
-      text.setTextStyleType(area < 3 ? TextStyleType::HEADER : TextStyleType::FOOTER);
-      text.setParent(const_cast<Page*>(this));
-      text.setLayoutToParentWidth(true);
 
-      Align flags;
+      Text* text;
+      if (area < 3) {
+            text = score()->headerText();
+            if (!text) {
+                  text = new Text(SubStyle::HEADER, score());
+                  text->setLayoutToParentWidth(true);
+                  score()->setHeaderText(text);
+                  }
+            }
+      else {
+            text = score()->footerText();
+            if (!text) {
+                  text = new Text(SubStyle::FOOTER, score());
+                  text->setLayoutToParentWidth(true);
+                  score()->setFooterText(text);
+                  }
+            }
+      text->setParent((Page*)this);
+      Align flags = Align::LEFT;
       switch (area) {
             case 0: flags = Align::LEFT    | Align::TOP;    break;
             case 1: flags = Align::HCENTER | Align::TOP;    break;
@@ -165,12 +179,26 @@ void Page::drawHeaderFooter(QPainter* p, int area, const QString& ss) const
             case 4: flags = Align::HCENTER | Align::BOTTOM; break;
             case 5: flags = Align::RIGHT   | Align::BOTTOM; break;
             }
-      text.textStyle().setAlign(flags);
-      text.setXmlText(s);
-      text.layout();
-      p->translate(text.pos());
-      text.draw(p);
-      p->translate(-text.pos());
+      text->setAlign(flags);
+      text->setXmlText(s);
+      text->layout();
+      p->translate(text->pos());
+      text->draw(p);
+      p->translate(-text->pos());
+      }
+
+//---------------------------------------------------------
+//   styleChanged
+//---------------------------------------------------------
+
+void Page::styleChanged()
+      {
+      Text* t = score()->headerText();
+      if (t)
+            t->styleChanged();
+      t = score()->footerText();
+      if (t)
+            t->styleChanged();
       }
 
 //---------------------------------------------------------
@@ -398,156 +426,6 @@ void Page::read(XmlReader& e)
       }
 
 //---------------------------------------------------------
-//   searchSystem
-//    return list of systems as there may be more than
-//    one system in a row
-//    p is in canvas coordinates
-//---------------------------------------------------------
-
-QList<System*> Page::searchSystem(const QPointF& pos) const
-      {
-      QList<System*> systems;
-      qreal y = pos.y();  // transform to page relative
-      qreal y2;
-      int n = _systems.size();
-      for (int i = 0; i < n; ++i) {
-            System* s = _systems.at(i);
-            System* ns = 0;               // next system row
-            int ii = i + 1;
-            for (; ii < n; ++ii) {
-                  ns = _systems.at(ii);
-                  if (ns->y() != s->y())
-                        break;
-                  }
-            if ((ii == n) || (ns == 0))
-                  y2 = height();
-            else  {
-                  qreal sy2 = s->y() + s->bbox().height();
-                  y2         = sy2 + (ns->y() - sy2) * .5;
-                  }
-            if (y < y2) {
-                  systems.append(s);
-                  for (int ii = i+1; ii < n; ++ii) {
-                        if (_systems.at(ii)->y() != s->y())
-                              break;
-                        systems.append(_systems.at(ii));
-                        }
-                  return systems;
-                  }
-            }
-      return systems;
-      }
-
-//---------------------------------------------------------
-//   searchMeasure
-//    p is in canvas coordinates
-//---------------------------------------------------------
-
-Measure* Page::searchMeasure(const QPointF& p) const
-      {
-      QList<System*> systems = searchSystem(p);
-      if (systems.empty())
-            return 0;
-
-      foreach(System* system, systems) {
-            qreal x = p.x() - system->pagePos().x();
-            foreach(MeasureBase* mb, system->measures()) {
-                  if (mb->type() != Element::Type::MEASURE)
-                        continue;
-                  if (x < (mb->x() + mb->bbox().width()))
-                        return static_cast<Measure*>(mb);
-                  }
-            }
-      return 0;
-      }
-
-//---------------------------------------------------------
-//   pos2measure
-//---------------------------------------------------------
-
-/**
- Return measure for canvas relative position \a p.
-*/
-
-MeasureBase* Page::pos2measure(const QPointF& p, int* rst, int* pitch,
-   Segment** seg, QPointF* offset) const
-      {
-      Measure* m = searchMeasure(p);
-      if (m == 0)
-            return 0;
-
-      System* s = m->system();
-      qreal y   = p.y() - s->canvasPos().y();
-
-      int i;
-      for (i = 0; i < score()->nstaves();) {
-            SysStaff* stff = s->staff(i);
-            if (!stff->show() || !score()->staff(i)->show()) {
-                  ++i;
-                  continue;
-                  }
-            int ni = i;
-            for (;;) {
-                  ++ni;
-                  if (ni == score()->nstaves() || (s->staff(ni)->show() && score()->staff(ni)->show()))
-                        break;
-                  }
-
-            qreal sy2;
-            if (ni != score()->nstaves()) {
-                  SysStaff* nstaff = s->staff(ni);
-                  qreal s1y2 = stff->bbox().y() + stff->bbox().height();
-                  sy2 = s1y2 + (nstaff->bbox().y() - s1y2)/2;
-                  }
-            else
-                  sy2 = s->page()->height() - s->pos().y();   // s->height();
-            if (y > sy2) {
-                  i   = ni;
-                  continue;
-                  }
-            break;
-            }
-
-      // search for segment + offset
-      QPointF pppp = p - m->pagePos();
-      int track    = i * VOICES;
-
-      SysStaff* sstaff = m->system()->staff(i);
-      for (Segment* segment = m->first(Segment::Type::ChordRest); segment; segment = segment->next(Segment::Type::ChordRest)) {
-            if ((segment->element(track) == 0)
-               && (segment->element(track+1) == 0)
-               && (segment->element(track+2) == 0)
-               && (segment->element(track+3) == 0)
-               )
-                  continue;
-            Segment* ns = segment->next();
-            for (; ns; ns = ns->next()) {
-                  if (ns->segmentType() != Segment::Type::ChordRest)
-                        continue;
-                  if (ns->element(track)
-                     || ns->element(track+1)
-                     || ns->element(track+2)
-                     || ns->element(track+3))
-                        break;
-                  }
-            if (!ns || (pppp.x() < (segment->x() + (ns->x() - segment->x())* .5))) {
-                  *rst = i;
-                  if (pitch) {
-//                        Staff* s = score()->staff(i);
-//                        int clef = s->clef(segment->tick());
-//TODO                        *pitch = score()->y2pitch(pppp.y() - sstaff->bbox().y(), clef, s->spatium());
-                        }
-                  if (offset)
-                        *offset = pppp - QPointF(segment->x(), sstaff->bbox().y());
-                  if (seg)
-                        *seg = segment;
-                  return m;
-                  }
-            }
-      return 0;
-      }
-
-//---------------------------------------------------------
 //   elements
 //---------------------------------------------------------
 
@@ -564,8 +442,8 @@ QList<Element*> Page::elements()
 
 qreal Page::tm() const
       {
-      const PageFormat* pf = score()->pageFormat();
-      return ((!pf->twosided() || isOdd()) ? pf->oddTopMargin() : pf->evenTopMargin()) * DPI;
+      return ((!score()->styleB(StyleIdx::pageTwosided) || isOdd())
+         ? score()->styleD(StyleIdx::pageOddTopMargin) : score()->styleD(StyleIdx::pageEvenTopMargin)) * DPI;
       }
 
 //---------------------------------------------------------
@@ -574,8 +452,8 @@ qreal Page::tm() const
 
 qreal Page::bm() const
       {
-      const PageFormat* pf = score()->pageFormat();
-      return ((!pf->twosided() || isOdd()) ? pf->oddBottomMargin() : pf->evenBottomMargin()) * DPI;
+      return ((!score()->styleB(StyleIdx::pageTwosided) || isOdd())
+         ? score()->styleD(StyleIdx::pageOddBottomMargin) : score()->styleD(StyleIdx::pageEvenBottomMargin)) * DPI;
       }
 
 //---------------------------------------------------------
@@ -584,8 +462,8 @@ qreal Page::bm() const
 
 qreal Page::lm() const
       {
-      const PageFormat* pf = score()->pageFormat();
-      return ((!pf->twosided() || isOdd()) ? pf->oddLeftMargin() : pf->evenLeftMargin()) * DPI;
+      return ((!score()->styleB(StyleIdx::pageTwosided) || isOdd())
+         ? score()->styleD(StyleIdx::pageOddLeftMargin) : score()->styleD(StyleIdx::pageEvenLeftMargin)) * DPI;
       }
 
 //---------------------------------------------------------
@@ -594,8 +472,7 @@ qreal Page::lm() const
 
 qreal Page::rm() const
       {
-      const PageFormat* pf = score()->pageFormat();
-      return ((!pf->twosided() || isOdd()) ? pf->oddRightMargin() : pf->evenRightMargin()) * DPI;
+      return (score()->styleD(StyleIdx::pageWidth) - score()->styleD(StyleIdx::pagePrintableWidth)) * DPI - lm();
       }
 
 //---------------------------------------------------------

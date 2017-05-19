@@ -14,6 +14,7 @@
 #define __ARTICULATION_H__
 
 #include "element.h"
+#include "mscore.h"
 
 namespace Ms {
 
@@ -54,7 +55,7 @@ constexpr bool operator& (ArticulationShowIn a1, ArticulationShowIn a2) {
 //---------------------------------------------------------
 
 class Articulation : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       SymId _symId;
       Direction _direction;
@@ -75,7 +76,7 @@ class Articulation : public Element {
       Articulation &operator=(const Articulation&) = delete;
 
       virtual Articulation* clone() const override   { return new Articulation(*this); }
-      virtual Element::Type type() const override    { return Element::Type::ARTICULATION; }
+      virtual ElementType type() const override    { return ElementType::ARTICULATION; }
 
       virtual qreal mag() const override;
 
@@ -98,7 +99,7 @@ class Articulation : public Element {
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID) const override;
-      virtual PropertyStyle propertyStyle(P_ID) const override;
+      virtual PropertyFlags propertyFlags(P_ID) const override;
       virtual void resetProperty(P_ID id) override;
       StyleIdx getPropertyStyle(P_ID id) const override;
 

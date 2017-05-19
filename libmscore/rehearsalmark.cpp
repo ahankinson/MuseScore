@@ -12,6 +12,7 @@
 
 #include "score.h"
 #include "rehearsalmark.h"
+#include "measure.h"
 
 namespace Ms {
 
@@ -20,9 +21,8 @@ namespace Ms {
 //---------------------------------------------------------
 
 RehearsalMark::RehearsalMark(Score* s)
-   : Text(s)
+   : SystemText(SubStyle::REHEARSAL_MARK, s)
       {
-      setTextStyleType(TextStyleType::REHEARSAL_MARK);
       }
 
 //---------------------------------------------------------
@@ -33,8 +33,16 @@ void RehearsalMark::layout()
       {
       if (autoplace())
             setUserOff(QPointF());
-      setPos(textStyle().offset(spatium()));
+      qreal y;
+      if (placeAbove())
+            y = score()->styleP(StyleIdx::rehearsalMarkPosAbove);
+      else {
+            qreal sh = staff() ? staff()->height() : 0;
+            y = score()->styleP(StyleIdx::rehearsalMarkPosBelow) + sh + lineSpacing();
+            }
+      setPos(QPointF(0.0, y));
       Text::layout1();
+
       Segment* s = segment();
       if (s) {
             if (!s->rtick()) {
@@ -52,12 +60,36 @@ void RehearsalMark::layout()
                         }
                   }
             if (autoplace()) {
-                  Shape s1 = s->staffShape(staffIdx()).translated(s->pos());
-                  Shape s2 = shape().translated(s->pos());
-                  qreal d  = s2.minVerticalDistance(s1);
-                  if (d > 0)
-                        setUserOff(QPointF(0.0, -d));
+                  qreal minDistance = score()->styleP(StyleIdx::rehearsalMarkMinDistance);
+                  Shape s1 = s->measure()->staffShape(staffIdx());
+                  Shape s2 = shape().translated(s->pos() + pos());
+                  if (placeAbove()) {
+                        qreal d = s2.minVerticalDistance(s1);
+                        if (d > -minDistance)
+                              rUserYoffset() = -d - minDistance;
+                        }
+                  else {
+                        qreal d = s1.minVerticalDistance(s2);
+                        if (d > -minDistance)
+                              rUserYoffset() = d + minDistance;
+                        }
                   }
+            }
+      }
+
+//---------------------------------------------------------
+//   propertyDefault
+//---------------------------------------------------------
+
+QVariant RehearsalMark::propertyDefault(P_ID id) const
+      {
+      switch (id) {
+            case P_ID::SUB_STYLE:
+                  return int(SubStyle::REHEARSAL_MARK);
+            case P_ID::PLACEMENT:
+                  return score()->styleV(StyleIdx::rehearsalMarkPlacement);
+            default:
+                  return Text::propertyDefault(id);
             }
       }
 

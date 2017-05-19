@@ -65,7 +65,7 @@ EditStyle::EditStyle(Score* s, QWidget* parent)
             }
 
       styleWidgets = {
-      //   idx --- showPercent --- widget --- resetButton
+      //   idx                --- showPercent      --- widget          --- resetButton
       { StyleIdx::voltaLineStyle,          false, voltaLineStyle,          resetVoltaLineStyle },
       { StyleIdx::ottavaLineStyle,         false, ottavaLineStyle,         resetOttavaLineStyle },
       { StyleIdx::pedalLineStyle,          false, pedalLineStyle,          resetPedalLineStyle },
@@ -221,11 +221,43 @@ EditStyle::EditStyle(Score* s, QWidget* parent)
       { StyleIdx::startBarlineMultiple,    false, showStartBarlineMultiple,     0 },
       { StyleIdx::dividerLeftSym,          false, dividerLeftSym,               0 },
       { StyleIdx::dividerRightSym,         false, dividerRightSym,              0 },
-      { StyleIdx::showMeasureNumber,       false, showMeasureNumber,            0 },
-      { StyleIdx::showMeasureNumberOne,    false, showFirstMeasureNumber,       0 },
-      { StyleIdx::measureNumberInterval,   false, intervalMeasureNumber,        0 },
-      { StyleIdx::measureNumberSystem,     false, showEverySystemMeasureNumber, 0 },
-      { StyleIdx::measureNumberAllStaffs,  false, showAllStaffsMeasureNumber,   0 },
+
+      { StyleIdx::showMeasureNumber,          false, showMeasureNumber,            0 },
+      { StyleIdx::showMeasureNumberOne,       false, showFirstMeasureNumber,       0 },
+      { StyleIdx::measureNumberInterval,      false, intervalMeasureNumber,        0 },
+      { StyleIdx::measureNumberSystem,        false, showEverySystemMeasureNumber, 0 },
+      { StyleIdx::measureNumberAllStaffs,     false, showAllStaffsMeasureNumber,   0 },
+      { StyleIdx::measureNumberFontFace,      false, measureNumberFontFace,        resetMeasureNumberFontFace },
+      { StyleIdx::measureNumberFontSize,      false, measureNumberFontSize,        resetMeasureNumberFontSize },
+      { StyleIdx::measureNumberFontBold,      false, measureNumberBold,            resetMeasureNumberBold },
+      { StyleIdx::measureNumberFontItalic,    false, measureNumberItalic,          resetMeasureNumberItalic },
+      { StyleIdx::measureNumberFontUnderline, false, measureNumberUnderline,       resetMeasureNumberUnderline },
+//      { StyleIdx::measureNumberOffset,           "measureNumberOffset",          QPointF(0.0, -2.0) },
+
+      { StyleIdx::shortInstrumentFontFace,      false, shortInstrumentFontFace,      resetShortInstrumentFontFace },
+      { StyleIdx::shortInstrumentFontSize,      false, shortInstrumentFontSize,      resetShortInstrumentFontSize },
+      { StyleIdx::shortInstrumentFontBold,      false, shortInstrumentFontBold,      resetShortInstrumentFontBold },
+      { StyleIdx::shortInstrumentFontItalic,    false, shortInstrumentFontItalic,    resetShortInstrumentFontItalic },
+      { StyleIdx::shortInstrumentFontUnderline, false, shortInstrumentFontUnderline, resetShortInstrumentFontUnderline },
+
+      { StyleIdx::longInstrumentFontFace,      false, longInstrumentFontFace,        resetLongInstrumentFontFace },
+      { StyleIdx::longInstrumentFontSize,      false, longInstrumentFontSize,        resetLongInstrumentFontSize },
+      { StyleIdx::longInstrumentFontBold,      false, longInstrumentFontBold,        resetLongInstrumentFontBold },
+      { StyleIdx::longInstrumentFontItalic,    false, longInstrumentFontItalic,      resetLongInstrumentFontItalic },
+      { StyleIdx::longInstrumentFontUnderline, false, longInstrumentFontUnderline,   resetLongInstrumentFontUnderline },
+
+      { StyleIdx::headerFontFace,      false, headerFontFace,        resetHeaderFontFace },
+      { StyleIdx::headerFontSize,      false, headerFontSize,        resetHeaderFontSize },
+      { StyleIdx::headerFontBold,      false, headerFontBold,        resetHeaderFontBold },
+      { StyleIdx::headerFontItalic,    false, headerFontItalic,      resetHeaderFontItalic },
+      { StyleIdx::headerFontUnderline, false, headerFontUnderline,   resetHeaderFontUnderline },
+
+      { StyleIdx::footerFontFace,      false, footerFontFace,        resetFooterFontFace },
+      { StyleIdx::footerFontSize,      false, footerFontSize,        resetFooterFontSize },
+      { StyleIdx::footerFontBold,      false, footerFontBold,        resetFooterFontBold },
+      { StyleIdx::footerFontItalic,    false, footerFontItalic,      resetFooterFontItalic },
+      { StyleIdx::footerFontUnderline, false, footerFontUnderline,   resetFooterFontUnderline },
+
       { StyleIdx::beamDistance,            true,  beamDistance,                 0 },
       { StyleIdx::beamNoSlope,             false, beamNoSlope,                  0 },
       { StyleIdx::graceNoteMag,            true,  graceNoteSize,                0 },
@@ -281,15 +313,25 @@ EditStyle::EditStyle(Score* s, QWidget* parent)
       { StyleIdx::dynamicsPosBelow,        false, dynamicsPosBelow,           resetDynamicsPosBelow },
       { StyleIdx::dynamicsMinDistance,     false, dynamicsMinDistance,        resetDynamicsMinDistance },
 
-      { StyleIdx::autoplaceVerticalAlignRange,      false, autoplaceVerticalAlignRange, resetAutoplaceVerticalAlignRange },
-      { StyleIdx::textLinePlacement,       false, textLinePlacement, resetTextLinePlacement },
-      { StyleIdx::textLinePosAbove,        false, textLinePosAbove,             resetTextLinePosAbove },
-      { StyleIdx::textLinePosBelow,        false, textLinePosBelow,             resetTextLinePosBelow },
+      { StyleIdx::tempoPlacement,          false, tempoTextPlacement,          resetTempoTextPlacement },
+      { StyleIdx::tempoPosAbove,           false, tempoTextPosAbove,           resetTempoTextPosAbove },
+      { StyleIdx::tempoPosBelow,           false, tempoTextPosBelow,           resetTempoTextPosBelow },
+      { StyleIdx::tempoMinDistance,        false, tempoTextMinDistance,        resetTempoTextMinDistance },
+
+      { StyleIdx::rehearsalMarkPlacement,   false, rehearsalMarkPlacement,     resetRehearsalMarkPlacement },
+      { StyleIdx::rehearsalMarkPosAbove,    false, rehearsalMarkPosAbove,      resetRehearsalMarkPosAbove },
+      { StyleIdx::rehearsalMarkPosBelow,    false, rehearsalMarkPosBelow,      resetRehearsalMarkPosBelow },
+      { StyleIdx::rehearsalMarkMinDistance, false, rehearsalMarkMinDistance,   resetRehearsalMarkMinDistance },
+
+      { StyleIdx::autoplaceVerticalAlignRange, false, autoplaceVerticalAlignRange, resetAutoplaceVerticalAlignRange },
+      { StyleIdx::textLinePlacement,           false, textLinePlacement,           resetTextLinePlacement },
+      { StyleIdx::textLinePosAbove,            false, textLinePosAbove,            resetTextLinePosAbove },
+      { StyleIdx::textLinePosBelow,            false, textLinePosBelow,            resetTextLinePosBelow },
       };
 
       for (QComboBox* cb : std::vector<QComboBox*> {
             lyricsPlacement, textLinePlacement, hairpinPlacement, pedalLinePlacement,
-            trillLinePlacement, dynamicsPlacement
+            trillLinePlacement, dynamicsPlacement, tempoTextPlacement, rehearsalMarkPlacement
             }) {
             cb->clear();
             cb->addItem(tr("Above"), int(Element::Placement::ABOVE));
@@ -437,6 +479,10 @@ EditStyle::EditStyle(Score* s, QWidget* parent)
                   connect(qobject_cast<QComboBox*>(sw.widget), SIGNAL(currentIndexChanged(int)), mapper2, SLOT(map()));
             else if (qobject_cast<QRadioButton*>(sw.widget))
                   connect(qobject_cast<QRadioButton*>(sw.widget), SIGNAL(toggled(bool)), mapper2, SLOT(map()));
+            else if (qobject_cast<QPushButton*>(sw.widget))
+                  connect(qobject_cast<QPushButton*>(sw.widget), SIGNAL(toggled(bool)), mapper2, SLOT(map()));
+            else if (qobject_cast<QToolButton*>(sw.widget))
+                  connect(qobject_cast<QToolButton*>(sw.widget), SIGNAL(toggled(bool)), mapper2, SLOT(map()));
             else if (qobject_cast<QGroupBox*>(sw.widget))
                   connect(qobject_cast<QGroupBox*>(sw.widget), SIGNAL(toggled(bool)), mapper2, SLOT(map()));
             else if (qobject_cast<QCheckBox*>(sw.widget))
@@ -520,6 +566,16 @@ void EditStyle::applyToAllParts()
       }
 
 //---------------------------------------------------------
+//   unhandledType
+//---------------------------------------------------------
+
+static void unhandledType(const StyleWidget* sw)
+      {
+      const char* type = MStyle::valueType(sw->idx);
+      qFatal("unhandled %s <%s>: widget: %s\n", type, MStyle::valueName(sw->idx), sw->widget->metaObject()->className());
+      }
+
+//---------------------------------------------------------
 //   getValue
 //    return current gui value
 //---------------------------------------------------------
@@ -529,30 +585,24 @@ QVariant EditStyle::getValue(StyleIdx idx)
       const StyleWidget& sw = styleWidget(idx);
       const char* type = MStyle::valueType(sw.idx);
 
-//      printf("getValue widget %s value %s\n",
-//         sw.widget->metaObject()->className(),
-//         MStyle::valueName(sw.idx));
-
       if (!strcmp("Ms::Spatium", type)) {
             QDoubleSpinBox* sb = qobject_cast<QDoubleSpinBox*>(sw.widget);
             return QVariant(Spatium(sb->value() * (sw.showPercent ? 0.01 : 1.0)));
             }
 
       else if (!strcmp("double", type)) {
+            QVariant v = sw.widget->property("value");
+            if (!v.isValid())
+                  unhandledType(&sw);
             if (sw.showPercent)
-                  return qobject_cast<QSpinBox*>(sw.widget)->value() * 0.01;
-            else
-                  return qobject_cast<QDoubleSpinBox*>(sw.widget)->value();
+                  v = v.toDouble() * 0.01;
+            return v;
             }
       else if (!strcmp("bool", type)) {
-            if (qobject_cast<QCheckBox*>(sw.widget))
-                  return qobject_cast<QCheckBox*>(sw.widget)->isChecked();
-            else if (qobject_cast<QGroupBox*>(sw.widget))
-                  return qobject_cast<QGroupBox*>(sw.widget)->isChecked();
-            else if (qobject_cast<QRadioButton*>(sw.widget))
-                  return qobject_cast<QRadioButton*>(sw.widget)->isChecked();
-            else
-                  qFatal("unhandled bool");
+            QVariant v = sw.widget->property("checked");
+            if (!v.isValid())
+                  unhandledType(&sw);
+            return v;
             }
       else if (!strcmp("int", type)) {
             if (qobject_cast<QComboBox*>(sw.widget)) {
@@ -565,6 +615,8 @@ QVariant EditStyle::getValue(StyleIdx idx)
                   qFatal("unhandled int");
             }
       else if (!strcmp("QString", type)) {
+            if (qobject_cast<QFontComboBox*>(sw.widget))
+                  return static_cast<QFontComboBox*>(sw.widget)->currentFont().family();
             if (qobject_cast<QComboBox*>(sw.widget)) {
                   QComboBox* cb = qobject_cast<QComboBox*>(sw.widget);
                   return cb->currentData().toString();
@@ -601,71 +653,65 @@ void EditStyle::setValues()
       for (const StyleWidget& sw : styleWidgets) {
             if (sw.widget)
                   sw.widget->blockSignals(true);
+            QVariant val = lstyle.value(sw.idx);
             const char* type = MStyle::valueType(sw.idx);
             if (sw.reset)
                   sw.reset->setEnabled(!lstyle.isDefault(sw.idx));
 
             if (!strcmp("Ms::Spatium", type)) {
                   if (sw.showPercent)
-                        qobject_cast<QSpinBox*>(sw.widget)->setValue(int(lstyle.value(sw.idx).value<Spatium>().val() * 100.0));
+                        qobject_cast<QSpinBox*>(sw.widget)->setValue(int(val.value<Spatium>().val() * 100.0));
                   else
-                        qobject_cast<QDoubleSpinBox*>(sw.widget)->setValue(lstyle.value(sw.idx).value<Spatium>().val());
+                        qobject_cast<QDoubleSpinBox*>(sw.widget)->setValue(val.value<Spatium>().val());
                   }
             else if (!strcmp("double", type)) {
                   if (sw.showPercent)
-                        qobject_cast<QSpinBox*>(sw.widget)->setValue(int(lstyle.value(sw.idx).toDouble() * 100.0));
-                  else
-                        qobject_cast<QDoubleSpinBox*>(sw.widget)->setValue(lstyle.value(sw.idx).toDouble());
+                        val = QVariant(val.toDouble() * 100);
+                  if (!sw.widget->setProperty("value", val))
+                        unhandledType(&sw);
                   }
             else if (!strcmp("bool", type)) {
-                  if (qobject_cast<QCheckBox*>(sw.widget))
-                        qobject_cast<QCheckBox*>(sw.widget)->setChecked(lstyle.value(sw.idx).toBool());
-                  else if (qobject_cast<QGroupBox*>(sw.widget))
-                        qobject_cast<QGroupBox*>(sw.widget)->setChecked(lstyle.value(sw.idx).toBool());
-                  else if (qobject_cast<QRadioButton*>(sw.widget))
-                        qobject_cast<QRadioButton*>(sw.widget)->setChecked(lstyle.value(sw.idx).toBool());
-                  else
-                        qFatal("unhandled bool");
+                  if (!sw.widget->setProperty("checked", val))
+                        unhandledType(&sw);
                   }
             else if (!strcmp("int", type)) {
                   if (qobject_cast<QComboBox*>(sw.widget)) {
                         QComboBox* cb = qobject_cast<QComboBox*>(sw.widget);
-                        cb->setCurrentIndex(cb->findData(lstyle.value(sw.idx)));
+                        cb->setCurrentIndex(cb->findData(val));
                         }
                   else if (qobject_cast<QSpinBox*>(sw.widget)) {
-                        qobject_cast<QSpinBox*>(sw.widget)->setValue(lstyle.value(sw.idx).toInt()
+                        qobject_cast<QSpinBox*>(sw.widget)->setValue(val.toInt()
                            * (sw.showPercent ? 100 : 1));
                         }
                   else
-                        abort();
+                        unhandledType(&sw);
                   }
             else if (!strcmp("QString", type)) {
-                  QComboBox* cb = qobject_cast<QComboBox*>(sw.widget);
-                  if (cb) {
+                  if (qobject_cast<QFontComboBox*>(sw.widget))
+                        static_cast<QFontComboBox*>(sw.widget)->setCurrentFont(QFont(val.toString()));
+                  else if (qobject_cast<QComboBox*>(sw.widget)) {
+                        QComboBox* cb = qobject_cast<QComboBox*>(sw.widget);
                         for (int i = 0; i < cb->count(); ++i) {
-                              if (cb->itemData(i) == lstyle.value(sw.idx).toString()) {
+                              if (cb->itemData(i) == val.toString()) {
                                     cb->setCurrentIndex(i);
                                     break;
                                     }
                               }
                         }
-                  else {
-                        QTextEdit* te = qobject_cast<QTextEdit*>(sw.widget);
-                        if (!te)
-                              abort();
-                        te->setPlainText(lstyle.value(sw.idx).toString());
-                        }
+                  else if (qobject_cast<QTextEdit*>(sw.widget))
+                        static_cast<QTextEdit*>(sw.widget)->setPlainText(val.toString());
+                  else
+                        unhandledType(&sw);
                   }
             else if (!strcmp("Ms::Direction", type)) {
                   QComboBox* cb = qobject_cast<QComboBox*>(sw.widget);
                   if (cb)
-                        cb->setCurrentIndex(int(lstyle.value(sw.idx).value<Direction>()));
+                        cb->setCurrentIndex(int(val.value<Direction>()));
                   else
-                        abort();
+                        unhandledType(&sw);
                   }
-            else {
-                  qFatal("EditStyle::setValues: unhandled type <%s>", type);
-                  }
+            else
+                  unhandledType(&sw);
             if (sw.widget)
                   sw.widget->blockSignals(false);
             }
@@ -925,9 +971,9 @@ void EditStyle::valueChanged(int i)
                           cs->undo(new ChangeStyleVal(cs, i.first, i.second));
                           }
                     if (scoreFont->textEnclosureThickness()) {
-                           TextStyle ts = cs->textStyle(TextStyleType::REHEARSAL_MARK);
-                           ts.setFrameWidth(Spatium(scoreFont->textEnclosureThickness()));
-                           cs->undo(new ChangeTextStyle(cs, ts));
+//                           TextStyle ts = cs->textStyle(TextStyleType::REHEARSAL_MARK);
+//                           ts.setFrameWidth(Spatium(scoreFont->textEnclosureThickness()));
+//TODO                           cs->undo(new ChangeTextStyle(cs, ts));
                            }
                     }
               setValue = true;

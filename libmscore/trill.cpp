@@ -54,7 +54,7 @@ void TrillSegment::draw(QPainter* painter) const
 void TrillSegment::add(Element* e)
       {
       e->setParent(this);
-      if (e->type() == Element::Type::ACCIDENTAL) {
+      if (e->type() == ElementType::ACCIDENTAL) {
             // accidental is part of trill
             trill()->setAccidental(static_cast<Accidental*>(e));
             }
@@ -202,9 +202,9 @@ Shape TrillSegment::shape() const
 //   acceptDrop
 //---------------------------------------------------------
 
-bool TrillSegment::acceptDrop(const DropData& data) const
+bool TrillSegment::acceptDrop(EditData& data) const
       {
-      if (data.element->type() == Element::Type::ACCIDENTAL)
+      if (data.element->isAccidental())
             return true;
       return false;
       }
@@ -213,11 +213,11 @@ bool TrillSegment::acceptDrop(const DropData& data) const
 //   drop
 //---------------------------------------------------------
 
-Element* TrillSegment::drop(const DropData& data)
+Element* TrillSegment::drop(EditData& data)
       {
       Element* e = data.element;
-      switch(e->type()) {
-            case Element::Type::ACCIDENTAL:
+      switch (e->type()) {
+            case ElementType::ACCIDENTAL:
                   e->setParent(trill());
                   score()->undoAddElement(e);
                   break;
@@ -320,7 +320,7 @@ Trill::~Trill()
 
 void Trill::add(Element* e)
       {
-      if (e->type() == Element::Type::ACCIDENTAL) {
+      if (e->type() == ElementType::ACCIDENTAL) {
             e->setParent(this);
             _accidental = static_cast<Accidental*>(e);
             }

@@ -14,6 +14,7 @@
 #define __ICON_H__
 
 #include "element.h"
+#include "mscore.h"
 
 namespace Ms {
 
@@ -23,7 +24,7 @@ namespace Ms {
 //---------------------------------------------------------
 
 class Icon : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       IconType _iconType { IconType::NONE };
       QByteArray _action;
@@ -35,7 +36,7 @@ class Icon : public Element {
       virtual ~Icon() {}
 
       virtual Icon* clone() const override                { return new Icon(*this);    }
-      virtual Element::Type type() const override         { return Element::Type::ICON;  }
+      virtual ElementType type() const override           { return ElementType::ICON;  }
       IconType iconType() const                           { return _iconType;          }
       void setIconType(IconType val)                      { _iconType = val;           }
       void setAction(const QByteArray& a, const QIcon& i) { _action = a; _icon = i; }

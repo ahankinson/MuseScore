@@ -14,6 +14,7 @@
 #define __BARLINE_H__
 
 #include "element.h"
+#include "mscore.h"
 
 namespace Ms {
 
@@ -50,19 +51,16 @@ struct BarLineTableItem {
 //---------------------------------------------------------
 //   @@ BarLine
 //
-//   @P barLineType  enum  (BarLineType.NORMAL, .DOUBLE, .START_REPEAT, .END_REPEAT, .BROKEN, .END, .END_START_REPEAT, .DOTTED)
+//   @P barLineType  enum  (BarLineType.NORMAL, .DOUBLE, .START_REPEAT, .END_REPEAT, .BROKEN, .END, .DOTTED)
 //---------------------------------------------------------
 
 class BarLine : public Element {
-      Q_OBJECT
-
-//      Q_PROPERTY(Ms::MSQE_BarLineType::E barLineType READ qmlBarLineType)
-//      Q_ENUMS(Ms::MSQE_BarLineType::E)
+      Q_GADGET
 
       char _spanStaff         { false };       // span barline to next staff if true
       char _spanFrom          { 0 };           // line number on start and end staves
       char _spanTo            { 0 };
-      BarLineType _barLineType { BarLineType::UNKNOWN };
+      BarLineType _barLineType { BarLineType::NORMAL };
       mutable qreal y1;
       mutable qreal y2;
       ElementList _el;        ///< fermata or other articulations
@@ -87,7 +85,7 @@ class BarLine : public Element {
       BarLine &operator=(const BarLine&) = delete;
 
       virtual BarLine* clone() const override     { return new BarLine(*this); }
-      virtual Element::Type type() const override { return Element::Type::BAR_LINE; }
+      virtual ElementType type() const override { return ElementType::BAR_LINE; }
       virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
       virtual void draw(QPainter*) const override;
@@ -97,11 +95,12 @@ class BarLine : public Element {
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
       virtual bool isEditable() const override    { return true; }
 
-      Segment* segment() const        { return (Segment*)parent(); }
+      Segment* segment() const        { return toSegment(parent()); }
+      Measure* measure() const        { return toMeasure(parent()->parent()); }
 
       void setSpanStaff(bool val)     { _spanStaff = val;     }
       void setSpanFrom(int val)       { _spanFrom = val;      }
@@ -110,12 +109,11 @@ class BarLine : public Element {
       int spanFrom() const            { return _spanFrom;     }
       int spanTo() const              { return _spanTo;       }
 
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
-      virtual void editDrag(const EditData&) override;
-      virtual void endEditDrag(const EditData&) override;
-      virtual void updateGrips(Grip*, QVector<QRectF>&) const override;
-      virtual int grips() const override { return 2; }
+      virtual void startEdit(EditData& ed) override;
+      virtual void endEdit(EditData&) override;
+      virtual void editDrag(EditData&) override;
+      virtual void endEditDrag(EditData&) override;
+      virtual void updateGrips(EditData&) const override;
       virtual Shape shape() const override;
 
       ElementList* el()                  { return &_el; }
@@ -131,8 +129,6 @@ class BarLine : public Element {
       BarLineType barLineType() const    { return _barLineType;  }
       static BarLineType barLineType(const QString&);
 
-//      Ms::MSQE_BarLineType::E qmlBarLineType() const { return static_cast<Ms::MSQE_BarLineType::E>(_barLineType); }
-
       virtual int subtype() const override         { return int(_barLineType); }
       virtual QString subtypeName() const override { return qApp->translate("barline", barLineTypeName().toUtf8()); }
 
@@ -140,7 +136,7 @@ class BarLine : public Element {
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID propertyId) const override;
 
-      static qreal layoutWidth(Score*, BarLineType, qreal mag);
+      static void layoutWidth(Score*, BarLineType, qreal mag, qreal* lx, qreal* rx);
 
       virtual Element* nextElement() override;
       virtual Element* prevElement() override;

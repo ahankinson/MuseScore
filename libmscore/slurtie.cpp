@@ -244,8 +244,8 @@ bool SlurTie::readProperties(XmlReader& e)
       {
       const QStringRef& tag(e.name());
 
-      if (tag == "up" || tag == "slurDirection")
-            readProperty(e, P_ID::SLUR_DIRECTION);
+      if (readProperty(tag, e, P_ID::SLUR_DIRECTION))
+            ;
       else if (tag == "lineType")
             _lineType = e.readInt();
       else if (tag == "SlurSegment") {
@@ -399,9 +399,9 @@ void SlurTie::fixupSegments(unsigned nsegs)
 //   startEdit
 //---------------------------------------------------------
 
-void SlurTie::startEdit(MuseScoreView* view, const QPointF& pt)
+void SlurTie::startEdit(EditData& ed)
       {
-      Spanner::startEdit(view, pt);
+      Spanner::startEdit(ed);
 
       editStartElement = startElement();
       editEndElement   = endElement();
@@ -422,9 +422,9 @@ void SlurTie::startEdit(MuseScoreView* view, const QPointF& pt)
 //   endEdit
 //---------------------------------------------------------
 
-void SlurTie::endEdit()
+void SlurTie::endEdit(EditData& ed)
       {
-      Spanner::endEdit();
+      Spanner::endEdit(ed);
       if (isSlur()) {
             if ((editStartElement != startElement()) || (editEndElement != endElement())) {
                   //

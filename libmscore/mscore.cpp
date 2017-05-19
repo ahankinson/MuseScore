@@ -57,7 +57,6 @@
 #include "excerpt.h"
 #include "spatium.h"
 #include "barline.h"
-#include "pageformat.h"
 
 namespace Ms {
 
@@ -77,9 +76,8 @@ bool MScore::useFallbackFont       = true;
 bool  MScore::saveTemplateMode = false;
 bool  MScore::noGui = false;
 
-MStyle  MScore::_defaultStyle;
-MStyle  MScore::_defaultStyleForParts;
-MStyle  MScore::_baseStyle;
+MStyle* MScore::_defaultStyleForParts;
+
 QString MScore::_globalShare;
 int     MScore::_vRaster;
 int     MScore::_hRaster;
@@ -111,6 +109,8 @@ int     MScore::mtcType;
 bool    MScore::noExcerpts = false;
 bool    MScore::noImages = false;
 bool    MScore::pdfPrinting = false;
+bool    MScore::svgPrinting = false;
+
 double  MScore::pixelRatio  = 0.8;        // DPI / logicalDPI
 
 MPaintDevice* MScore::_paintDevice;
@@ -198,8 +198,7 @@ void Direction::fillComboBox(QComboBox* cb)
       cb->addItem(qApp->translate("Direction", "down"), int(DOWN));
       }
 
-static Spatium doubleToSpatium(double d)       { return Spatium(d); }
-static TextStyleType intToTextStyleType(int i) { return TextStyleType(i); }
+static Spatium doubleToSpatium(double d) { return Spatium(d); }
 
 //---------------------------------------------------------
 //   init
@@ -210,12 +209,10 @@ void MScore::init()
       if (!QMetaType::registerConverter<Spatium, double>(&Spatium::toDouble))
             qFatal("registerConverter Spatium::toDouble failed");
       if (!QMetaType::registerConverter<double, Spatium>(&doubleToSpatium))
-            qFatal("registerConverter douobleToSpatium failed");
-      if (!QMetaType::registerConverter<int, TextStyleType>(&intToTextStyleType))
-            qFatal("registerConverter intToTextStyleType failed");
+            qFatal("registerConverter doubleToSpatium failed");
 
 #ifdef SCRIPT_INTERFACE
-      qRegisterMetaType<Element::Type>     ("ElementType");
+      qRegisterMetaType<ElementType>     ("ElementType");
       qRegisterMetaType<Note::ValueType>   ("ValueType");
 
       qRegisterMetaType<Direction::E>("Direction");
@@ -225,12 +222,12 @@ void MScore::init()
       qRegisterMetaType<Spanner::Anchor>   ("Anchor");
       qRegisterMetaType<NoteHead::Group>   ("NoteHeadGroup");
       qRegisterMetaType<NoteHead::Type>("NoteHeadType");
-      qRegisterMetaType<Segment::Type>("SegmentType");
+      qRegisterMetaType<SegmentType>("SegmentType");
       qRegisterMetaType<FiguredBassItem::Modifier>("Modifier");
       qRegisterMetaType<FiguredBassItem::Parenthesis>("Parenthesis");
       qRegisterMetaType<FiguredBassItem::ContLine>("ContLine");
       qRegisterMetaType<Volta::Type>("VoltaType");
-      qRegisterMetaType<Ottava::Type>("OttavaType");
+      qRegisterMetaType<OttavaType>("OttavaType");
       qRegisterMetaType<Trill::Type>("TrillType");
       qRegisterMetaType<Dynamic::Range>("DynamicRange");
       qRegisterMetaType<Jump::Type>("JumpType");
@@ -242,7 +239,7 @@ void MScore::init()
       qRegisterMetaType<Glissando::Type>("GlissandoType");
 
       //classed enumerations
-//      qRegisterMetaType<MSQE_TextStyleType::E>("TextStyleType");
+//      qRegisterMetaType<MSQE_StyledPropertyListIdx::E>("StyledPropertyListIdx");
 //      qRegisterMetaType<MSQE_BarLineType::E>("BarLineType");
 #endif
       qRegisterMetaType<Fraction>("Fraction");
@@ -289,15 +286,27 @@ void MScore::init()
       //
       //  initialize styles
       //
-      Ms::initStyle(&_defaultStyle);
-      _baseStyle            = _defaultStyle;
-      _defaultStyleForParts = _defaultStyle;
+      _baseStyle.precomputeValues();
       QSettings s;
+      QString defStyle = s.value("defaultStyle").toString();
+      if (!(MScore::testMode || defStyle.isEmpty())) {
+            QFile f(defStyle);
+            if (f.open(QIODevice::ReadOnly)) {
+                  qDebug("load default style <%s>", qPrintable(defStyle));
+                  _defaultStyle.load(&f);
+                  f.close();
+                  }
+            }
+      _defaultStyle.precomputeValues();
       QString partStyle = s.value("partStyle").toString();
-      if (!partStyle.isEmpty()) {
+      if (!(MScore::testMode || partStyle.isEmpty())) {
             QFile f(partStyle);
-            if (f.open(QIODevice::ReadOnly))
-                  _defaultStyleForParts.load(&f);
+            if (f.open(QIODevice::ReadOnly)) {
+                  qDebug("load default style for parts <%s>", qPrintable(partStyle));
+                  _defaultStyleForParts = new MStyle(_defaultStyle);
+                  _defaultStyleForParts->load(&f);
+                  _defaultStyleForParts->precomputeValues();
+                  }
             }
 
       //
@@ -389,6 +398,7 @@ QQmlEngine* MScore::qml()
       if (_qml == 0) {
             //-----------some qt bindings
             _qml = new QQmlEngine;
+
 #ifdef Q_OS_WIN
             QStringList importPaths;
             QDir dir(QCoreApplication::applicationDirPath() + QString("/../qml"));
@@ -401,15 +411,21 @@ QQmlEngine* MScore::qml()
             importPaths.append(dir.absolutePath());
             _qml->setImportPathList(importPaths);
 #endif
+            const char* enumErr = "You can't create an enumeration";
             qmlRegisterType<MsProcess>  ("MuseScore", 1, 0, "QProcess");
             qmlRegisterType<FileIO, 1>  ("FileIO",    1, 0, "FileIO");
             //-----------mscore bindings
-            qmlRegisterUncreatableType<Direction>("MuseScore", 1, 0, "Direction", tr("You can't create an enumeration"));
+//            qmlRegisterUncreatableMetaObject(Ms::staticMetaObject, "MuseScore", 1, 0, "Ms", enumErr);
+            qmlRegisterUncreatableType<Direction>("MuseScore", 1, 0, "Direction", tr(enumErr));
 
             qmlRegisterType<MScore>     ("MuseScore", 1, 0, "MScore");
             qmlRegisterType<MsScoreView>("MuseScore", 1, 0, "ScoreView");
-//            qmlRegisterType<QmlPlugin>  ("MuseScore", 1, 0, "MuseScore");
+
             qmlRegisterType<Score>      ("MuseScore", 1, 0, "Score");
+            qmlRegisterType<Cursor>     ("MuseScore", 1, 0, "Cursor");
+            qmlRegisterType<ElementW>   ("MuseScore", 1, 0, "Element");
+            qRegisterMetaType<ElementW*>("ElementWrapper*");
+#if 0
             qmlRegisterType<Segment>    ("MuseScore", 1, 0, "Segment");
             qmlRegisterType<Chord>      ("MuseScore", 1, 0, "Chord");
             qmlRegisterType<Note>       ("MuseScore", 1, 0, "Note");
@@ -417,7 +433,6 @@ QQmlEngine* MScore::qml()
             qmlRegisterType<Accidental> ("MuseScore", 1, 0, "Accidental");
             qmlRegisterType<Rest>       ("MuseScore", 1, 0, "Rest");
             qmlRegisterType<Measure>    ("MuseScore", 1, 0, "Measure");
-            qmlRegisterType<Cursor>     ("MuseScore", 1, 0, "Cursor");
             qmlRegisterType<StaffText>  ("MuseScore", 1, 0, "StaffText");
             qmlRegisterType<Part>       ("MuseScore", 1, 0, "Part");
             qmlRegisterType<Staff>      ("MuseScore", 1, 0, "Staff");
@@ -439,20 +454,18 @@ QQmlEngine* MScore::qml()
             qmlRegisterType<Excerpt>    ("MuseScore", 1, 0, "Excerpt");
             qmlRegisterType<BarLine>    ("MuseScore", 1, 0, "BarLine");
 
-            qmlRegisterType<FractionWrapper>   ("MuseScore", 1, 1, "Fraction");
-            qRegisterMetaType<FractionWrapper*>("FractionWrapper*");
-
-            qmlRegisterUncreatableType<Element>("MuseScore", 1, 0,
-               "Element", tr("you cannot create an element"));
 
             //classed enumerations
-//            qmlRegisterUncreatableType<MSQE_TextStyleType>("MuseScore", 1, 0, "TextStyleType", tr("You can't create an enum"));
-//            qmlRegisterUncreatableType<MSQE_BarLineType>("MuseScore", 1, 0, "BarLineType", tr("You can't create an enum"));
+            qmlRegisterUncreatableType<MSQE_StyledPropertyListIdx>("MuseScore", 1, 0, "StyledPropertyListIdx", tr("You can't create an enum"));
+            qmlRegisterUncreatableType<MSQE_BarLineType>("MuseScore", 1, 0, "BarLineType", enumErr);
 
             //-----------virtual classes
             qmlRegisterType<ChordRest>();
             qmlRegisterType<SlurTie>();
             qmlRegisterType<Spanner>();
+#endif
+            qmlRegisterType<FractionWrapper>   ("MuseScore", 1, 1, "Fraction");
+            qRegisterMetaType<FractionWrapper*>("FractionWrapper*");
             }
       return _qml;
       }

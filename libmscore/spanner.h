@@ -33,7 +33,7 @@ enum class SpannerSegmentType : char {
 //---------------------------------------------------------
 
 class SpannerSegment : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       Spanner* _spanner;
       SpannerSegmentType _spannerSegmentType;
@@ -74,8 +74,8 @@ class SpannerSegment : public Element {
       qreal& rxpos2()                       { return _p2.rx();        }
       qreal& rypos2()                       { return _p2.ry();        }
 
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
+      virtual void startEdit(EditData&) override;
+      virtual void endEdit(EditData&) override;
       virtual bool isEditable() const override { return true; }
 
       virtual QVariant getProperty(P_ID id) const override;
@@ -106,7 +106,7 @@ class SpannerSegment : public Element {
 //----------------------------------------------------------------------------------
 
 class Spanner : public Element {
-      Q_OBJECT
+      Q_GADGET
       Q_ENUMS(Anchor)
 
    public:
@@ -144,7 +144,7 @@ class Spanner : public Element {
       Spanner(const Spanner&);
       ~Spanner();
 
-      virtual Element::Type type() const = 0;
+      virtual ElementType type() const = 0;
       virtual void setScore(Score* s) override;
 
       virtual int tick() const override { return _tick;          }
@@ -173,8 +173,8 @@ class Spanner : public Element {
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
+      virtual void startEdit(EditData&) override;
+      virtual void endEdit(EditData&) override;
       bool removeSpannerBack();
       virtual void removeUnmanaged();
       virtual void undoInsertTimeUnmanaged(int tick, int len);

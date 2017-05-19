@@ -29,7 +29,7 @@ class Segment;
 //---------------------------------------------------------------------------------------
 
 class KeySig : public Element {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(bool showCourtesy READ showCourtesy   WRITE undoSetShowCourtesy)
 
       bool _showCourtesy;
@@ -42,9 +42,9 @@ class KeySig : public Element {
       KeySig(const KeySig&);
       virtual KeySig* clone() const override       { return new KeySig(*this); }
       virtual void draw(QPainter*) const override;
-      virtual Element::Type type() const override { return Element::Type::KEYSIG; }
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual ElementType type() const override { return ElementType::KEYSIG; }
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
       virtual void layout() override;
       virtual qreal mag() const override;
 

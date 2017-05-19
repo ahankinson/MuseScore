@@ -63,13 +63,13 @@ static bool needsStaff(Element* e)
       if (e == 0)
             return false;
       switch(e->type()) {
-            case Element::Type::CHORD:
-            case Element::Type::BAR_LINE:
-            case Element::Type::CLEF:
-            case Element::Type::KEYSIG:
-            case Element::Type::TIMESIG:
-            case Element::Type::REST:
-            case Element::Type::BAGPIPE_EMBELLISHMENT:
+            case ElementType::CHORD:
+            case ElementType::BAR_LINE:
+            case ElementType::CLEF:
+            case ElementType::KEYSIG:
+            case ElementType::TIMESIG:
+            case ElementType::REST:
+            case ElementType::BAGPIPE_EMBELLISHMENT:
                   return true;
             default:
                   return false;
@@ -363,7 +363,7 @@ void Palette::mouseMoveEvent(QMouseEvent* ev)
 
 static void applyDrop(Score* score, ScoreView* viewer, Element* target, Element* e, QPointF pt = QPointF())
       {
-      DropData dropData;
+      EditData dropData;
       dropData.view       = viewer;
       dropData.pos        = pt.isNull() ? target->pagePos() : pt;
       dropData.dragOffset = QPointF();
@@ -377,9 +377,11 @@ static void applyDrop(Score* score, ScoreView* viewer, Element* target, Element*
             XmlReader e(gscore, a);
             Fraction duration;  // dummy
             QPointF dragOffset;
-            Element::Type type = Element::readType(e, &dragOffset, &duration);
+            ElementType type = Element::readType(e, &dragOffset, &duration);
             dropData.element = Element::create(type, score);
+
             dropData.element->read(e);
+            dropData.element->styleChanged();   // update to local style
 
             Element* el = target->drop(dropData);
             if (el)
@@ -453,10 +455,10 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
             else if (element->isSlur() && addSingle) {
                   viewer->cmdAddSlur();
                   }
-            else if (element->isSLine() && element->type() != Element::Type::GLISSANDO && addSingle) {
+            else if (element->isSLine() && element->type() != ElementType::GLISSANDO && addSingle) {
                   Segment* startSegment = cr1->segment();
                   Segment* endSegment = cr2->segment();
-                  if (element->type() == Element::Type::PEDAL && cr2 != cr1)
+                  if (element->type() == ElementType::PEDAL && cr2 != cr1)
                         endSegment = endSegment->nextCR(cr2->track());
                   // TODO - handle cross-voice selections
                   int idx = cr1->staffIdx();
@@ -465,7 +467,7 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
                   XmlReader e(gscore, a);
                   Fraction duration;  // dummy
                   QPointF dragOffset;
-                  Element::Type type = Element::readType(e, &dragOffset, &duration);
+                  ElementType type = Element::readType(e, &dragOffset, &duration);
                   Spanner* spanner = static_cast<Spanner*>(Element::create(type, score));
                   spanner->read(e);
                   score->cmdAddSpanner(spanner, idx, startSegment, endSegment);
@@ -476,17 +478,17 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
                   }
             }
       else if (sel.isRange()) {
-            if (element->type() == Element::Type::BAR_LINE
-                || element->type() == Element::Type::MARKER
-                || element->type() == Element::Type::JUMP
-                || element->type() == Element::Type::SPACER
-                || element->type() == Element::Type::LAYOUT_BREAK
-                || element->type() == Element::Type::VBOX
-                || element->type() == Element::Type::HBOX
-                || element->type() == Element::Type::TBOX
-                || element->type() == Element::Type::MEASURE
-                || element->type() == Element::Type::BRACKET
-                || (element->type() == Element::Type::ICON
+            if (element->type() == ElementType::BAR_LINE
+                || element->type() == ElementType::MARKER
+                || element->type() == ElementType::JUMP
+                || element->type() == ElementType::SPACER
+                || element->type() == ElementType::LAYOUT_BREAK
+                || element->type() == ElementType::VBOX
+                || element->type() == ElementType::HBOX
+                || element->type() == ElementType::TBOX
+                || element->type() == ElementType::MEASURE
+                || element->type() == ElementType::BRACKET
+                || (element->type() == ElementType::ICON
                     && (toIcon(element)->iconType() == IconType::VFRAME
                         || toIcon(element)->iconType() == IconType::HFRAME
                         || toIcon(element)->iconType() == IconType::TFRAME
@@ -512,21 +514,21 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
                   // for clefs, apply to each staff separately
                   // otherwise just apply to top staff
                   int staffIdx1 = sel.staffStart();
-                  int staffIdx2 = element->type() == Element::Type::CLEF ? sel.staffEnd() : staffIdx1 + 1;
+                  int staffIdx2 = element->type() == ElementType::CLEF ? sel.staffEnd() : staffIdx1 + 1;
                   for (int i = staffIdx1; i < staffIdx2; ++i) {
                         // for clefs, use mid-measure changes if appropriate
                         Element* e1 = nullptr;
                         Element* e2 = nullptr;
                         // use mid-measure clef changes as appropriate
-                        if (element->type() == Element::Type::CLEF) {
-                              if (sel.startSegment()->segmentType() == Segment::Type::ChordRest && sel.startSegment()->rtick() != 0) {
+                        if (element->type() == ElementType::CLEF) {
+                              if (sel.startSegment()->segmentType() == SegmentType::ChordRest && sel.startSegment()->rtick() != 0) {
                                     ChordRest* cr = static_cast<ChordRest*>(sel.startSegment()->nextChordRest(i * VOICES));
                                     if (cr && cr->isChord())
                                           e1 = static_cast<Chord*>(cr)->upNote();
                                     else
                                           e1 = cr;
                                     }
-                              if (sel.endSegment() && sel.endSegment()->segmentType() == Segment::Type::ChordRest) {
+                              if (sel.endSegment() && sel.endSegment()->segmentType() == SegmentType::ChordRest) {
                                     ChordRest* cr = static_cast<ChordRest*>(sel.endSegment()->nextChordRest(i * VOICES));
                                     if (cr && cr->isChord())
                                           e2 = static_cast<Chord*>(cr)->upNote();
@@ -540,14 +542,14 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
                               int tick1 = sel.startSegment()->tick();
                               Element* oelement = nullptr;
                               switch (element->type()) {
-                                    case Element::Type::CLEF:
+                                    case ElementType::CLEF:
                                           {
                                           Clef* oclef = new Clef(score);
                                           oclef->setClefType(staff->clef(tick1));
                                           oelement = oclef;
                                           break;
                                           }
-                                    case Element::Type::KEYSIG:
+                                    case ElementType::KEYSIG:
                                           {
                                           KeySig* okeysig = new KeySig(score);
                                           okeysig->setKeySigEvent(staff->keySigEvent(tick1));
@@ -561,7 +563,7 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
                                           oelement = okeysig;
                                           break;
                                           }
-                                    case Element::Type::TIMESIG:
+                                    case ElementType::TIMESIG:
                                           {
                                           TimeSig* otimesig = new TimeSig(score);
                                           otimesig->setFrom(staff->timeSig(tick1));
@@ -596,10 +598,10 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
                               }
                         }
                   }
-            else if (element->type() == Element::Type::SLUR) {
+            else if (element->type() == ElementType::SLUR) {
                   viewer->cmdAddSlur();
                   }
-            else if (element->isSLine() && element->type() != Element::Type::GLISSANDO) {
+            else if (element->isSLine() && element->type() != ElementType::GLISSANDO) {
                   Segment* startSegment = sel.startSegment();
                   Segment* endSegment = sel.endSegment();
                   int endStaff = sel.staffEnd();
@@ -619,14 +621,14 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
                               Element* e = s->element(track);
                               if (e == 0)
                                     continue;
-                              if (e->type() == Element::Type::CHORD) {
+                              if (e->type() == ElementType::CHORD) {
                                     Chord* chord = static_cast<Chord*>(e);
                                     for (Note* n : chord->notes())
                                           applyDrop(score, viewer, n, element);
                                     }
                               else {
                                     // do not apply articulation to barline in a range selection
-                                    if(e->type() != Element::Type::BAR_LINE || element->type() != Element::Type::ARTICULATION)
+                                    if(e->type() != ElementType::BAR_LINE || element->type() != ElementType::ARTICULATION)
                                           applyDrop(score, viewer, e, element);
                                     }
                               }
@@ -1214,7 +1216,7 @@ bool Palette::read(const QString& p)
 static void writeFailed(const QString& path)
       {
       QString s = qApp->translate("Palette", "Writing Palette File\n%1\nfailed: ");
-      QMessageBox::critical(mscore, qApp->translate("Palette", "MuseScore: Writing Palette File"), s.arg(path));
+      QMessageBox::critical(mscore, qApp->translate("Palette", "Writing Palette File"), s.arg(path));
       }
 
 //---------------------------------------------------------
@@ -1228,7 +1230,7 @@ void Palette::write(const QString& p)
       QSet<ImageStoreItem*> images;
       int n = cells.size();
       for (int i = 0; i < n; ++i) {
-            if (cells[i] == 0 || cells[i]->element == 0 || cells[i]->element->type() != Element::Type::IMAGE)
+            if (cells[i] == 0 || cells[i]->element == 0 || cells[i]->element->type() != ElementType::IMAGE)
                   continue;
             images.insert(static_cast<Image*>(cells[i]->element)->storeItem());
             }
@@ -1336,7 +1338,7 @@ void Palette::read(XmlReader& e)
                                     }
                               else {
                                     cell->element->read(e);
-                                    if (cell->element->type() == Element::Type::ICON) {
+                                    if (cell->element->type() == ElementType::ICON) {
                                           Icon* icon = static_cast<Icon*>(cell->element);
                                           QAction* ac = getAction(icon->action());
                                           if (ac) {
@@ -1358,6 +1360,11 @@ void Palette::read(XmlReader& e)
             else
                   e.unknown();
             }
+            // make sure hgrid and vgrid are not 0, we divide by them later
+            if (hgrid <= 0)
+                  hgrid = 28;
+            if (vgrid <= 0)
+                  vgrid = 28;
       }
 
 //---------------------------------------------------------
@@ -1422,7 +1429,7 @@ void Palette::actionToggled(bool /*val*/)
       int nn = size();
       for (int n = 0; n < nn; ++n) {
             Element* e = cellAt(n)->element;
-            if (e && e->type() == Element::Type::ICON) {
+            if (e && e->type() == ElementType::ICON) {
                   QAction* a = getAction(static_cast<Icon*>(e)->action());
                   if (a->isChecked()) {
                         selectedIdx = n;
@@ -1654,9 +1661,9 @@ void Palette::dropEvent(QDropEvent* event)
             XmlReader xml(gscore, data);
             QPointF dragOffset;
             Fraction duration;
-            Element::Type type = Element::readType(xml, &dragOffset, &duration);
+            ElementType type = Element::readType(xml, &dragOffset, &duration);
 
-            if (type == Element::Type::SYMBOL) {
+            if (type == ElementType::SYMBOL) {
                   Symbol* symbol = new Symbol(gscore);
                   symbol->read(xml);
                   e = symbol;

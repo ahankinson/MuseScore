@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>122</width>
+    <width>174</width>
     <height>91</height>
    </rect>
   </property>
@@ -76,7 +76,24 @@
       <property name="verticalSpacing">
        <number>0</number>
       </property>
-      <item row="0" column="2">
+      <item row="1" column="3">
+       <widget class="QToolButton" name="resetBracket">
+        <property name="toolTip">
+         <string>Reset to default</string>
+        </property>
+        <property name="accessibleName">
+         <string>Reset 'Bracket type' value</string>
+        </property>
+        <property name="text">
+         <string notr="true"/>
+        </property>
+        <property name="icon">
+         <iconset resource="../musescore.qrc">
+          <normaloff>:/data/icons/edit-reset.svg</normaloff>:/data/icons/edit-reset.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
        <widget class="QToolButton" name="resetSmall">
         <property name="toolTip">
          <string>Reset to default</string>
@@ -93,7 +110,20 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
+      <item row="1" column="2">
+       <widget class="QComboBox" name="bracket"/>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Bracket type:</string>
+        </property>
+        <property name="buddy">
+         <cstring>bracket</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" colspan="2">
        <widget class="QCheckBox" name="small">
         <property name="focusPolicy">
          <enum>Qt::TabFocus</enum>
@@ -106,36 +136,6 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QCheckBox" name="hasBracket">
-        <property name="focusPolicy">
-         <enum>Qt::TabFocus</enum>
-        </property>
-        <property name="accessibleName">
-         <string>Has bracket</string>
-        </property>
-        <property name="text">
-         <string>Has bracket</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QToolButton" name="resetHasBracket">
-        <property name="toolTip">
-         <string>Reset to default</string>
-        </property>
-        <property name="accessibleName">
-         <string>Reset 'Has bracket' value</string>
-        </property>
-        <property name="text">
-         <string notr="true"/>
-        </property>
-        <property name="icon">
-         <iconset resource="../musescore.qrc">
-          <normaloff>:/data/icons/edit-reset.svg</normaloff>:/data/icons/edit-reset.svg</iconset>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -145,8 +145,8 @@
   <tabstop>title</tabstop>
   <tabstop>small</tabstop>
   <tabstop>resetSmall</tabstop>
-  <tabstop>hasBracket</tabstop>
-  <tabstop>resetHasBracket</tabstop>
+  <tabstop>bracket</tabstop>
+  <tabstop>resetBracket</tabstop>
  </tabstops>
  <resources>
   <include location="../musescore.qrc"/>

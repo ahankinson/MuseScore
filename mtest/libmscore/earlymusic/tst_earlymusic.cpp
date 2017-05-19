@@ -58,10 +58,10 @@ void TestEarlymusic::earlymusic01()
       // go to first chord and verify crossMeasure values
       Measure*    msr   = score->firstMeasure();
       QVERIFY(msr);
-      Segment*    seg   = msr->findSegment(Segment::Type::ChordRest, 0);
+      Segment*    seg   = msr->findSegment(SegmentType::ChordRest, 0);
       QVERIFY(seg);
       Ms::Chord*      chord = static_cast<Ms::Chord*>(seg->element(0));
-      QVERIFY(chord && chord->type() == Element::Type::CHORD);
+      QVERIFY(chord && chord->type() == ElementType::CHORD);
       QVERIFY(chord->crossMeasure() == CrossMeasure::UNKNOWN);
       TDuration cmDur   = chord->crossMeasureDurationType();
 //      QVERIFY(cmDur.type() == TDuration::DurationType::V_INVALID);    // irrelevant if crossMeasure() == UNKNOWN
@@ -90,7 +90,7 @@ void TestEarlymusic::earlymusic01()
       QVERIFY(saveCompareScore(score, "mensurstrich01.mscx", DIR + "mensurstrich01-ref.mscx"));
 
       // UNDO AND VERIFY
-      score->undoStack()->undo();
+      score->undoStack()->undo(ed);
       score->doLayout();
       QVERIFY(chord->crossMeasure() == CrossMeasure::UNKNOWN);
       cmDur = chord->crossMeasureDurationType();

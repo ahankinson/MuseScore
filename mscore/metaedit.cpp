@@ -40,7 +40,11 @@ MetaEditDialog::MetaEditDialog(Score* s, QWidget* parent)
 
       level->setValue(score->mscVersion());
       version->setText(score->mscoreVersion());
-      revision->setValue(score->mscoreRevision());
+      int rev = score->mscoreRevision();
+      if (rev > 99999)  // MuseScore 1.3 is decimal 5702, 2.0 and later uses a 7-digit hex SHA
+            revision->setText(QString::number(rev, 16));
+      else
+            revision->setText(QString::number(rev, 10));
       filePath->setText(score->importedFilePath());
 
       int idx = 0;
@@ -67,7 +71,7 @@ MetaEditDialog::MetaEditDialog(Score* s, QWidget* parent)
 void MetaEditDialog::newClicked()
       {
       QString s = QInputDialog::getText(this,
-         tr("MuseScore: Input Tag Name"),
+         tr("Input Tag Name"),
          tr("New tag name:")
          );
       QGridLayout* grid = static_cast<QGridLayout*>(scrollWidget->layout());

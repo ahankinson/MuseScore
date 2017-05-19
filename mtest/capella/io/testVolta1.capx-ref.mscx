@@ -9,22 +9,6 @@
       <maxSystemDistance>12</maxSystemDistance>
       <measureSpacing>1</measureSpacing>
       <smallStaffMag>0.681818</smallStaffMag>
-      <page-layout>
-        <page-height>1683.78</page-height>
-        <page-width>1190.55</page-width>
-        <page-margins type="even">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        <page-margins type="odd">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        </page-layout>
       <Spatium>1.76</Spatium>
       </Style>
     <showInvisible>1</showInvisible>
@@ -75,23 +59,19 @@
           </TimeSig>
         <StaffText>
           <pos x="25" y="-13"/>
-          <halign>center</halign>
-          <valign>baseline</valign>
-          <xoffset>0</xoffset>
-          <yoffset>2</yoffset>
           <family>Arial</family>
           <size>24</size>
           <bold>1</bold>
+          <align>center,baseline</align>
+          <offset x="0" y="2"/>
           <text>Volta 1</text>
           </StaffText>
         <StaffText>
           <pos x="25" y="-8"/>
-          <halign>center</halign>
-          <valign>baseline</valign>
-          <xoffset>0</xoffset>
-          <yoffset>2</yoffset>
           <family>Arial</family>
           <bold>1</bold>
+          <align>center,baseline</align>
+          <offset x="0" y="2"/>
           <text>MuseScore testfile</text>
           </StaffText>
         <Chord>
@@ -105,10 +85,8 @@
       <Measure number="2">
         <endRepeat>2</endRepeat>
         <Volta id="2">
-          <endHook>1</endHook>
-          <beginText>
-            <text>1.</text>
-            </beginText>
+          <endHookType>1</endHookType>
+          <beginText>1.</beginText>
           <endings>1</endings>
           </Volta>
         <Chord>
@@ -122,9 +100,7 @@
       <Measure number="3">
         <endSpanner id="2"/>
         <Volta id="3">
-          <beginText>
-            <text>2.</text>
-            </beginText>
+          <beginText>2.</beginText>
           <endings>2</endings>
           </Volta>
         <Chord>
@@ -141,12 +117,10 @@
           </LayoutBreak>
         <StaffText>
           <pos x="5" y="-4"/>
-          <halign>center</halign>
-          <valign>baseline</valign>
-          <xoffset>0</xoffset>
-          <yoffset>2</yoffset>
           <family>Arial</family>
           <bold>1</bold>
+          <align>center,baseline</align>
+          <offset x="0" y="2"/>
           <text>Leon Vinken</text>
           </StaffText>
         <endSpanner id="3"/>

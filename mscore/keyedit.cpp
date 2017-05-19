@@ -198,8 +198,8 @@ void KeyCanvas::dragEnterEvent(QDragEnterEvent* event)
 
             QPointF dragOffset;
             Fraction duration;
-            Element::Type type = Element::readType(e, &dragOffset, &duration);
-            if (type != Element::Type::ACCIDENTAL)
+            ElementType type = Element::readType(e, &dragOffset, &duration);
+            if (type != ElementType::ACCIDENTAL)
                   return;
 
             event->acceptProposedAction();
@@ -267,7 +267,7 @@ KeyEditor::KeyEditor(QWidget* parent)
    : QWidget(parent, Qt::WindowFlags(Qt::Dialog | Qt::Window))
       {
       setupUi(this);
-      setWindowTitle(tr("MuseScore: Key Signatures"));
+      setWindowTitle(tr("Key Signatures"));
 
       // create key signature palette
 

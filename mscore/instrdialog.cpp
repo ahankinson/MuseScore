@@ -34,6 +34,7 @@
 #include "libmscore/staff.h"
 #include "libmscore/stafftype.h"
 #include "libmscore/undo.h"
+#include "libmscore/bracketItem.h"
 
 namespace Ms {
 
@@ -71,7 +72,7 @@ void InstrumentsDialog::on_saveButton_clicked()
       {
       QString name = QFileDialog::getSaveFileName(
          this,
-         tr("MuseScore: Save Instrument List"),
+         tr("Save Instrument List"),
          ".",
          tr("MuseScore Instruments") + " (*.xml)"
          );
@@ -86,7 +87,7 @@ void InstrumentsDialog::on_saveButton_clicked()
       if (!f.open(QIODevice::WriteOnly)) {
             QString s = tr("Open Instruments File\n%1\nfailed: ")
                + QString(strerror(errno));
-            QMessageBox::critical(mscore, tr("MuseScore: Open Instruments File"), s.arg(f.fileName()));
+            QMessageBox::critical(mscore, tr("Open Instruments File"), s.arg(f.fileName()));
             return;
             }
 
@@ -102,7 +103,7 @@ void InstrumentsDialog::on_saveButton_clicked()
       xml.etag();
       if (f.error() != QFile::NoError) {
             QString s = tr("Write Style failed: ") + f.errorString();
-            QMessageBox::critical(this, tr("MuseScore: Write Style"), s);
+            QMessageBox::critical(this, tr("Write Style"), s);
             }
       }
 
@@ -113,7 +114,7 @@ void InstrumentsDialog::on_saveButton_clicked()
 void InstrumentsDialog::on_loadButton_clicked()
       {
       QString fn = QFileDialog::getOpenFileName(
-         this, tr("MuseScore: Load Instrument List"),
+         this, tr("Load Instrument List"),
           mscoreGlobalShare + "/templates",
          tr("MuseScore Instruments") + " (*.xml)"
          );
@@ -122,7 +123,7 @@ void InstrumentsDialog::on_loadButton_clicked()
       QFile f(fn);
       if (!loadInstrumentTemplates(fn)) {
             QMessageBox::warning(0,
-               QWidget::tr("MuseScore: Load Style Failed"),
+               QWidget::tr("Load Style Failed"),
                QString(strerror(errno)),
                QString::null, QWidget::tr("Quit"), QString::null, 0, 1);
             return;
@@ -463,11 +464,9 @@ void MuseScore::editInstrList()
                   --curSpan;
 
                   // update brackets
-                  QList<BracketItem> brackets = staff->brackets();
-                  int nn = brackets.size();
-                  for (int ii = 0; ii < nn; ++ii) {
-                        if ((brackets[ii]._bracket != BracketType::NO_BRACKET) && (brackets[ii]._bracketSpan > (n - i)))
-                              s->undoChangeBracketSpan(staff, ii, n - i);
+                  for (BracketItem* bi : staff->brackets()) {
+                        if ((bi->bracketSpan() > (n - i)))
+                              bi->undoChangeProperty(P_ID::BRACKET_SPAN, n - i);
                         }
                   }
             }
@@ -476,7 +475,7 @@ void MuseScore::editInstrList()
       // there should be at least one measure
       //
       if (masterScore->measures()->size() == 0)
-            masterScore->insertMeasure(Element::Type::MEASURE, 0, false);
+            masterScore->insertMeasure(ElementType::MEASURE, 0, false);
 
       for (Excerpt* excerpt : masterScore->excerpts()) {
             QList<Staff*> sl       = excerpt->partScore()->staves();

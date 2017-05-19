@@ -228,18 +228,19 @@ void Stem::read(XmlReader& e)
 //   updateGrips
 //---------------------------------------------------------
 
-void Stem::updateGrips(Grip* defaultGrip, QVector<QRectF>& grip) const
+void Stem::updateGrips(EditData& ed) const
       {
-      *defaultGrip = Grip::START;
-      grip[0].translate(pagePos() + line.p2());
+      ed.grip[0].translate(pagePos() + line.p2());
       }
 
 //---------------------------------------------------------
 //   startEdit
 //---------------------------------------------------------
 
-void Stem::startEdit(MuseScoreView*, const QPointF&)
+void Stem::startEdit(EditData& ed)
       {
+      ed.grips   = 1;
+      ed.curGrip = Grip::START;
       undoPushProperty(P_ID::USER_LEN);
       }
 
@@ -247,7 +248,7 @@ void Stem::startEdit(MuseScoreView*, const QPointF&)
 //   editDrag
 //---------------------------------------------------------
 
-void Stem::editDrag(const EditData& ed)
+void Stem::editDrag(EditData& ed)
       {
       qreal yDelta = ed.delta.y();
       _userLen += up() ? -yDelta : yDelta;
@@ -271,10 +272,10 @@ void Stem::reset()
 //   acceptDrop
 //---------------------------------------------------------
 
-bool Stem::acceptDrop(const DropData& data) const
+bool Stem::acceptDrop(EditData& data) const
       {
       Element* e = data.element;
-      if ((e->type() == Element::Type::TREMOLO) && (static_cast<Tremolo*>(e)->tremoloType() <= TremoloType::R64)) {
+      if ((e->type() == ElementType::TREMOLO) && (static_cast<Tremolo*>(e)->tremoloType() <= TremoloType::R64)) {
             return true;
             }
       return false;
@@ -284,13 +285,13 @@ bool Stem::acceptDrop(const DropData& data) const
 //   drop
 //---------------------------------------------------------
 
-Element* Stem::drop(const DropData& data)
+Element* Stem::drop(EditData& data)
       {
       Element* e = data.element;
       Chord* ch  = chord();
 
       switch(e->type()) {
-            case Element::Type::TREMOLO:
+            case ElementType::TREMOLO:
                   e->setParent(ch);
                   score()->undoAddElement(e);
                   return e;

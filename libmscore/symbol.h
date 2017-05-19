@@ -29,7 +29,7 @@ enum class SymId;
 //---------------------------------------------------------
 
 class Symbol : public BSymbol {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(QString symbol        READ symName)
 
    protected:
@@ -43,7 +43,7 @@ class Symbol : public BSymbol {
       Symbol &operator=(const Symbol&) = delete;
 
       virtual Symbol* clone() const      { return new Symbol(*this); }
-      virtual Element::Type type() const { return Element::Type::SYMBOL; }
+      virtual ElementType type() const { return ElementType::SYMBOL; }
 
       void setSym(SymId s, const ScoreFont* sf = nullptr) { _sym  = s; _scoreFont = sf;    }
       SymId sym() const                  { return _sym;  }
@@ -65,7 +65,7 @@ class Symbol : public BSymbol {
 //---------------------------------------------------------
 
 class FSymbol : public BSymbol {
-      Q_OBJECT
+      Q_GADGET
 
       QFont _font;
       int _code;
@@ -75,7 +75,7 @@ class FSymbol : public BSymbol {
       FSymbol(const FSymbol&);
 
       virtual FSymbol* clone() const    { return new FSymbol(*this); }
-      virtual Element::Type type() const  { return Element::Type::FSYMBOL; }
+      virtual ElementType type() const  { return ElementType::FSYMBOL; }
 
       virtual void draw(QPainter*) const;
       virtual void write(XmlWriter& xml) const;

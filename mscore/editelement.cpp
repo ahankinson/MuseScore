@@ -31,20 +31,66 @@
 namespace Ms {
 
 //---------------------------------------------------------
+//   updateGrips
+//    if (curGrip == -1) then initialize to element
+//    default grip
+//---------------------------------------------------------
+
+void ScoreView::updateGrips()
+      {
+      if (!editData.element)
+            return;
+
+      double dx = 1.5 / _matrix.m11();
+      double dy = 1.5 / _matrix.m22();
+
+      for (const QRectF& r : editData.grip)
+            score()->addRefresh(r.adjusted(-dx, -dy, dx, dy));
+
+      qreal w   = 8.0 / _matrix.m11();
+      qreal h   = 8.0 / _matrix.m22();
+      QRectF r(-w*.5, -h*.5, w, h);
+
+      editData.grip.resize(editData.grips);
+
+      if (editData.grips) {
+            for (QRectF& gr : editData.grip)
+                  gr = r;
+            editData.element->updateGrips(editData);
+
+            // updateGrips returns grips in page coordinates,
+            // transform to view coordinates:
+
+            Element* page = editData.element;
+            while (page->parent())
+                  page = page->parent();
+            QPointF pageOffset(page->pos());
+            for (QRectF& grip : editData.grip) {
+                  grip.translate(pageOffset);
+                  score()->addRefresh(grip.adjusted(-dx, -dy, dx, dy));
+                  }
+
+            QPointF anchor = editData.element->gripAnchor(editData.curGrip);
+            if (!anchor.isNull())
+                  setDropAnchor(QLineF(anchor + pageOffset, editData.grip[int(editData.curGrip)].center()));
+            else
+                  setDropTarget(0); // this also resets dropAnchor
+            }
+      score()->addRefresh(editData.element->canvasBoundingRect());
+      }
+
+//---------------------------------------------------------
 //   startEdit
 //---------------------------------------------------------
 
-void ScoreView::startEdit(Element* e)
+void ScoreView::startEditMode(Element* e)
       {
       if (!e || !e->isEditable()) {
             qDebug("The element cannot be edited");
             return;
             }
-      if (e->isTBox())
-            e = toTBox(e)->text();
-      editObject = e;
-      sm->postEvent(new CommandEvent("edit"));
-      _score->update();
+      editData.element = e;
+      changeState(ViewState::EDIT);
       }
 
 //---------------------------------------------------------
@@ -57,30 +103,30 @@ void ScoreView::startEdit(Element* element, Grip startGrip)
             qDebug("The element cannot be edited");
             return;
             }
-      editObject = element;
-      startEdit();
-      if (startGrip == Grip::NO_GRIP)
-            curGrip = defaultGrip;
-      else
-            curGrip = startGrip;
+      editData.element = element;
+      changeState(ViewState::EDIT);
+      if (startGrip != Grip::NO_GRIP)
+            editData.curGrip = startGrip;
       }
 
 //---------------------------------------------------------
 //   startEdit
+//    enter state EDIT
 //---------------------------------------------------------
 
 void ScoreView::startEdit()
       {
-      if (editObject->isTBox())
-            editObject = toTBox(editObject)->text();
-      curElement  = 0;
+      if (editData.element->isTBox())
+            editData.element = toTBox(editData.element)->text();
       setFocus();
-      if (!_score->undoStack()->active())
-            _score->startCmd();
-      editObject->startEdit(this, data.startMove);
-      curGrip = Grip::NO_GRIP;
+      editData.grips   = 0;
+      editData.curGrip = Grip(0);
+      editData.clearData();
+
+      editData.element->startEdit(editData);
       updateGrips();
       _score->update();
+      setCursor(QCursor(Qt::ArrowCursor));
       }
 
 //---------------------------------------------------------
@@ -90,83 +136,97 @@ void ScoreView::startEdit()
 void ScoreView::endEdit()
       {
       setDropTarget(0);
-      if (!editObject)
+      if (!editData.element)
             return;
-      editObject->endEditDrag(data);
-      _score->addRefresh(editObject->canvasBoundingRect());
-      for (int i = 0; i < grips; ++i)
-            score()->addRefresh(grip[i]);
+      _score->addRefresh(editData.element->canvasBoundingRect());
+      for (int i = 0; i < editData.grips; ++i)
+            score()->addRefresh(editData.grip[i]);
+      editData.element->endEdit(editData);
 
-      if (editObject->userOff() != editObject->startDragPosition())
-            editObject->undoChangeProperty(P_ID::AUTOPLACE, false);
-      editObject->endEdit();
+      _score->addRefresh(editData.element->canvasBoundingRect());
 
-      _score->addRefresh(editObject->canvasBoundingRect());
-
-      Element::Type tp = editObject->type();
-      if (tp == Element::Type::LYRICS)
+      ElementType tp = editData.element->type();
+      if (tp == ElementType::LYRICS)
             lyricsEndEdit();
-      else if (tp == Element::Type::HARMONY)
+      else if (tp == ElementType::HARMONY)
             harmonyEndEdit();
-      else if (tp == Element::Type::FIGURED_BASS)
+      else if (tp == ElementType::FIGURED_BASS)
             figuredBassEndEdit();
-      else if (editObject->isText()) {
-            Text* text = static_cast<Text*>(editObject);
+      else if (editData.element->isText()) {
+            Text* text = toText(editData.element);
             // remove text if empty
             // dont do this for TBOX
-            if (text->empty() && text->parent() && text->parent()->type() != Element::Type::TBOX)
+            if (text->empty() && text->parent() && text->parent()->type() != ElementType::TBOX)
                   _score->undoRemoveElement(text);
             }
-
-      _score->endCmd();
-
-      if (dragElement && (dragElement != editObject)) {
+#if 0
+      if (dragElement && (dragElement != editData.element)) {
             curElement = dragElement;
             _score->select(curElement);
             _score->update();
             }
+#endif
+      editData.clearData();
       mscore->updateInspector();
-
-      editObject = nullptr;
-      grips      = 0;
-      curGrip    = Grip::NO_GRIP;
       }
 
 //---------------------------------------------------------
-//   editElementDragTransition
-//    (start dragEdit)
+//   editData.elementDragTransition
+//    start dragEdit
 //---------------------------------------------------------
 
 bool ScoreView::editElementDragTransition(QMouseEvent* ev)
       {
-      data.startMove = toLogical(ev->pos());
-      data.lastPos   = data.startMove;
-      data.pos       = data.startMove;
-      data.view      = this;
-      data.modifiers = qApp->keyboardModifiers();
+      editData.startMove = toLogical(ev->pos());
+      editData.lastPos   = editData.startMove;
+      editData.pos       = editData.startMove;
+      editData.view      = this;
+      editData.modifiers = qApp->keyboardModifiers();
 
-      Element* e = elementNear(data.startMove);
-      if (e && (e == editObject) && (editObject->isText())) {
-            if (editObject->mousePress(data.startMove, ev)) {
-                  _score->addRefresh(editObject->canvasBoundingRect());
+      int i = 0;
+      score()->startCmd();
+      editData.element->startEditDrag(editData);
+
+      if (editData.element->isText()) {
+            qreal margin = editData.element->spatium();
+            QRectF r = editData.element->pageBoundingRect().adjusted(-margin, -margin, margin, margin);
+            if (r.contains(editData.pos)) {
+                  if (editData.element->shape().translated(editData.element->pagePos()).contains(editData.pos)) {
+                        if (editData.element->mousePress(editData, ev)) {
+                              _score->addRefresh(editData.element->canvasBoundingRect());
+                              _score->update();
+                              }
+                        }
+                  return true;
+                  }
+            return false;
+            }
+
+printf("editData.elementDragTransition %d\n", editData.grips);
+      if (editData.grips) {
+            qreal a = editData.grip[0].width() * 1.0;
+            for (; i < editData.grips; ++i) {
+                  if (editData.grip[i].adjusted(-a, -a, a, a).contains(editData.startMove)) {
+                        editData.curGrip = Grip(i);
+                        updateGrips();
+                        score()->update();
+                        printf("   ===click grip %d %d\n", i, int(editData.curGrip));
+                        return true;
+                        }
+                  }
+            printf("  no grip\n");
+            }
+#if 0
+      Element* e = elementNear(editData.startMove);
+      if (e && (e == editData.element) && (editData.element->isText())) {
+            if (editData.element->mousePress(editData, ev)) {
+                  _score->addRefresh(editData.element->canvasBoundingRect());
                   _score->update();
                   }
             return true;
             }
-      int i = 0;
-      if (grips) {
-            qreal a = grip[0].width() * 1.0;
-            for (; i < grips; ++i) {
-                  if (grip[i].adjusted(-a, -a, a, a).contains(data.startMove)) {
-                        curGrip = Grip(i);
-                        data.curGrip = Grip(i);
-                        updateGrips();
-                        score()->update();
-                        break;
-                        }
-                  }
-            }
-      return i != grips;
+#endif
+      return i != editData.grips;
       }
 
 //---------------------------------------------------------
@@ -175,31 +235,40 @@ bool ScoreView::editElementDragTransition(QMouseEvent* ev)
 
 void ScoreView::doDragEdit(QMouseEvent* ev)
       {
-      data.lastPos   = data.pos;
-      data.pos       = toLogical(ev->pos());
-      data.modifiers = qApp->keyboardModifiers();
+      editData.lastPos   = editData.pos;
+      editData.pos       = toLogical(ev->pos());
+      editData.modifiers = qApp->keyboardModifiers();
 
-      if (!editObject->isBarLine()) {
+      if (!editData.element->isBarLine()) {
             // on other elements, BOTH Ctrl (vert. constrain) and Shift (horiz. constrain) modifiers = NO constrain
             if (qApp->keyboardModifiers() == Qt::ShiftModifier)
-                  data.pos.setX(data.lastPos.x());
+                  editData.pos.setX(editData.lastPos.x());
             if (qApp->keyboardModifiers() == Qt::ControlModifier)
-                  data.pos.setY(data.lastPos.y());
+                  editData.pos.setY(editData.lastPos.y());
             }
-      data.delta = data.pos - data.lastPos;
+      editData.delta = editData.pos - editData.lastPos;
+      score()->addRefresh(editData.element->canvasBoundingRect());
 
-      score()->addRefresh(editObject->canvasBoundingRect());
-      if (editObject->isText()) {
-            Text* text = static_cast<Text*>(editObject);
-            text->dragTo(data.pos);
+      if (editData.element->isText()) {
+            if (editData.element->shape().translated(editData.element->pagePos()).contains(editData.pos)) {
+                  qDebug("in");
+                  toText(editData.element)->dragTo(editData);
+                  }
+            else {
+                  qDebug("out");
+                  editData.hRaster = false;
+                  editData.vRaster = false;
+                  editData.element->editDrag(editData);
+                  updateGrips();
+                  }
             }
       else {
-            data.hRaster = false;
-            data.vRaster = false;
-            editObject->editDrag(data);
+            editData.hRaster = false;
+            editData.vRaster = false;
+            editData.element->editDrag(editData);
             updateGrips();
             }
-      QRectF r(editObject->canvasBoundingRect());
+      QRectF r(editData.element->canvasBoundingRect());
       _score->addRefresh(r);
       _score->update();
       }
@@ -210,14 +279,14 @@ void ScoreView::doDragEdit(QMouseEvent* ev)
 
 void ScoreView::endDragEdit()
       {
-      _score->addRefresh(editObject->canvasBoundingRect());
-      editObject->endEditDrag(data);
+      _score->addRefresh(editData.element->canvasBoundingRect());
+      editData.element->endEditDrag(editData);
+      score()->endCmd();
       setDropTarget(0);
       updateGrips();
       _score->rebuildBspTree();
-      _score->addRefresh(editObject->canvasBoundingRect());
+      _score->addRefresh(editData.element->canvasBoundingRect());
       _score->update();
       }
-
 }
 

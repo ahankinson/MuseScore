@@ -53,11 +53,11 @@
 //   TODO: remove duplicate code
 //---------------------------------------------------------
 
-static void addText(Ms::VBox*& vbx, Ms::Score* s, QString strTxt, Ms::TextStyleType stl)
+static void addText(Ms::VBox*& vbx, Ms::Score* s, QString strTxt, Ms::SubStyle stl)
       {
       if (!strTxt.isEmpty()) {
             Ms::Text* text = new Ms::Text(s);
-            text->setTextStyleType(stl);
+            text->initSubStyle(stl);
             text->setPlainText(strTxt);
             if (vbx == 0)
                   vbx = new Ms::VBox(s);
@@ -115,7 +115,7 @@ static void setTempo(Ms::Score* score, int tempo)
       tempoText += QString(" = %1").arg(tempo);
       tt->setPlainText(tempoText);
       Ms::Measure* measure = score->firstMeasure();
-      Ms::Segment* segment = measure->getSegment(Ms::Segment::Type::ChordRest, 0);
+      Ms::Segment* segment = measure->getSegment(Ms::SegmentType::ChordRest, 0);
       segment->add(tt);
       }
 
@@ -249,7 +249,7 @@ void MsScWriter::beginMeasure(const Bww::MeasureBeginFlags mbf)
             Ms::Clef* clef = new Ms::Clef(score);
             clef->setClefType(Ms::ClefType::G);
             clef->setTrack(0);
-            Ms::Segment* s = currentMeasure->getSegment(Ms::Segment::Type::Clef, tick);
+            Ms::Segment* s = currentMeasure->getSegment(Ms::SegmentType::Clef, tick);
             s->add(clef);
             // keysig
             Ms::KeySigEvent key;
@@ -257,13 +257,13 @@ void MsScWriter::beginMeasure(const Bww::MeasureBeginFlags mbf)
             Ms::KeySig* keysig = new Ms::KeySig(score);
             keysig->setKeySigEvent(key);
             keysig->setTrack(0);
-            s = currentMeasure->getSegment(Ms::Segment::Type::KeySig, tick);
+            s = currentMeasure->getSegment(Ms::SegmentType::KeySig, tick);
             s->add(keysig);
             // timesig
             Ms::TimeSig* timesig = new Ms::TimeSig(score);
             timesig->setSig(Ms::Fraction(beats, beat));
             timesig->setTrack(0);
-            s = currentMeasure->getSegment(Ms::Segment::Type::TimeSig, tick);
+            s = currentMeasure->getSegment(Ms::SegmentType::TimeSig, tick);
             s->add(timesig);
             qDebug("tempo %d", tempo);
             }
@@ -380,7 +380,7 @@ void MsScWriter::note(const QString pitch, const QVector<Bww::BeamType> beamList
       cr->add(note);
       // add chord to measure
       if (!grace) {
-            Ms::Segment* s = currentMeasure->getSegment(Ms::Segment::Type::ChordRest, tick);
+            Ms::Segment* s = currentMeasure->getSegment(Ms::SegmentType::ChordRest, tick);
             s->add(cr);
             if (!currentGraceNotes.isEmpty()) {
                   for (int i = currentGraceNotes.size() - 1; i >=0; i--)
@@ -431,11 +431,11 @@ void MsScWriter::header(const QString title, const QString type,
 
       //  score->setWorkTitle(title);
       Ms::VBox* vbox  = 0;
-      addText(vbox, score, title, Ms::TextStyleType::TITLE);
-      addText(vbox, score, type, Ms::TextStyleType::SUBTITLE);
-      addText(vbox, score, composer, Ms::TextStyleType::COMPOSER);
-      // addText(vbox, score, strPoet, Ms::TextStyleType::POET);
-      // addText(vbox, score, strTranslator, Ms::TextStyleType::TRANSLATOR);
+      addText(vbox, score, title, Ms::SubStyle::TITLE);
+      addText(vbox, score, type, Ms::SubStyle::SUBTITLE);
+      addText(vbox, score, composer, Ms::SubStyle::COMPOSER);
+      // addText(vbox, score, strPoet, Ms::SubStyle::POET);
+      // addText(vbox, score, strTranslator, Ms::SubStyle::TRANSLATOR);
       if (vbox) {
             vbox->setTick(0);
             score->measures()->add(vbox);

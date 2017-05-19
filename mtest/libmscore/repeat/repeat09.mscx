@@ -70,16 +70,6 @@ p, li { white-space: pre-wrap; }
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'freeSans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p align=&quot;right&quot; style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;$p&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</oddFooterR>
-      <page-layout>
-        <page-height>1584</page-height>
-        <page-width>1224</page-width>
-        <page-margins type="both">
-          <left-margin>56.6929</left-margin>
-          <right-margin>56.6929</right-margin>
-          <top-margin>56.6929</top-margin>
-          <bottom-margin>113.386</bottom-margin>
-          </page-margins>
-        </page-layout>
       <Spatium>1.764</Spatium>
       </Style>
     <showInvisible>1</showInvisible>
@@ -174,16 +164,14 @@ p, li { white-space: pre-wrap; }
       <Measure number="3">
         <endRepeat>2</endRepeat>
         <Volta id="2">
-          <endHook>1</endHook>
+          <endHookType>1</endHookType>
           <lineWidth>0.1</lineWidth>
           <Segment>
             <subtype>0</subtype>
             <off2 x="0" y="0"/>
             <offset x="-0.491739" y="-2.95043"/>
             </Segment>
-          <beginText>
-            <text>1.</text>
-            </beginText>
+          <beginText>1.</beginText>
           <endings>1</endings>
           </Volta>
         <Chord>
@@ -198,16 +186,14 @@ p, li { white-space: pre-wrap; }
         <endRepeat>2</endRepeat>
         <endSpanner id="2"/>
         <Volta id="3">
-          <endHook>1</endHook>
+          <endHookType>1</endHookType>
           <lineWidth>0.1</lineWidth>
           <Segment>
             <subtype>0</subtype>
             <off2 x="0" y="0"/>
             <offset x="-0.0674338" y="-2.89668"/>
             </Segment>
-          <beginText>
-            <text>2.</text>
-            </beginText>
+          <beginText>2.</beginText>
           <endings>1</endings>
           </Volta>
         <Chord>
@@ -228,9 +214,7 @@ p, li { white-space: pre-wrap; }
             <off2 x="0" y="0"/>
             <offset x="0.271718" y="-2.87585"/>
             </Segment>
-          <beginText>
-            <text>3.</text>
-            </beginText>
+          <beginText>3.</beginText>
           <endings>2</endings>
           </Volta>
         <endSpanner id="4"/>

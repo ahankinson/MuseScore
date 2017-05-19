@@ -13,20 +13,42 @@
 #ifndef __CURSOR_H__
 #define __CURSOR_H__
 
-#include "segment.h"
-
 namespace Ms {
 
 class Element;
+class ScoreElement;
 class Score;
 class Chord;
 class Rest;
 class Note;
-// class Segment;
+class Segment;
 class RepeatSegment;
 class ChordRest;
 class StaffText;
 class Measure;
+
+enum class SegmentType;
+
+//---------------------------------------------------------
+//   ElementW
+//    Element wrapper
+//---------------------------------------------------------
+
+class ElementW : public QObject {
+      Q_OBJECT
+      Q_PROPERTY(QString type READ type)
+
+      ScoreElement* e;
+
+   public slots:
+
+   public:
+      ElementW(ScoreElement* _e) : QObject() { e = _e; }
+      ElementW() {}
+      QString type() const;
+      Q_INVOKABLE QVariant tick() const;
+      Q_INVOKABLE QVariant get(const QString& s) const;
+      };
 
 //---------------------------------------------------------
 //   @@ Cursor
@@ -50,10 +72,6 @@ class Cursor : public QObject {
       Q_PROPERTY(int voice      READ voice     WRITE setVoice)
       Q_PROPERTY(int filter     READ filter    WRITE setFilter)
 
-      Q_PROPERTY(Ms::Element* element READ element)
-      Q_PROPERTY(Ms::Segment* segment READ segment)
-      Q_PROPERTY(Ms::Measure* measure READ measure)
-
       Q_PROPERTY(int tick         READ tick)
       Q_PROPERTY(double time      READ time)
 
@@ -69,7 +87,7 @@ class Cursor : public QObject {
 
       //state
       Segment* _segment;
-      Segment::Type _filter { Segment::Type::ChordRest };
+      SegmentType _filter;
 
       // utility methods
       void nextInTrack();
@@ -91,11 +109,11 @@ class Cursor : public QObject {
       void setVoice(int v);
 
       int filter() const            { return int(_filter); }
-      void setFilter(int f)         { _filter = Segment::Type(f); }
+      void setFilter(int f)         { _filter = SegmentType(f); }
 
-      Element* element() const;
-      Segment* segment() const      { return _segment;  }
-      Measure* measure() const;
+      Q_INVOKABLE Ms::ElementW* element() const;
+      Q_INVOKABLE Ms::ElementW* segment() const;
+      Q_INVOKABLE Ms::ElementW* measure() const;
 
       int tick();
       double time();

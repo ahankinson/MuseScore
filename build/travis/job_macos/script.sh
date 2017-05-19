@@ -15,8 +15,12 @@ BRANCH="$TRAVIS_BRANCH"
 REVISION="$(echo "$TRAVIS_COMMIT" | cut -c 1-7)"
 [ "REVISION" ] || REVISION="$(make -f Makefile.osx revision && cat mscore/revision.h)"
 
+if [ "$(grep '^[[:blank:]]*set( *MSCORE_UNSTABLE \+TRUE *)' CMakeLists.txt)" ]
 cp -f build/travis/resources/splash-nightly.png  mscore/data/splash.png
 cp -f build/travis/resources/mscore-nightly.icns mscore/data/mscore.icns
+else
+python build/add-mc-keys.py $MC_CONSUMER_KEY $MC_CONSUMER_SECRET
+fi
 
 make -f Makefile.osx ci
 if [ "$(grep '^[[:blank:]]*set( *MSCORE_UNSTABLE \+TRUE *)' CMakeLists.txt)" ]
@@ -38,7 +42,7 @@ SSH_INDENTITY=$HOME/.ssh/osuosl_nighlies_rsa
 scp -C -i $SSH_INDENTITY $DMGFILE musescore-nightlies@ftp-osl.osuosl.org:ftp/macosx
 
 # delete old files
-ssh -i $SSH_INDENTITY musescore-nightlies@ftp-osl.osuosl.org "cd ~/ftp/macosx; ls MuseScoreNightly* -t | tail -n +41 | xargs rm"
+ssh -i $SSH_INDENTITY musescore-nightlies@ftp-osl.osuosl.org "cd ~/ftp/macosx; ls MuseScoreNightly* -t | tail -n +41 | xargs rm -f"
 
 # create and upload index.html and RSS
 python build/travis/job_macos/updateHTML.py $SSH_INDENTITY

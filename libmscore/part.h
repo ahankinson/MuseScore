@@ -44,8 +44,8 @@ class InstrumentTemplate;
 //   @P volume          int
 //---------------------------------------------------------
 
-class Part : public QObject, public ScoreElement {
-      Q_OBJECT
+class Part : public ScoreElement {
+      Q_GADGET
 
       Q_PROPERTY(int          endTrack          READ endTrack)
       Q_PROPERTY(int          harmonyCount      READ harmonyCount)
@@ -73,8 +73,7 @@ class Part : public QObject, public ScoreElement {
    public:
       Part(Score* = 0);
       void initFromInstrTemplate(const InstrumentTemplate*);
-
-      virtual const char* name() const override { return "Part"; }
+      virtual ElementType type() const override { return ElementType::PART; }
 
       void read(XmlReader&);
       bool readProperties(XmlReader&);

@@ -14,6 +14,7 @@
 #define __SLURTIE_H__
 
 #include "spanner.h"
+#include "mscore.h"
 
 namespace Ms {
 
@@ -52,7 +53,7 @@ class SlurTie;
 //---------------------------------------------------------
 
 class SlurTieSegment : public SpannerSegment {
-      Q_OBJECT
+      Q_GADGET
 
    protected:
       struct UP _ups[int(Grip::GRIPS)];
@@ -84,17 +85,15 @@ class SlurTieSegment : public SpannerSegment {
 
 //-------------------------------------------------------------------
 //   @@ SlurTie
-//   @P lineType       int    (0 - solid, 1 - dotted, 2 - dashed)
+//   @P lineType       int  (0 - solid, 1 - dotted, 2 - dashed, 3 - wide dashed)
 //   @P slurDirection  enum (Direction.AUTO, Direction.DOWN, Direction.UP)
 //-------------------------------------------------------------------
 
 class SlurTie : public Spanner {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(int lineType                         READ lineType       WRITE undoSetLineType)
-//TODO-WS      Q_PROPERTY(Ms::Direction slurDirection  READ slurDirection  WRITE undoSetSlurDirection)
-//TODO-WS      Q_ENUMS(Ms::MScore::Direction)
 
-      int _lineType;    // 0 = solid, 1 = dotted, 2 = dashed
+      int _lineType;    // 0 = solid, 1 = dotted, 2 = dashed, 3 = wide dashed
 
       static Element* editStartElement;
       static Element* editEndElement;
@@ -113,7 +112,7 @@ class SlurTie : public Spanner {
       SlurTie(const SlurTie&);
       ~SlurTie();
 
-      virtual Element::Type type() const = 0;
+      virtual ElementType type() const = 0;
       bool up() const                             { return _up; }
 
       virtual void reset() override;
@@ -135,8 +134,8 @@ class SlurTie : public Spanner {
       virtual void slurPos(SlurPos*) = 0;
       virtual SlurTieSegment* newSlurTieSegment() = 0;
 
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
+      virtual void startEdit(EditData&) override;
+      virtual void endEdit(EditData&) override;
 
       virtual QVariant getProperty(P_ID propertyId) const;
       virtual bool setProperty(P_ID propertyId, const QVariant&);

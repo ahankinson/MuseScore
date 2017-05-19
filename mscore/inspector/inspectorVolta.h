@@ -29,13 +29,13 @@ namespace Ms {
 class InspectorVolta : public InspectorElementBase {
       Q_OBJECT
 
-      Ui::InspectorElement e;
       Ui::InspectorLine l;
-      //Ui::InspectorTextLine tl;
+      Ui::InspectorTextLine tl;
       Ui::InspectorVolta v;
 
    public:
       InspectorVolta(QWidget* parent);
+      virtual void setElement() override;
       };
 
 

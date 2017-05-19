@@ -52,7 +52,7 @@ class XmlReader : public QXmlStreamReader {
       int _track            { 0       };
       int _trackOffset      { 0       };
       bool _pasteMode       { false   };        // modifies read behaviour on paste operation
-      Measure* _lastMeasure { nullptr };
+      Measure* _lastMeasure { 0       };
       QHash<int, Beam*>    _beams;
       QHash<int, Tuplet*>  _tuplets;
 
@@ -84,9 +84,10 @@ class XmlReader : public QXmlStreamReader {
       bool hasAttribute(const char* s) const;
 
       // helper routines based on readElementText():
-      int readInt()         { return readElementText().toInt();    }
-      int readInt(bool* ok) { return readElementText().toInt(ok);  }
-      double readDouble()   { return readElementText().toDouble(); }
+      int readInt()         { return readElementText().toInt();      }
+      int readInt(bool* ok) { return readElementText().toInt(ok);    }
+      int readIntHex()      { return readElementText().toInt(0, 16); }
+      double readDouble()   { return readElementText().toDouble();   }
       double readDouble(double min, double max);
       bool readBool();
       QPointF readPoint();

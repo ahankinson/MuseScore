@@ -62,7 +62,7 @@ void TestSelectionRangeDelete::verifyDelete(MasterScore* score, size_t spanners)
       score->endCmd();
 
       QVERIFY(score->spanner().size() == spanners -1);
-      score->undoRedo(true);
+      score->undoRedo(true, ed);
       QVERIFY(score->spanner().size() == spanners);
       }
 
@@ -77,7 +77,7 @@ void TestSelectionRangeDelete::verifyNoDelete(MasterScore* score, size_t spanner
       score->endCmd();
 
       QVERIFY(score->spanner().size() == spanners);
-      score->undoRedo(true);
+      score->undoRedo(true, ed);
       QVERIFY(score->spanner().size() == spanners);
       }
 
@@ -89,7 +89,7 @@ Element* chordRestAtBeat(Score* score, int beat, int half = 0)
       {
       qDebug("Chordrest at beat %i,%i",beat,half);
       int division = MScore::division;
-      return score->tick2segment(beat * division + half * division/2,false,Segment::Type::ChordRest,false)->element(0);
+      return score->tick2segment(beat * division + half * division/2,false,SegmentType::ChordRest,false)->element(0);
       }
 
 //---------------------------------------------------------

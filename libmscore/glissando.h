@@ -29,14 +29,14 @@ class Note;
 //---------------------------------------------------------
 
 class GlissandoSegment : public LineSegment {
-      Q_OBJECT
+      Q_GADGET
 
    protected:
 
    public:
       GlissandoSegment(Score* s) : LineSegment(s)           {}
       Glissando* glissando() const                          { return (Glissando*)spanner(); }
-      virtual Element::Type type() const override           { return Element::Type::GLISSANDO_SEGMENT; }
+      virtual ElementType type() const override           { return ElementType::GLISSANDO_SEGMENT; }
       virtual GlissandoSegment* clone() const override      { return new GlissandoSegment(*this); }
       virtual void draw(QPainter*) const override;
       virtual void layout() override;
@@ -54,7 +54,7 @@ class GlissandoSegment : public LineSegment {
 //---------------------------------------------------------
 
 class Glissando : public SLine {
-      Q_OBJECT
+      Q_GADGET
 
       Q_PROPERTY(Ms::Glissando::Type glissandoType READ glissandoType  WRITE undoSetGlissandoType)
       Q_PROPERTY(QString text                      READ text     WRITE undoSetText)
@@ -84,7 +84,7 @@ class Glissando : public SLine {
 
       // overriden inherited methods
       virtual Glissando* clone() const override       { return new Glissando(*this); }
-      virtual Element::Type type() const override     { return Element::Type::GLISSANDO; }
+      virtual ElementType type() const override     { return ElementType::GLISSANDO; }
       virtual LineSegment* createLineSegment() override;
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
       virtual void layout() override;

@@ -17,7 +17,6 @@
 
 namespace Ms {
 
-
 //---------------------------------------------------------
 //   @@ Marker
 //
@@ -26,7 +25,7 @@ namespace Ms {
 //---------------------------------------------------------
 
 class Marker : public Text {
-      Q_OBJECT
+      Q_GADGET
 
       Q_PROPERTY(QString label               READ label      WRITE undoSetLabel)
       Q_PROPERTY(Ms::Marker::Type markerType READ markerType WRITE undoSetMarkerType)
@@ -44,7 +43,6 @@ class Marker : public Text {
             USER
             };
 
-
    private:
       Type _markerType;
       QString _label;               ///< referenced from Jump() element
@@ -59,7 +57,7 @@ class Marker : public Text {
       QString markerTypeUserName() const;
 
       virtual Marker* clone() const override      { return new Marker(*this); }
-      virtual Element::Type type() const override { return Element::Type::MARKER; }
+      virtual ElementType type() const override { return ElementType::MARKER; }
 
       Measure* measure() const         { return (Measure*)parent(); }
 
@@ -85,13 +83,18 @@ class Marker : public Text {
       virtual QString accessibleInfo() const override;
       };
 
-typedef struct {
+//---------------------------------------------------------
+//   MarkerTypeItem
+//---------------------------------------------------------
+
+struct MarkerTypeItem {
       Marker::Type type;
       QString name;
-      } MarkerTypeItem;
+      };
 
 extern const MarkerTypeItem markerTypeTable[];
 int markerTypeTableSize();
+
 }     // namespace Ms
 
 Q_DECLARE_METATYPE(Ms::Marker::Type);

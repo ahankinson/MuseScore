@@ -23,7 +23,7 @@ namespace Ms {
 //---------------------------------------------------------
 
 class SlurSegment : public SlurTieSegment {
-      Q_OBJECT
+      Q_GADGET
 
    protected:
       void changeAnchor(MuseScoreView*, Grip, Element*);
@@ -33,7 +33,7 @@ class SlurSegment : public SlurTieSegment {
       SlurSegment(const SlurSegment& ss) : SlurTieSegment(ss) {}
 
       virtual SlurSegment* clone() const override  { return new SlurSegment(*this); }
-      virtual Element::Type type() const override  { return Element::Type::SLUR_SEGMENT; }
+      virtual ElementType type() const override  { return ElementType::SLUR_SEGMENT; }
       virtual int subtype() const override         { return static_cast<int>(spanner()->type()); }
       virtual QString subtypeName() const override { return name(spanner()->type()); }
       virtual void draw(QPainter*) const override;
@@ -41,10 +41,10 @@ class SlurSegment : public SlurTieSegment {
       void layoutSegment(const QPointF& p1, const QPointF& p2);
 
       bool isEdited() const;
-      virtual void editDrag(const EditData&) override;
-      virtual bool edit(MuseScoreView*, Grip grip, int key, Qt::KeyboardModifiers, const QString& s) override;
-      virtual void updateGrips(Grip*, QVector<QRectF>&) const override;
-      virtual int grips() const override { return int(Grip::GRIPS); }
+      virtual void startEdit(EditData&) override;
+      virtual void editDrag(EditData&) override;
+      virtual bool edit(EditData&) override;
+      virtual void updateGrips(EditData&) const override;
       virtual QPointF gripAnchor(Grip grip) const override;
 
       QPointF getGrip(Grip) const override;
@@ -60,7 +60,7 @@ class SlurSegment : public SlurTieSegment {
 //---------------------------------------------------------
 
 class Slur : public SlurTie {
-      Q_OBJECT
+      Q_GADGET
 
       void slurPosChord(SlurPos*);
 
@@ -68,7 +68,7 @@ class Slur : public SlurTie {
       Slur(Score* = 0);
       ~Slur();
       virtual Slur* clone() const override        { return new Slur(*this); }
-      virtual Element::Type type() const override { return Element::Type::SLUR; }
+      virtual ElementType type() const override { return ElementType::SLUR; }
       virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
       virtual void layout() override;

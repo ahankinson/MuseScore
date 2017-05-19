@@ -97,6 +97,10 @@
           </TimeSig>
         <Chord>
           <durationType>quarter</durationType>
+          <Lyrics>
+            <ticks>1440</ticks>
+            <text>A</text>
+            </Lyrics>
           <Note>
             <pitch>69</pitch>
             <tpc>17</tpc>

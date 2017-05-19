@@ -22,6 +22,7 @@
 #include "sig.h"
 #include "barline.h"
 #include "excerpt.h"
+#include "spanner.h"
 
 #ifdef OMR
 #include "omr/omr.h"
@@ -163,7 +164,7 @@ bool Score::read(XmlReader& e)
                   else {
                         e.tracks().clear();     // ???
                         MasterScore* m = masterScore();
-                        Score* s       = new Score(m, MScore::baseStyle());
+                        Score* s       = new Score(m);
                         Excerpt* ex    = new Excerpt(m);
 
                         ex->setPartScore(s);
@@ -194,7 +195,7 @@ bool Score::read(XmlReader& e)
             qDebug("%s: xml read error at line %lld col %lld: %s",
                qPrintable(e.getDocName()), e.lineNumber(), e.columnNumber(),
                e.name().toUtf8().data());
-            MScore::lastError = tr("XML read error at line %1 column %2: %3").arg(e.lineNumber()).arg(e.columnNumber()).arg(e.name().toString());
+            MScore::lastError = QObject::tr("XML read error at line %1 column %2: %3").arg(e.lineNumber()).arg(e.columnNumber()).arg(e.name().toString());
             return false;
             }
 
@@ -311,7 +312,7 @@ Score::FileError MasterScore::read300(XmlReader& e)
                   parseVersion(mscoreVersion());
                   }
             else if (tag == "programRevision")
-                  setMscoreRevision(e.readInt());
+                  setMscoreRevision(e.readIntHex());
             else if (tag == "Score") {
                   MasterScore* score;
                   if (top) {
@@ -331,8 +332,6 @@ Score::FileError MasterScore::read300(XmlReader& e)
                   revisions()->add(revision);
                   }
             }
-      for (MasterScore* ms : *_movements)
-            printf("=====%p %p %p\n", ms, ms->prev(), ms->next());
       return FileError::FILE_NO_ERROR;
       }
 

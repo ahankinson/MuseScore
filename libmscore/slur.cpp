@@ -52,9 +52,26 @@ void SlurSegment::draw(QPainter* painter) const
                   pen.setWidthF(score()->styleP(StyleIdx::SlurDottedWidth));
                   pen.setStyle(Qt::DashLine);
                   break;
+            case 3:
+                  painter->setBrush(Qt::NoBrush);
+                  pen.setWidthF(score()->styleP(StyleIdx::SlurDottedWidth));
+                  pen.setStyle(Qt::CustomDashLine);
+                  QVector<qreal> dashes { 5.0, 5.0 };
+                  pen.setDashPattern(dashes);
+                  break;
             }
       painter->setPen(pen);
       painter->drawPath(path);
+      }
+
+//---------------------------------------------------------
+//   startEdit
+//---------------------------------------------------------
+
+void SlurSegment::startEdit(EditData& ed)
+      {
+      ed.grips   = int(Grip::GRIPS);
+      ed.curGrip = Grip::END;
       }
 
 //---------------------------------------------------------
@@ -62,13 +79,12 @@ void SlurSegment::draw(QPainter* painter) const
 //    return grip rectangles in page coordinates
 //---------------------------------------------------------
 
-void SlurSegment::updateGrips(Grip* defaultGrip, QVector<QRectF>& r) const
+void SlurSegment::updateGrips(EditData& ed) const
       {
-      *defaultGrip = Grip::END;
       QPointF p(pagePos());
       p -= QPointF(0.0, system()->staff(staffIdx())->y());   // ??
       for (int i = 0; i < int(Grip::GRIPS); ++i)
-            r[i].translate(_ups[i].p + _ups[i].off + p);
+            ed.grip[i].translate(_ups[i].p + _ups[i].off + p);
       }
 
 //---------------------------------------------------------
@@ -77,8 +93,8 @@ void SlurSegment::updateGrips(Grip* defaultGrip, QVector<QRectF>& r) const
 
 static ChordRest* searchCR(Segment* segment, int startTrack, int endTrack)
       {
-      // for (Segment* s = segment; s; s = s->next1MM(Segment::Type::ChordRest)) {
-      for (Segment* s = segment; s; s = s->next(Segment::Type::ChordRest)) {     // restrict search to measure
+      // for (Segment* s = segment; s; s = s->next1MM(SegmentType::ChordRest)) {
+      for (Segment* s = segment; s; s = s->next(SegmentType::ChordRest)) {     // restrict search to measure
             if (startTrack > endTrack) {
                   for (int t = startTrack-1; t >= endTrack; --t) {
                         if (s->element(t))
@@ -100,28 +116,28 @@ static ChordRest* searchCR(Segment* segment, int startTrack, int endTrack)
 //    return true if event is accepted
 //---------------------------------------------------------
 
-bool SlurSegment::edit(MuseScoreView* viewer, Grip curGrip, int key, Qt::KeyboardModifiers modifiers, const QString&)
+bool SlurSegment::edit(EditData& ed)
       {
       Slur* sl = slur();
 
-      if (key == Qt::Key_X) {
+      if (ed.key == Qt::Key_X) {
             sl->setSlurDirection(sl->up() ? Direction::DOWN : Direction::UP);
             sl->layout();
             return true;
             }
-      if (key == Qt::Key_Home) {
-            ups(curGrip).off = QPointF();
+      if (ed.key == Qt::Key_Home) {
+            ups(ed.curGrip).off = QPointF();
             sl->layout();
             return true;
             }
 
-      if (!((modifiers & Qt::ShiftModifier) && (isSingleType() || (isBeginType() && curGrip == Grip::START) || (isEndType() && curGrip == Grip::END))))
+      if (!((ed.modifiers & Qt::ShiftModifier) && (isSingleType() || (isBeginType() && ed.curGrip == Grip::START) || (isEndType() && ed.curGrip == Grip::END))))
             return false;
 
       ChordRest* cr = 0;
       ChordRest* e;
       ChordRest* e1;
-      if (curGrip == Grip::START) {
+      if (ed.curGrip == Grip::START) {
             e = sl->startCR();
             e1 = sl->endCR();
             }
@@ -130,24 +146,24 @@ bool SlurSegment::edit(MuseScoreView* viewer, Grip curGrip, int key, Qt::Keyboar
             e1 = sl->startCR();
             }
 
-      if (key == Qt::Key_Left)
+      if (ed.key == Qt::Key_Left)
             cr = prevChordRest(e);
-      else if (key == Qt::Key_Right)
+      else if (ed.key == Qt::Key_Right)
             cr = nextChordRest(e);
-      else if (key == Qt::Key_Up) {
+      else if (ed.key == Qt::Key_Up) {
             Part* part     = e->part();
             int startTrack = part->startTrack();
             int endTrack   = e->track();
             cr = searchCR(e->segment(), endTrack, startTrack);
             }
-      else if (key == Qt::Key_Down) {
+      else if (ed.key == Qt::Key_Down) {
             int startTrack = e->track() + 1;
             Part* part     = e->part();
             int endTrack   = part->endTrack();
             cr = searchCR(e->segment(), startTrack, endTrack);
             }
       if (cr && cr != e1)
-            changeAnchor(viewer, curGrip, cr);
+            changeAnchor(ed.view, ed.curGrip, cr);
 //      undoChangeProperty(P_ID::AUTOPLACE, false);
       return true;
       }
@@ -305,7 +321,7 @@ void SlurSegment::setGrip(Grip n, const QPointF& pt)
 //   editDrag
 //---------------------------------------------------------
 
-void SlurSegment::editDrag(const EditData& ed)
+void SlurSegment::editDrag(EditData& ed)
       {
       ups(ed.curGrip).off += ed.delta;
 
@@ -783,7 +799,12 @@ void Slur::slurPos(SlurPos* sp)
             return;
 
       sp->p1 = scr->pagePos() - sp->system1->pagePos();
-      sp->p2 = ecr->pagePos() - sp->system2->pagePos();
+      QPointF ppp = ecr->pagePos();
+      System* sss = sp->system2;
+      QPointF pppp = sss->pagePos();
+      sp->p2 = ppp - pppp;
+
+//      sp->p2 = ecr->pagePos() - sp->system2->pagePos();
       // account for centering or other adjustments (other than mirroring)
       if (note1 && !note1->mirror())
             sp->p1.rx() += note1->x();
@@ -1124,7 +1145,7 @@ static bool chordsHaveTie(Chord* c1, Chord* c2)
 static bool isDirectionMixture(Chord* c1, Chord* c2)
       {
       bool up = c1->up();
-      for (Segment* seg = c1->segment(); seg; seg = seg->next(Segment::Type::ChordRest)) {
+      for (Segment* seg = c1->segment(); seg; seg = seg->next(SegmentType::ChordRest)) {
             Element* e = seg->element(c1->track());
             if (!e || !e->isChord())
                   continue;

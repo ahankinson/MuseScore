@@ -71,7 +71,7 @@ class FileIO : public QObject {
 //---------------------------------------------------------
 
 class MsProcess : public QProcess {
-      Q_OBJECT
+      Q_GADGET
 
    public:
       MsProcess(QObject* parent = 0) : QProcess(parent) {}
@@ -94,7 +94,7 @@ class MsProcess : public QProcess {
 //---------------------------------------------------------
 
 class MsScoreView : public QQuickPaintedItem, public MuseScoreView {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(QColor color READ color WRITE setColor)
       Q_PROPERTY(qreal  scale READ scale WRITE setScale)
 
@@ -113,7 +113,7 @@ class MsScoreView : public QQuickPaintedItem, public MuseScoreView {
       virtual void removeScore()                {}
       virtual void changeEditElement(Element*)  {}
       virtual int gripCount() const             { return 0; }
-      virtual const QRectF& getGrip(Grip) const override;
+//      virtual const QRectF& getGrip(Grip) const override;
       virtual const QTransform& matrix() const;
       virtual void setDropRectangle(const QRectF&) {}
       virtual void cmdAddSlur(Note*, Note*)     {}

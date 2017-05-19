@@ -72,7 +72,7 @@ void Score::checkScore()
       for (Segment* s = firstMeasure()->first(); s;) {
             Segment* ns = s->next1();
 
-            if (s->segmentType() & (Segment::Type::ChordRest)) {
+            if (s->segmentType() & (SegmentType::ChordRest)) {
                   bool empty = true;
                   foreach(Element* e, s->elist()) {
                         if (e) {
@@ -96,7 +96,7 @@ qDebug("checkScore: remove empty ChordRest segment");
             int track = staffIdx * VOICES;
             int tick  = 0;
             Staff* st = staff(staffIdx);
-            for (Segment* s = firstMeasure()->first(Segment::Type::ChordRest); s; s = s->next1(Segment::Type::ChordRest)) {
+            for (Segment* s = firstMeasure()->first(SegmentType::ChordRest); s; s = s->next1(SegmentType::ChordRest)) {
                   ChordRest* cr = static_cast<ChordRest*>(s->element(track));
                   if (!cr)
                         continue;
@@ -175,14 +175,14 @@ bool Score::sanityCheck(const QString& name)
       QString error;
       for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
             Fraction mLen = m->len();
-            int endStaff = staves().size();
+            int endStaff  = staves().size();
             for (int staffIdx = 0; staffIdx < endStaff; ++staffIdx) {
                   Rest* fmrest0 = 0;      // full measure rest in voice 0
-                  Fraction voices[VOICES] = {};
+                  Fraction voices[VOICES];
 #ifndef NDEBUG
                   m->setCorrupted(staffIdx, false);
 #endif
-                  for (Segment* s = m->first(Segment::Type::ChordRest); s; s = s->next(Segment::Type::ChordRest)) {
+                  for (Segment* s = m->first(SegmentType::ChordRest); s; s = s->next(SegmentType::ChordRest)) {
                         for (int v = 0; v < VOICES; ++v) {
                               ChordRest* cr = toChordRest(s->element(staffIdx * VOICES + v));
                               if (cr == 0)
@@ -197,7 +197,7 @@ bool Score::sanityCheck(const QString& name)
                               }
                         }
                   if (voices[0] != mLen) {
-                        QString msg = tr("Measure %1 Staff %2 incomplete. Expected: %3; Found: %4").arg(mNumber).arg( staffIdx+1).arg(mLen.print()).arg(voices[0].print());
+                        QString msg = QObject::tr("Measure %1 Staff %2 incomplete. Expected: %3; Found: %4").arg(mNumber).arg( staffIdx+1).arg(mLen.print()).arg(voices[0].print());
                         qDebug() << msg;
                         error += QString("%1\n").arg(msg);
 #ifndef NDEBUG
@@ -214,7 +214,7 @@ bool Score::sanityCheck(const QString& name)
                         }
                   for (int v = 1; v < VOICES; ++v) {
                         if (voices[v] > mLen) {
-                              QString msg = tr("Measure %1, staff %2, voice %3 too long. Expected: %4; Found: %5").arg( mNumber).arg(staffIdx + 1).arg(v+1).arg(mLen.print()).arg(voices[v].print());
+                              QString msg = QObject::tr("Measure %1, staff %2, voice %3 too long. Expected: %4; Found: %5").arg( mNumber).arg(staffIdx + 1).arg(v+1).arg(mLen.print()).arg(voices[v].print());
                               qDebug() << msg;
                               error += QString("%1\n").arg(msg);
 #ifndef NDEBUG
@@ -261,7 +261,7 @@ bool Score::checkKeys()
       for (int i = 0; i < nstaves(); ++i) {
             Key k = staff(i)->key(0);
             for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
-                  Segment* s = m->findSegment(Segment::Type::KeySig, m->tick());
+                  Segment* s = m->findSegment(SegmentType::KeySig, m->tick());
                   if (s) {
                         Element* element = s->element(i * VOICES);
                         if (element)
@@ -295,7 +295,7 @@ bool Score::checkClefs()
 
             for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
                   if (prevMeasure) {
-                        Segment* segment = prevMeasure->findSegmentR(Segment::Type::Clef | Segment::Type::HeaderClef, 0);
+                        Segment* segment = prevMeasure->findSegmentR(SegmentType::Clef | SegmentType::HeaderClef, 0);
                         if (segment) {
                               Element* e = segment->element(track);
                               if (e)
@@ -356,7 +356,7 @@ void Measure::checkMeasure(int staffIdx)
             Fraction expectedPos = 0;
             Fraction currentPos  = 0;
 
-            for (Segment* seg = first(Segment::Type::ChordRest); seg; seg = seg->next(Segment::Type::ChordRest)) {
+            for (Segment* seg = first(SegmentType::ChordRest); seg; seg = seg->next(SegmentType::ChordRest)) {
                   Element* e = seg->element(track);
                   if (!e)
                         continue;

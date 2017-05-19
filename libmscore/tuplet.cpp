@@ -122,8 +122,7 @@ void Tuplet::layout()
       qreal _spatium = spatium();
       if (_numberType != NumberType::NO_TEXT) {
             if (_number == 0) {
-                  _number = new Text(score());
-                  _number->setTextStyleType(TextStyleType::TUPLET);
+                  _number = new Text(SubStyle::TUPLET, score());
                   _number->setTrack(track());
                   _number->setParent(this);
                   _number->setVisible(visible());
@@ -669,8 +668,8 @@ void Tuplet::read(XmlReader& e)
 bool Tuplet::readProperties(XmlReader& e)
       {
       const QStringRef& tag(e.name());
-      if (tag == "direction")
-            readProperty(e, P_ID::DIRECTION);
+      if (readProperty(tag, e, P_ID::DIRECTION))
+            ;
       else if (tag == "numberType")
             _numberType = NumberType(e.readInt());
       else if (tag == "bracketType")
@@ -686,10 +685,9 @@ bool Tuplet::readProperties(XmlReader& e)
       else if (tag == "baseNote")
             _baseLen = TDuration(e.readElementText());
       else if (tag == "Number") {
-            _number = new Text(score());
+            _number = new Text(SubStyle::TUPLET, score());
             _number->setParent(this);
             _number->read(e);
-            _number->setTextStyleType(TextStyleType::TUPLET);
             _number->setVisible(visible());     //?? override saved property
             _number->setTrack(track());
             }
@@ -714,12 +712,12 @@ void Tuplet::add(Element* e)
 #endif
 
       switch (e->type()) {
-            case Element::Type::TEXT:
+            case ElementType::TEXT:
                   _number = toText(e);
                   break;
-            case Element::Type::CHORD:
-            case Element::Type::REST:
-            case Element::Type::TUPLET: {
+            case ElementType::CHORD:
+            case ElementType::REST:
+            case ElementType::TUPLET: {
                   bool found = false;
                   DurationElement* de = toDurationElement(e);
                   int tick = de->tick();
@@ -751,13 +749,13 @@ void Tuplet::add(Element* e)
 void Tuplet::remove(Element* e)
       {
       switch (e->type()) {
-            case Element::Type::TEXT:
+            case ElementType::TEXT:
                   if (e == _number)
                         _number = 0;
                   break;
-            case Element::Type::CHORD:
-            case Element::Type::REST:
-            case Element::Type::TUPLET: {
+            case ElementType::CHORD:
+            case ElementType::REST:
+            case ElementType::TUPLET: {
                   auto i = std::find(_elements.begin(), _elements.end(), static_cast<DurationElement*>(e));
                   if (i == _elements.end()) {
                         qDebug("Tuplet::remove: cannot find element <%s>", e->name());
@@ -783,10 +781,20 @@ bool Tuplet::isEditable() const
       }
 
 //---------------------------------------------------------
+//   startEdit
+//---------------------------------------------------------
+
+void Tuplet::startEdit(EditData& ed)
+      {
+      ed.grips   = 2;
+      ed.curGrip = Grip::END;
+      }
+
+//---------------------------------------------------------
 //   editDrag
 //---------------------------------------------------------
 
-void Tuplet::editDrag(const EditData& ed)
+void Tuplet::editDrag(EditData& ed)
       {
       if (ed.curGrip == Grip::START)
             _p1 += ed.delta;
@@ -801,11 +809,10 @@ void Tuplet::editDrag(const EditData& ed)
 //   updateGrips
 //---------------------------------------------------------
 
-void Tuplet::updateGrips(Grip* defaultGrip, QVector<QRectF>& grip) const
+void Tuplet::updateGrips(EditData& ed) const
       {
-      *defaultGrip = Grip::END;
-      grip[0].translate(pagePos() + p1);
-      grip[1].translate(pagePos() + p2);
+      ed.grip[0].translate(pagePos() + p1);
+      ed.grip[1].translate(pagePos() + p2);
       }
 
 //---------------------------------------------------------
@@ -814,12 +821,12 @@ void Tuplet::updateGrips(Grip* defaultGrip, QVector<QRectF>& grip) const
 
 void Tuplet::reset()
       {
-      if (directionStyle == PropertyStyle::UNSTYLED)
-            undoChangeProperty(P_ID::DIRECTION, propertyDefault(P_ID::DIRECTION), PropertyStyle::STYLED);
-      if (numberStyle == PropertyStyle::UNSTYLED)
-            undoChangeProperty(P_ID::NUMBER_TYPE, propertyDefault(P_ID::NUMBER_TYPE), PropertyStyle::STYLED);
-      if (bracketStyle == PropertyStyle::UNSTYLED)
-            undoChangeProperty(P_ID::BRACKET_TYPE, propertyDefault(P_ID::BRACKET_TYPE), PropertyStyle::STYLED);
+      if (directionStyle == PropertyFlags::UNSTYLED)
+            undoChangeProperty(P_ID::DIRECTION, propertyDefault(P_ID::DIRECTION), PropertyFlags::STYLED);
+      if (numberStyle == PropertyFlags::UNSTYLED)
+            undoChangeProperty(P_ID::NUMBER_TYPE, propertyDefault(P_ID::NUMBER_TYPE), PropertyFlags::STYLED);
+      if (bracketStyle == PropertyFlags::UNSTYLED)
+            undoChangeProperty(P_ID::BRACKET_TYPE, propertyDefault(P_ID::BRACKET_TYPE), PropertyFlags::STYLED);
 
       score()->addRefresh(canvasBoundingRect());
 
@@ -920,15 +927,15 @@ bool Tuplet::setProperty(P_ID propertyId, const QVariant& v)
       {
       switch (propertyId) {
             case P_ID::DIRECTION:
-                  directionStyle = PropertyStyle::UNSTYLED;
+                  directionStyle = PropertyFlags::UNSTYLED;
                   setDirection(v.value<Direction>());
                   break;
             case P_ID::NUMBER_TYPE:
-                  numberStyle = PropertyStyle::UNSTYLED;
+                  numberStyle = PropertyFlags::UNSTYLED;
                   setNumberType(NumberType(v.toInt()));
                   break;
             case P_ID::BRACKET_TYPE:
-                  bracketStyle = PropertyStyle::UNSTYLED;
+                  bracketStyle = PropertyFlags::UNSTYLED;
                   setBracketType(BracketType(v.toInt()));
                   break;
             case P_ID::NORMAL_NOTES:
@@ -978,10 +985,10 @@ QVariant Tuplet::propertyDefault(P_ID id) const
       }
 
 //---------------------------------------------------------
-//   propertyStyle
+//   propertyFlags
 //---------------------------------------------------------
 
-PropertyStyle Tuplet::propertyStyle(P_ID id) const
+PropertyFlags Tuplet::propertyFlags(P_ID id) const
       {
       switch (id) {
             case P_ID::DIRECTION:
@@ -994,9 +1001,9 @@ PropertyStyle Tuplet::propertyStyle(P_ID id) const
             case P_ID::ACTUAL_NOTES:
             case P_ID::P1:
             case P_ID::P2:
-                  return PropertyStyle::NOSTYLE;
+                  return PropertyFlags::NOSTYLE;
             default:
-                  return DurationElement::propertyStyle(id);
+                  return DurationElement::propertyFlags(id);
             }
       }
 
@@ -1028,15 +1035,15 @@ void Tuplet::resetProperty(P_ID id)
       switch (id) {
             case P_ID::DIRECTION:
                   setProperty(id, propertyDefault(id));
-                  directionStyle = PropertyStyle::STYLED;
+                  directionStyle = PropertyFlags::STYLED;
                   break;
             case P_ID::NUMBER_TYPE:
                   setProperty(id, propertyDefault(id));
-                  numberStyle = PropertyStyle::STYLED;
+                  numberStyle = PropertyFlags::STYLED;
                   break;
             case P_ID::BRACKET_TYPE:
                   setProperty(id, propertyDefault(id));
-                  bracketStyle = PropertyStyle::STYLED;
+                  bracketStyle = PropertyFlags::STYLED;
                   break;
             case P_ID::NORMAL_NOTES:
             case P_ID::ACTUAL_NOTES:
@@ -1057,11 +1064,11 @@ void Tuplet::resetProperty(P_ID id)
 
 void Tuplet::styleChanged()
       {
-      if (directionStyle == PropertyStyle::STYLED)
+      if (directionStyle == PropertyFlags::STYLED)
             setDirection(score()->styleV(StyleIdx::tupletDirection).value<Direction>());
-      if (numberStyle == PropertyStyle::STYLED)
+      if (numberStyle == PropertyFlags::STYLED)
             setNumberType(NumberType(score()->styleI(StyleIdx::tupletNumberType)));
-      if (bracketStyle == PropertyStyle::STYLED)
+      if (bracketStyle == PropertyFlags::STYLED)
             setBracketType(BracketType(score()->styleI(StyleIdx::tupletBracketType)));
       if (!_elements.empty()) {
             _elements.front()->triggerLayout();

@@ -31,11 +31,11 @@ InspectorBarLine::InspectorBarLine(QWidget* parent)
             b.type->addItem(qApp->translate("Palette", i.userName), int(i.type));
 
       const std::vector<InspectorItem> il = {
-            { P_ID::LEADING_SPACE,     0, 1, s.leadingSpace,  s.resetLeadingSpace  },
-            { P_ID::BARLINE_TYPE,      0, 0, b.type,     b.resetType     },
-            { P_ID::BARLINE_SPAN,      0, 0, b.span,     b.resetSpan     },
-            { P_ID::BARLINE_SPAN_FROM, 0, 0, b.spanFrom, b.resetSpanFrom },
-            { P_ID::BARLINE_SPAN_TO,   0, 0, b.spanTo,   b.resetSpanTo   },
+            { P_ID::LEADING_SPACE,     1, s.leadingSpace,  s.resetLeadingSpace  },
+            { P_ID::BARLINE_TYPE,      0, b.type,     b.resetType     },
+            { P_ID::BARLINE_SPAN,      0, b.span,     b.resetSpan     },
+            { P_ID::BARLINE_SPAN_FROM, 0, b.spanFrom, b.resetSpanFrom },
+            { P_ID::BARLINE_SPAN_TO,   0, b.spanTo,   b.resetSpanTo   },
             };
       const std::vector<InspectorPanel> ppList = {
             { s.title, s.panel },
@@ -91,14 +91,16 @@ void InspectorBarLine::setElement()
       // enable / disable individual type combo items according to score and selected bar line status
       bool bMultiStaff  = bl->score()->nstaves() > 1;
       BarLineType blt   = bl->barLineType();
-      bool isRepeat     = blt & (BarLineType::START_REPEAT | BarLineType::END_REPEAT | BarLineType::END_START_REPEAT);
+//      bool isRepeat     = blt & (BarLineType::START_REPEAT | BarLineType::END_REPEAT | BarLineType::END_START_REPEAT);
+      bool isRepeat     = blt & (BarLineType::START_REPEAT | BarLineType::END_REPEAT);
 
       const QStandardItemModel* model = qobject_cast<const QStandardItemModel*>(b.type->model());
       int i = 0;
       for (auto& k : BarLine::barLineTable) {
             QStandardItem* item = model->item(i);
             // if combo item is repeat type, should be disabled for multi-staff scores
-            if (k.type & (BarLineType::START_REPEAT | BarLineType::END_REPEAT | BarLineType::END_START_REPEAT)) {
+//            if (k.type & (BarLineType::START_REPEAT | BarLineType::END_REPEAT | BarLineType::END_START_REPEAT)) {
+            if (k.type & (BarLineType::START_REPEAT | BarLineType::END_REPEAT)) {
                   // disable / enable
                   item->setFlags(bMultiStaff ?
                         item->flags() & ~(Qt::ItemIsSelectable|Qt::ItemIsEnabled) :

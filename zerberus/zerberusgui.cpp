@@ -27,7 +27,7 @@ SfzListDialog::SfzListDialog(QWidget* parent)
       list->setSelectionMode(QAbstractItemView::ExtendedSelection);
       okButton = new QPushButton;
       cancelButton = new QPushButton;
-      okButton->setText(tr("Load..."));
+      okButton->setText(tr("Load"));
       cancelButton->setText(tr("Cancel"));
       QVBoxLayout* layout = new QVBoxLayout;
       buttonBox = new QDialogButtonBox;
@@ -117,7 +117,7 @@ static void collectFiles(QFileInfoList* l, const QString& path)
             if (path == s.absoluteFilePath())
                   return;
 
-            if (s.isDir())
+            if (s.isDir() && !s.isHidden())
                   collectFiles(l, s.absoluteFilePath());
             else {
                   if (s.suffix().toLower() == "sfz")

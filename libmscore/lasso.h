@@ -22,28 +22,20 @@ namespace Ms {
 //---------------------------------------------------------
 
 class Lasso : public Element {
-      Q_OBJECT
+      Q_GADGET
 
-      QRectF _rect;
       MuseScoreView* view;        // valid in edit mode
 
    public:
       Lasso(Score*);
       virtual Lasso* clone() const override        { return new Lasso(*this); }
-      virtual Element::Type type() const override  { return Element::Type::LASSO; }
+      virtual ElementType type() const override    { return ElementType::LASSO; }
       virtual void draw(QPainter*) const override;
       virtual bool isEditable() const override     { return true; }
-      virtual void editDrag(const EditData&) override;
-      virtual void updateGrips(Grip*, QVector<QRectF>&) const override;
-      virtual int grips() const override { return 8; }
+      virtual void editDrag(EditData&) override;
+      virtual void updateGrips(EditData&) const override;
 
-      QRectF rect() const                 { return _rect; }
-      void setRect(const QRectF& r)       { _rect = r;    }
-      void setSize(qreal w, qreal h)      { _rect.setWidth(w), _rect.setHeight(h); }
-
-      virtual void layout() override;
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
+      virtual void startEdit(EditData&) override;
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       };

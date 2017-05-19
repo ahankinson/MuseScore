@@ -419,7 +419,7 @@ NewWizard::NewWizard(QWidget* parent)
       setWizardStyle(QWizard::ClassicStyle);
       setPixmap(QWizard::LogoPixmap, QPixmap(":/data/mscore.png"));
       setPixmap(QWizard::WatermarkPixmap, QPixmap());
-      setWindowTitle(tr("MuseScore: New Score Wizard"));
+      setWindowTitle(tr("New Score Wizard"));
 
       setOption(QWizard::NoCancelButton, false);
       setOption(QWizard::CancelButtonOnLeft, true);
@@ -440,7 +440,7 @@ NewWizard::NewWizard(QWidget* parent)
       setPage(Page::Keysig,      p5);
       setPage(Page::Timesig,     p3);
 
-
+      resize(QSize(840, 560)); //ensure default size if no geometry in settings
       MuseScore::restoreGeometry(this);
       connect(this, SIGNAL(currentIdChanged(int)), SLOT(idChanged(int)));
       }

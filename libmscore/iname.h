@@ -32,7 +32,7 @@ class InstrumentName : public Text  {
    public:
       InstrumentName(Score*);
       virtual InstrumentName* clone() const override { return new InstrumentName(*this); }
-      virtual Element::Type type() const override    { return Element::Type::INSTRUMENT_NAME; }
+      virtual ElementType type() const override    { return ElementType::INSTRUMENT_NAME; }
 
       int layoutPos() const      { return _layoutPos; }
       void setLayoutPos(int val) { _layoutPos = val;  }
@@ -41,7 +41,7 @@ class InstrumentName : public Text  {
       InstrumentNameType instrumentNameType() const { return _instrumentNameType; }
       void setInstrumentNameType(InstrumentNameType v);
       void setInstrumentNameType(const QString& s);
-      virtual void endEdit() override;
+      virtual void endEdit(EditData&) override;
 
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;

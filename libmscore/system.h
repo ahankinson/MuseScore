@@ -72,7 +72,7 @@ class SysStaff {
 //---------------------------------------------------------
 
 class System : public Element {
-      Q_OBJECT
+      Q_GADGET
 
       SystemDivider*  _systemDividerLeft    { 0 };
       SystemDivider*  _systemDividerRight   { 0 };
@@ -89,7 +89,7 @@ class System : public Element {
       System(Score*);
       ~System();
       virtual System* clone() const override      { return new System(*this); }
-      virtual Element::Type type() const override { return Element::Type::SYSTEM; }
+      virtual ElementType type() const override { return ElementType::SYSTEM; }
 
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
@@ -98,6 +98,8 @@ class System : public Element {
       virtual void read(XmlReader&) override;
 
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
+
+      void appendMeasure(MeasureBase*);
 
       Page* page() const                    { return (Page*)parent(); }
 

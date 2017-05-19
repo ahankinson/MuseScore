@@ -2722,11 +2722,12 @@ class Sym {
       static SymId oldName2id(const QString s)   { return lonhash.value(s, SymId::noSym);}
       static const char* id2name(SymId id);
 
-      static QString id2userName(SymId id)       { return qApp->translate("symUserNames", symUserNames[int(id)].toUtf8().data()); }
+      static QString id2userName(SymId id)       { return qApp->translate("symUserNames", symUserNames[int(id)]); }
       static SymId userName2id(const QString& s);
 
-      static QVector<const char*> symNames;
-      static QVector<QString> symUserNames;
+      static const std::array<const char*, int (SymId::lastSym)+1> symNames;
+      static const std::array<const char*, int(SymId::lastSym)+1> symUserNames;
+
       static QHash<QString, SymId> lnhash;
       static QHash<QString, SymId> lonhash;
       friend class ScoreFont;
@@ -2739,13 +2740,14 @@ class Sym {
 struct GlyphKey {
       FT_Face face;
       SymId id;
-      qreal mag;
+      qreal magX;
+      qreal magY;
       qreal worldScale;
       QColor color;
 
    public:
-      GlyphKey(FT_Face _f, SymId _id, float m, float s, QColor c)
-         : face(_f), id(_id), mag(m), worldScale(s), color(c) {}
+      GlyphKey(FT_Face _f, SymId _id, float mx, float my, float s, QColor c)
+         : face(_f), id(_id), magX(mx), magY(my), worldScale(s), color(c) {}
       bool operator==(const GlyphKey&) const;
       };
 
@@ -2756,7 +2758,7 @@ struct GlyphPixmap {
 
 inline uint qHash(const GlyphKey& k)
       {
-      return (int(k.id) << 16) + k.mag;
+      return (int(k.id) << 16) + (int(k.magX * 100) << 8) + k.magY * 100;
       }
 
 //---------------------------------------------------------
@@ -2808,18 +2810,24 @@ class ScoreFont {
       QString toString(SymId) const;
       QPixmap sym2pixmap(SymId, qreal) { return QPixmap(); }      // TODOxxxx
 
-      void draw(SymId id, QPainter* painter, qreal mag, const QPointF& pos, qreal scale) const;
-      void draw(SymId id, QPainter* painter, qreal mag, const QPointF& pos) const;
-      void draw(const std::vector<SymId>&, QPainter*, qreal mag, const QPointF& pos) const;
-      void draw(const std::vector<SymId>&, QPainter*, qreal mag, const QPointF& pos, qreal scale) const;
-      void draw(SymId id, QPainter* painter, qreal mag, const QPointF& pos, int n) const;
+      void draw(SymId id,                  QPainter*, const QSizeF& mag, const QPointF& pos, qreal scale) const;
+      void draw(SymId id,                  QPainter*, qreal mag,         const QPointF& pos, qreal scale) const;
+      void draw(SymId id,                  QPainter*, qreal mag,         const QPointF& pos) const;
+      void draw(SymId id,                  QPainter*, const QSizeF& mag, const QPointF& pos) const;
+      void draw(SymId id,                  QPainter*, qreal mag,         const QPointF& pos, int n) const;
+      void draw(const std::vector<SymId>&, QPainter*, qreal mag,         const QPointF& pos) const;
+      void draw(const std::vector<SymId>&, QPainter*, const QSizeF& mag, const QPointF& pos) const;
+      void draw(const std::vector<SymId>&, QPainter*, qreal mag,         const QPointF& pos, qreal scale) const;
+      void draw(const std::vector<SymId>&, QPainter*, const QSizeF& mag, const QPointF& pos, qreal scale) const;
 
       qreal height(SymId id, qreal mag) const         { return bbox(id, mag).height(); }
       qreal width(SymId id, qreal mag) const          { return bbox(id, mag).width();  }
       qreal advance(SymId id, qreal mag) const;
       qreal width(const std::vector<SymId>&, qreal mag) const;
 
+      const QRectF bbox(SymId id, const QSizeF&) const;
       const QRectF bbox(SymId id, qreal mag) const;
+      const QRectF bbox(const std::vector<SymId>& s, const QSizeF& mag) const;
       const QRectF bbox(const std::vector<SymId>& s, qreal mag) const;
       QPointF stemDownNW(SymId id, qreal mag) const;
       QPointF stemUpSE(SymId id, qreal mag) const;

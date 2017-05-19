@@ -60,6 +60,8 @@ class HPiano : public QGraphicsView {
       QList<PianoKeyItem*> keys;
       qreal scaleVal;
       virtual void wheelEvent(QWheelEvent*);
+      virtual bool event(QEvent* event);
+      bool gestureEvent(QGestureEvent *event);
       void setScale(qreal);
 
    signals:
@@ -86,8 +88,8 @@ class PianoTools : public QDockWidget {
       HPiano* _piano;
 
    signals:
-      void keyPressed(int pitch, bool ctrl, int vel);
-      void keyReleased(int pitch, bool ctrl, int vel);
+      void keyPressed(int pitch, bool chord, int vel);
+      void keyReleased(int pitch, bool chord, int vel);
 
    protected:
       virtual void changeEvent(QEvent *event);

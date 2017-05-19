@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>223</width>
-    <height>179</height>
+    <width>227</width>
+    <height>216</height>
    </rect>
   </property>
   <property name="accessibleName">
@@ -82,23 +82,6 @@
       <property name="verticalSpacing">
        <number>0</number>
       </property>
-      <item row="5" column="3">
-       <widget class="QToolButton" name="resetX">
-        <property name="toolTip">
-         <string>Reset to default</string>
-        </property>
-        <property name="accessibleName">
-         <string>Reset 'Horizontal offset' value</string>
-        </property>
-        <property name="text">
-         <string notr="true"/>
-        </property>
-        <property name="icon">
-         <iconset resource="../musescore.qrc">
-          <normaloff>:/data/icons/edit-reset.svg</normaloff>:/data/icons/edit-reset.svg</iconset>
-        </property>
-       </widget>
-      </item>
       <item row="4" column="0" colspan="3">
        <widget class="QCheckBox" name="autoplace">
         <property name="text">
@@ -106,32 +89,20 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>Stacking order:</string>
+      <item row="5" column="3">
+       <widget class="QToolButton" name="resetOffset">
+        <property name="toolTip">
+         <string>Reset to default</string>
         </property>
-        <property name="buddy">
-         <cstring>z</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="1">
-       <widget class="QDoubleSpinBox" name="offsetY">
         <property name="accessibleName">
-         <string>Vertical offset</string>
+         <string>Reset 'Offset' value</string>
         </property>
-        <property name="suffix">
-         <string extracomment="spatium unit">sp</string>
+        <property name="text">
+         <string notr="true"/>
         </property>
-        <property name="minimum">
-         <double>-200.000000000000000</double>
-        </property>
-        <property name="maximum">
-         <double>300.000000000000000</double>
-        </property>
-        <property name="singleStep">
-         <double>0.500000000000000</double>
+        <property name="icon">
+         <iconset resource="../musescore.qrc">
+          <normaloff>:/data/icons/edit-reset.svg</normaloff>:/data/icons/edit-reset.svg</iconset>
         </property>
        </widget>
       </item>
@@ -152,28 +123,6 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
-       <widget class="QDoubleSpinBox" name="offsetX">
-        <property name="accessibleName">
-         <string>Horizontal offset</string>
-        </property>
-        <property name="prefix">
-         <string notr="true"/>
-        </property>
-        <property name="suffix">
-         <string extracomment="spatium unit">sp</string>
-        </property>
-        <property name="minimum">
-         <double>-100.000000000000000</double>
-        </property>
-        <property name="maximum">
-         <double>200.000000000000000</double>
-        </property>
-        <property name="singleStep">
-         <double>0.500000000000000</double>
-        </property>
-       </widget>
-      </item>
       <item row="1" column="3">
        <widget class="QToolButton" name="resetVisible">
         <property name="toolTip">
@@ -191,16 +140,6 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="0">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Vertical offset:</string>
-        </property>
-        <property name="buddy">
-         <cstring>offsetY</cstring>
-        </property>
-       </widget>
-      </item>
       <item row="3" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
@@ -212,12 +151,12 @@
        </widget>
       </item>
       <item row="5" column="0">
-       <widget class="QLabel" name="label_2">
+       <widget class="QLabel" name="offsetLabel">
         <property name="text">
-         <string>Horizontal offset:</string>
+         <string>Offset:</string>
         </property>
         <property name="buddy">
-         <cstring>offsetX</cstring>
+         <cstring>offset</cstring>
         </property>
        </widget>
       </item>
@@ -226,39 +165,18 @@
         <property name="focusPolicy">
          <enum>Qt::TabFocus</enum>
         </property>
+        <property name="text">
+         <string>Visible</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1" colspan="2">
+       <widget class="Awl::ColorLabel" name="color">
         <property name="accessibleName">
-         <string>Visible</string>
+         <string>Color</string>
         </property>
-        <property name="text">
-         <string>Visible</string>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="2">
-       <widget class="QToolButton" name="vRaster">
-        <property name="text">
-         <string notr="true"/>
-        </property>
-        <property name="icon">
-         <iconset resource="../musescore.qrc">
-          <normaloff>:/data/icons/raster-vertical.svg</normaloff>:/data/icons/raster-vertical.svg</iconset>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="2">
-       <widget class="QToolButton" name="hRaster">
-        <property name="text">
-         <string notr="true"/>
-        </property>
-        <property name="icon">
-         <iconset resource="../musescore.qrc">
-          <normaloff>:/data/icons/raster-horizontal.svg</normaloff>:/data/icons/raster-horizontal.svg</iconset>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
         </property>
        </widget>
       </item>
@@ -279,16 +197,6 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1" colspan="2">
-       <widget class="Awl::ColorLabel" name="color">
-        <property name="accessibleName">
-         <string>Color:</string>
-        </property>
-        <property name="frameShape">
-         <enum>QFrame::Box</enum>
-        </property>
-       </widget>
-      </item>
       <item row="3" column="3">
        <widget class="QToolButton" name="resetColor">
         <property name="toolTip">
@@ -306,31 +214,58 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="3">
-       <widget class="QToolButton" name="resetY">
-        <property name="toolTip">
-         <string>Reset to default</string>
-        </property>
-        <property name="accessibleName">
-         <string>Reset 'Vertical offset' value</string>
-        </property>
-        <property name="text">
-         <string notr="true"/>
-        </property>
-        <property name="icon">
-         <iconset resource="../musescore.qrc">
-          <normaloff>:/data/icons/edit-reset.svg</normaloff>:/data/icons/edit-reset.svg</iconset>
+      <item row="5" column="1" colspan="2">
+       <widget class="Ms::OffsetSelect" name="offset" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
        </widget>
       </item>
-      <item row="2" column="1" colspan="2">
-       <widget class="QSpinBox" name="z">
-        <property name="maximum">
-         <number>1000000000</number>
-        </property>
-        <property name="singleStep">
-         <number>100</number>
-        </property>
+      <item row="2" column="0" colspan="3">
+       <widget class="QWidget" name="widget" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Stacking order:</string>
+           </property>
+           <property name="buddy">
+            <cstring>z</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="z">
+           <property name="accessibleName">
+            <string>Stacking order</string>
+           </property>
+           <property name="maximum">
+            <number>10000</number>
+           </property>
+           <property name="singleStep">
+            <number>100</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
@@ -345,17 +280,18 @@
    <header>awl/colorlabel.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>Ms::OffsetSelect</class>
+   <extends>QWidget</extends>
+   <header>inspector/offsetSelect.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>visible</tabstop>
   <tabstop>resetVisible</tabstop>
   <tabstop>resetColor</tabstop>
-  <tabstop>offsetX</tabstop>
-  <tabstop>hRaster</tabstop>
-  <tabstop>resetX</tabstop>
-  <tabstop>offsetY</tabstop>
-  <tabstop>vRaster</tabstop>
-  <tabstop>resetY</tabstop>
+  <tabstop>resetOffset</tabstop>
  </tabstops>
  <resources>
   <include location="../musescore.qrc"/>

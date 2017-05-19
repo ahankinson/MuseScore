@@ -88,7 +88,7 @@ ChordRest* nextChordRest(ChordRest* cr, bool skipGrace)
             }
 
       int track = cr->track();
-      Segment::Type st = Segment::Type::ChordRest;
+      SegmentType st = SegmentType::ChordRest;
 
       for (Segment* seg = cr->segment()->next1MM(st); seg; seg = seg->next1MM(st)) {
             ChordRest* e = toChordRest(seg->element(track));
@@ -162,11 +162,11 @@ ChordRest* prevChordRest(ChordRest* cr, bool skipGrace)
             }
 
       int track = cr->track();
-      Segment::Type st = Segment::Type::ChordRest;
+      SegmentType st = SegmentType::ChordRest;
       for (Segment* seg = cr->segment()->prev1MM(st); seg; seg = seg->prev1MM(st)) {
             ChordRest* e = toChordRest(seg->element(track));
             if (e) {
-                  if (e->type() == Element::Type::CHORD && !skipGrace) {
+                  if (e->type() == ElementType::CHORD && !skipGrace) {
                         QVector<Chord*> cl = toChord(e)->graceNotesAfter();
                         if (!cl.empty())
                               return cl.last();
@@ -273,7 +273,8 @@ Note* Score::downAltCtrl(Note* note) const
 
 Element* Score::firstElement()
       {
-      return this->firstSegment()->element(0);
+      Segment *s = firstSegment(SegmentType::All);
+      return s ? s->element(0) : nullptr;
       }
 
 //---------------------------------------------------------
@@ -282,8 +283,10 @@ Element* Score::firstElement()
 
 Element* Score::lastElement()
       {
-      Element* re =0;
-      Segment* seg = this->lastSegment();
+      Element* re = 0;
+      Segment* seg = lastSegment();
+      if (!seg)
+            return nullptr;
       while (true) {
             for (int i = (staves().size() -1) * VOICES; i < staves().size() * VOICES; i++) {
                   if (seg->element(i))
@@ -295,7 +298,7 @@ Element* Score::lastElement()
                         }
                   return re;
                   }
-            seg = seg->prev1MM(Segment::Type::All);
+            seg = seg->prev1MM(SegmentType::All);
             }
       }
 
@@ -373,7 +376,7 @@ ChordRest* Score::nextTrack(ChordRest* cr)
             if (track == tracks)
                   return cr;
             // find element at same or previous segment within this track
-            for (Segment* segment = cr->segment(); segment; segment = segment->prev(Segment::Type::ChordRest)) {
+            for (Segment* segment = cr->segment(); segment; segment = segment->prev(SegmentType::ChordRest)) {
                   el = toChordRest(segment->element(track));
                   if (el)
                         break;
@@ -408,7 +411,7 @@ ChordRest* Score::prevTrack(ChordRest* cr)
             if (track < 0)
                   return cr;
             // find element at same or previous segment within this track
-            for (Segment* segment = cr->segment(); segment; segment = segment->prev(Segment::Type::ChordRest)) {
+            for (Segment* segment = cr->segment(); segment; segment = segment->prev(SegmentType::ChordRest)) {
                   el = toChordRest(segment->element(track));
                   if (el)
                         break;

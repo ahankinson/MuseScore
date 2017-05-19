@@ -58,26 +58,31 @@ void InstrumentName::setInstrumentNameType(const QString& s)
 void InstrumentName::setInstrumentNameType(InstrumentNameType st)
       {
       _instrumentNameType = st;
-      setTextStyleType(st == InstrumentNameType::SHORT ? TextStyleType::INSTRUMENT_SHORT : TextStyleType::INSTRUMENT_LONG);
+      initSubStyle(st == InstrumentNameType::SHORT ? SubStyle::INSTRUMENT_SHORT : SubStyle::INSTRUMENT_LONG);
       }
 
 //---------------------------------------------------------
 //   endEdit
 //---------------------------------------------------------
 
-void InstrumentName::endEdit()
+void InstrumentName::endEdit(EditData& ed)
       {
-      Text::endEdit();
+      Text::endEdit(ed);
       Part* part = staff()->part();
       Instrument* instrument = new Instrument(*part->instrument());
 
       QString s = plainText();
 
+      if (!validateText(s)) {
+            qWarning("Invalid instrument name: <%s>", s.toUtf8().data());
+            return;
+            }
+
       if (_instrumentNameType == InstrumentNameType::LONG)
             instrument->setLongName(s);
       else
             instrument->setShortName(s);
-      score()->undo(new ChangePart(part, instrument, part->name()));
+      score()->undo(new ChangePart(part, instrument, part->partName()));
       }
 
 //---------------------------------------------------------
@@ -100,16 +105,21 @@ QVariant InstrumentName::getProperty(P_ID id) const
 
 bool InstrumentName::setProperty(P_ID id, const QVariant& v)
       {
+      bool rv = true;
       switch (id) {
             case P_ID::INAME_LAYOUT_POSITION:
                   _layoutPos = v.toInt();
-printf("%p set layoutPos %d\n", this, _layoutPos);
                   break;
             default:
-                  return Text::setProperty(id, v);
+                  rv = Text::setProperty(id, v);
+                  break;
+            }
+      StyleIdx sidx = getPropertyStyle(id);
+      if (sidx != StyleIdx::NOSTYLE) {
+            score()->undoChangeStyleVal(sidx, getProperty(id));
             }
       score()->setLayoutAll();
-      return true;
+      return rv;
       }
 
 //---------------------------------------------------------

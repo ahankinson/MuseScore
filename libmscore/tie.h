@@ -23,7 +23,7 @@ namespace Ms {
 //---------------------------------------------------------
 
 class TieSegment : public SlurTieSegment {
-      Q_OBJECT
+      Q_GADGET
 
       QPointF autoAdjustOffset;
 
@@ -38,7 +38,7 @@ class TieSegment : public SlurTieSegment {
       TieSegment(Score* s) : SlurTieSegment(s) { autoAdjustOffset = QPointF(); }
       TieSegment(const TieSegment& s) : SlurTieSegment(s) { autoAdjustOffset = QPointF(); }
       virtual TieSegment* clone() const override   { return new TieSegment(*this); }
-      virtual Element::Type type() const override  { return Element::Type::TIE_SEGMENT; }
+      virtual ElementType type() const override  { return ElementType::TIE_SEGMENT; }
       virtual int subtype() const override         { return static_cast<int>(spanner()->type()); }
       virtual QString subtypeName() const override { return name(spanner()->type()); }
       virtual void draw(QPainter*) const override;
@@ -46,10 +46,10 @@ class TieSegment : public SlurTieSegment {
       void layoutSegment(const QPointF& p1, const QPointF& p2);
 
       bool isEdited() const;
-      virtual void editDrag(const EditData&) override;
-      virtual bool edit(MuseScoreView*, Grip grip, int key, Qt::KeyboardModifiers, const QString& s) override;
-      virtual void updateGrips(Grip*, QVector<QRectF>&) const override;
-      virtual int grips() const override { return int(Grip::GRIPS); }
+      virtual void startEdit(EditData&) override;
+      virtual void editDrag(EditData&) override;
+      virtual bool edit(EditData&) override;
+      virtual void updateGrips(EditData&) const override;
       virtual QPointF gripAnchor(Grip grip) const override;
 
       QPointF getGrip(Grip) const override;
@@ -66,7 +66,7 @@ class TieSegment : public SlurTieSegment {
 //---------------------------------------------------------
 
 class Tie : public SlurTie {
-      Q_OBJECT
+      Q_GADGET
 
       static Note* editStartNote;
       static Note* editEndNote;
@@ -74,7 +74,7 @@ class Tie : public SlurTie {
    public:
       Tie(Score* = 0);
       virtual Tie* clone() const override         { return new Tie(*this);  }
-      virtual Element::Type type() const override { return Element::Type::TIE; }
+      virtual ElementType type() const override { return ElementType::TIE; }
 
       void setStartNote(Note* note);
       void setEndNote(Note* note)                 { setEndElement((Element*)note); }
@@ -86,8 +86,8 @@ class Tie : public SlurTie {
       virtual void read(XmlReader&) override;
       virtual void layout() override;
       virtual void slurPos(SlurPos*) override;
-      virtual void startEdit(MuseScoreView*, const QPointF&) override;
-      virtual void endEdit() override;
+      virtual void startEdit(EditData&) override;
+      virtual void endEdit(EditData&) override;
 
       bool readProperties(XmlReader&);
 

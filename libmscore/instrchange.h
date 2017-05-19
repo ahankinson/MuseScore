@@ -23,7 +23,7 @@ namespace Ms {
 //---------------------------------------------------------
 
 class InstrumentChange : public Text  {
-      Q_OBJECT
+      Q_GADGET
 
       Instrument* _instrument;  // Staff holds ownership if part of score
 
@@ -34,7 +34,7 @@ class InstrumentChange : public Text  {
       ~InstrumentChange();
 
       virtual InstrumentChange* clone() const override { return new InstrumentChange(*this); }
-      virtual Element::Type type() const override      { return Element::Type::INSTRUMENT_CHANGE; }
+      virtual ElementType type() const override      { return ElementType::INSTRUMENT_CHANGE; }
       virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
 
@@ -44,8 +44,6 @@ class InstrumentChange : public Text  {
       void setInstrument(const Instrument& i);
 
       Segment* segment() const              { return toSegment(parent()); }
-
-      virtual QRectF drag(EditData*) override;
 
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;

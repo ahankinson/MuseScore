@@ -39,7 +39,7 @@ TimeDialog::TimeDialog(QWidget* parent)
    : QWidget(parent, Qt::WindowFlags(Qt::Dialog | Qt::Window))
       {
       setupUi(this);
-      setWindowTitle(tr("MuseScore: Time Signatures"));
+      setWindowTitle(tr("Time Signatures"));
 
       QLayout* l = new QVBoxLayout();
       l->setContentsMargins(0, 0, 0, 0);
@@ -177,7 +177,7 @@ int TimeDialog::denominator() const
 void TimeDialog::paletteChanged(int idx)
       {
       TimeSig* e = static_cast<TimeSig*>(sp->element(idx));
-      if (!e || e->type() != Element::Type::TIMESIG) {
+      if (!e || e->type() != ElementType::TIMESIG) {
             zNominal->setEnabled(false);
             nNominal->setEnabled(false);
             zText->setEnabled(false);

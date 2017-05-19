@@ -144,13 +144,13 @@ void addTitleToScore(Score *score, const QString &string, int textCounter)
       {
       Text* text = new Text(score);
       if (textCounter == 1)
-            text->setTextStyleType(TextStyleType::TITLE);
+            text->setSubStyle(SubStyle::TITLE);
       else if (textCounter == 2)
-            text->setTextStyleType(TextStyleType::COMPOSER);
+            text->setSubStyle(SubStyle::COMPOSER);
       text->setPlainText(string.right(string.size() - TEXT_PREFIX.size()));
 
       MeasureBase* measure = score->first();
-      if (measure->type() != Element::Type::VBOX) {
+      if (!measure->isVBox()) {
             measure = new VBox(score);
             measure->setTick(0);
             measure->setNext(score->first());
@@ -215,7 +215,7 @@ void addLyricsToScore(
             QString text = MidiCharset::convertToCharset(it->second);
             if (originalTime != ReducedFraction(0, 1) || !isTitlePrefix(text)) { // not title
                   score->addLyrics(quantizedTime.ticks(), staffAddTo->idx(),
-                                   removeSlashes(text));
+                                   removeSlashes(text).toHtmlEscaped());
                   }
             }
       }

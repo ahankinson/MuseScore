@@ -27,7 +27,6 @@ namespace Ms {
 class InspectorBeam : public InspectorElementBase {
       Q_OBJECT
 
-//      UiInspectorElement e;
       Ui::InspectorBeam b;
 
    protected slots:

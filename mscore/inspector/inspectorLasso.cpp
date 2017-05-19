@@ -27,33 +27,15 @@ InspectorLasso::InspectorLasso(QWidget* parent)
       b.setupUi(addWidget());
 
       iList = {
-            { P_ID::LASSO_POS,    0, false, b.posX,       0 },
-            { P_ID::LASSO_POS,    1, false, b.posY,       0 },
-            { P_ID::LASSO_SIZE,   0, false, b.sizeWidth,  0 },
-            { P_ID::LASSO_SIZE,   1, false, b.sizeHeight, 0 },
+            { P_ID::LASSO_POS,    0, b.pos,   0 },
+            { P_ID::LASSO_SIZE,   0, b.size,  0 },
             };
+
+      b.pos->setSuffix(tr("mm"));
+      b.size->setSuffix(tr("mm"));
 
       mapSignals();
       }
-
-#if 0
-//---------------------------------------------------------
-//   setElement
-//---------------------------------------------------------
-
-void InspectorLasso::setElement(Element* e)
-      {
-      Lasso* lasso = static_cast<Lasso*>(e);
-      QRectF bb(lasso->rect());
-
-      b.posX->setValue(bb.x() / DPMM);
-      b.posY->setValue(bb.y() / DPMM);
-      b.sizeWidth->setValue(bb.width() / DPMM);
-      b.sizeHeight->setValue(bb.height() / DPMM);
-
-      InspectorBase::setElement();
-      }
-#endif
 
 }
 

@@ -27,7 +27,7 @@ enum class SymId;
 //---------------------------------------------------------
 
 class Rest : public ChordRest {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(bool  isFullMeasure  READ isFullMeasureRest)
 
       // values calculated by layout:
@@ -36,7 +36,7 @@ class Rest : public ChordRest {
       qreal _mmWidth { 0.0 };       // width of multi measure rest
       bool _gap;                    ///< invisible and not selectable for user
 
-      virtual QRectF drag(EditData*) override;
+      virtual QRectF drag(EditData&) override;
       virtual qreal upPos()   const override;
       virtual qreal downPos() const override;
       virtual qreal centerX() const override;
@@ -49,7 +49,7 @@ class Rest : public ChordRest {
       Rest(const Rest&, bool link = false);
       ~Rest() {}
 
-      virtual Element::Type type() const override { return Element::Type::REST; }
+      virtual ElementType type() const override { return ElementType::REST; }
       Rest &operator=(const Rest&) = delete;
 
       virtual Rest* clone() const override        { return new Rest(*this, false); }
@@ -59,8 +59,8 @@ class Rest : public ChordRest {
       virtual void draw(QPainter*) const override;
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true) override;
 
-      virtual bool acceptDrop(const DropData&) const override;
-      virtual Element* drop(const DropData&) override;
+      virtual bool acceptDrop(EditData&) const override;
+      virtual Element* drop(EditData&) override;
       virtual void layout() override;
 
       bool isGap() const               { return _gap;     }

@@ -25,7 +25,6 @@ Lasso::Lasso(Score* s)
    : Element(s)
       {
       setVisible(false);
-      view = 0;
       }
 
 //---------------------------------------------------------
@@ -38,48 +37,48 @@ void Lasso::draw(QPainter* painter) const
       // always 2 pixel width
       qreal w = 2.0 / painter->transform().m11();
       painter->setPen(QPen(MScore::selectColor[0], w));
-      painter->drawRect(_rect);
+      painter->drawRect(bbox());
       }
 
 //---------------------------------------------------------
 //   editDrag
 //---------------------------------------------------------
 
-void Lasso::editDrag(const EditData& ed)
+void Lasso::editDrag(EditData& ed)
       {
       Qt::CursorShape cursorShape = ed.view->cursor().shape();
       switch (int(ed.curGrip)) {
             case 0:
                   cursorShape = Qt::SizeFDiagCursor;
-                  _rect.setTopLeft(_rect.topLeft() + ed.delta);
+                  bbox().setTopLeft(bbox().topLeft() + ed.delta);
                   break;
             case 1:
                   cursorShape = Qt::SizeBDiagCursor;
-                  _rect.setTopRight(_rect.topRight() + ed.delta);
+                  bbox().setTopRight(bbox().topRight() + ed.delta);
                   break;
             case 2:
                   cursorShape = Qt::SizeFDiagCursor;
-                  _rect.setBottomRight(_rect.bottomRight() + ed.delta);
+                  bbox().setBottomRight(bbox().bottomRight() + ed.delta);
                   break;
             case 3:
                   cursorShape = Qt::SizeBDiagCursor;
-                  _rect.setBottomLeft(_rect.bottomLeft() + ed.delta);
+                  bbox().setBottomLeft(bbox().bottomLeft() + ed.delta);
                   break;
             case 4:
                   cursorShape = Qt::SizeVerCursor;
-                  _rect.setTop(_rect.top() + ed.delta.y());
+                  bbox().setTop(bbox().top() + ed.delta.y());
                   break;
             case 5:
                   cursorShape = Qt::SizeHorCursor;
-                  _rect.setRight(_rect.right() + ed.delta.x());
+                  bbox().setRight(bbox().right() + ed.delta.x());
                   break;
             case 6:
                   cursorShape = Qt::SizeVerCursor;
-                  _rect.setBottom(_rect.bottom() + ed.delta.y());
+                  bbox().setBottom(bbox().bottom() + ed.delta.y());
                   break;
             case 7:
                   cursorShape = Qt::SizeHorCursor;
-                  _rect.setLeft(_rect.left() + ed.delta.x());
+                  bbox().setLeft(bbox().left() + ed.delta.x());
                   break;
             }
       ed.view->setCursor(QCursor(cursorShape));
@@ -89,53 +88,26 @@ void Lasso::editDrag(const EditData& ed)
 //   updateGrips
 //---------------------------------------------------------
 
-void Lasso::updateGrips(Grip* defaultGrip, QVector<QRectF>& r) const
+void Lasso::updateGrips(EditData& ed) const
       {
-      *defaultGrip = Grip(7);
-      r[0].translate(_rect.topLeft());
-      r[1].translate(_rect.topRight());
-      r[2].translate(_rect.bottomRight());
-      r[3].translate(_rect.bottomLeft());
-      r[4].translate(_rect.x() + _rect.width() * .5, _rect.top());
-      r[5].translate(_rect.right(), _rect.y() + _rect.height() * .5);
-      r[6].translate(_rect.x() + _rect.width()*.5, _rect.bottom());
-      r[7].translate(_rect.left(), _rect.y() + _rect.height() * .5);
-      }
-
-//---------------------------------------------------------
-//  layout
-//---------------------------------------------------------
-
-void Lasso::layout()
-      {
-#if 0
-      QRectF bb(_rect);
-      if (view) {
-            qreal dx = 1.5 / view->matrix().m11();
-            qreal dy = 1.5 / view->matrix().m22();
-            for (int i = 0; i < view->gripCount(); ++i)
-                  bb |= view->getGrip(i).adjusted(-dx, -dy, dx, dy);
-            }
-#endif
-      setbbox(_rect);
+      ed.grip[0].translate(bbox().topLeft());
+      ed.grip[1].translate(bbox().topRight());
+      ed.grip[2].translate(bbox().bottomRight());
+      ed.grip[3].translate(bbox().bottomLeft());
+      ed.grip[4].translate(bbox().x() + bbox().width() * .5, bbox().top());
+      ed.grip[5].translate(bbox().right(), bbox().y() + bbox().height() * .5);
+      ed.grip[6].translate(bbox().x() + bbox().width()*.5, bbox().bottom());
+      ed.grip[7].translate(bbox().left(), bbox().y() + bbox().height() * .5);
       }
 
 //---------------------------------------------------------
 //   startEdit
 //---------------------------------------------------------
 
-void Lasso::startEdit(MuseScoreView* sv, const QPointF&)
+void Lasso::startEdit(EditData& ed)
       {
-      view = sv;
-      }
-
-//---------------------------------------------------------
-//   endEdit
-//---------------------------------------------------------
-
-void Lasso::endEdit()
-      {
-      view = 0;
+      ed.grips   = 8;
+      ed.curGrip = Grip(7);
       }
 
 //---------------------------------------------------------
@@ -144,12 +116,12 @@ void Lasso::endEdit()
 
 bool Lasso::setProperty(P_ID propertyId, const QVariant& v)
       {
-      switch(propertyId) {
+      switch (propertyId) {
             case P_ID::LASSO_POS:
-                  _rect.moveTo(v.toPointF());
+                  bbox().moveTo(v.toPointF());
                   break;
             case P_ID::LASSO_SIZE:
-                  _rect.setSize(v.toSizeF());
+                  bbox().setSize(v.toSizeF());
                   break;
             default:
                   if (!Element::setProperty(propertyId, v))
@@ -166,11 +138,11 @@ bool Lasso::setProperty(P_ID propertyId, const QVariant& v)
 
 QVariant Lasso::getProperty(P_ID propertyId) const
       {
-      switch(propertyId) {
+      switch (propertyId) {
             case P_ID::LASSO_POS:
-                  return _rect.topLeft();
+                  return bbox().topLeft();
             case P_ID::LASSO_SIZE:
-                  return _rect.size();
+                  return bbox().size();
             default:
                   break;
             }

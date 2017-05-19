@@ -14,8 +14,7 @@
 #ifndef __INSPECTOR_JUMP_H__
 #define __INSPECTOR_JUMP_H__
 
-#include "inspector.h"
-#include "inspectorBase.h"
+#include "inspectorTextBase.h"
 #include "ui_inspector_jump.h"
 
 namespace Ms {
@@ -24,16 +23,13 @@ namespace Ms {
 //   InspectorJump
 //---------------------------------------------------------
 
-class InspectorJump : public InspectorElementBase {
+class InspectorJump : public InspectorTextBase {
       Q_OBJECT
 
-      UiInspectorElement b;
-      Ui::InspectorText t;
       Ui::InspectorJump j;
 
    public:
       InspectorJump(QWidget* parent);
-      virtual void setElement() override;
       };
 
 

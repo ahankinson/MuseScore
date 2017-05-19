@@ -12,6 +12,7 @@
 
 #include "inspectorText.h"
 #include "libmscore/score.h"
+#include "icons.h"
 
 namespace Ms {
 
@@ -20,35 +21,26 @@ namespace Ms {
 //---------------------------------------------------------
 
 InspectorText::InspectorText(QWidget* parent)
-   : InspectorElementBase(parent)
+   : InspectorTextBase(parent)
       {
-      t.setupUi(addWidget());
+      f.setupUi(addWidget());
 
-      iList.push_back({ P_ID::TEXT_STYLE_TYPE,    0, 0, t.style,    t.resetStyle    });
-      pList.push_back({ t.title, t.panel });
-      connect(t.resetToStyle, SIGNAL(clicked()), SLOT(resetToStyle()));
-      mapSignals();
-      }
+      const std::vector<InspectorItem> iiList = {
+            { P_ID::SUB_STYLE, 0, f.subStyle,     f.resetSubStyle     },
+            };
 
-//---------------------------------------------------------
-//   setElement
-//---------------------------------------------------------
+      const std::vector<InspectorPanel> ppList = {
+            { f.title, f.panel }
+            };
 
-void InspectorText::setElement()
-      {
-      Element* e = inspector->element();
-      Score* score = e->score();
-
-      t.style->blockSignals(true);
-      t.style->clear();
-      const QList<TextStyle>& ts = score->style().textStyles();
-      int n = ts.size();
-      for (int i = 0; i < n; ++i) {
-            if (!(ts.at(i).hidden() & TextStyleHidden::IN_LISTS) )
-                  t.style->addItem(qApp->translate("TextStyle",ts.at(i).name().toUtf8().data()), i);
+      f.subStyle->clear();
+      for (auto ss : { SubStyle::FRAME, SubStyle::TITLE, SubStyle::SUBTITLE,SubStyle::COMPOSER, SubStyle::POET, SubStyle::INSTRUMENT_EXCERPT,
+                       SubStyle::TRANSLATOR, SubStyle::HEADER, SubStyle::FOOTER, SubStyle::USER1, SubStyle::USER2 } )
+            {
+            f.subStyle->addItem(subStyleUserName(ss), int(ss));
             }
-      t.style->blockSignals(false);
-      InspectorElementBase::setElement();
+
+      mapSignals(iiList, ppList);
       }
 
 }

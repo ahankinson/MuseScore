@@ -16,6 +16,7 @@
 #include "libmscore/mscore.h"
 #include "libmscore/score.h"
 #include "libmscore/note.h"
+#include "libmscore/chordrest.h"
 #include "libmscore/accidental.h"
 #include "libmscore/chord.h"
 #include "libmscore/measure.h"
@@ -48,6 +49,7 @@ class TestNote : public QObject, public MTest
       void tpcTranspose2();
       void noteLimits();
       void tpcDegrees();
+      void LongNoteAfterShort_183746();
       };
 
 //---------------------------------------------------------
@@ -375,7 +377,7 @@ void TestNote::tpc()
       MasterScore* score = readScore(DIR + "tpc.mscx");
 
       score->inputState().setTrack(0);
-      score->inputState().setSegment(score->tick2segment(0, false, Segment::Type::ChordRest));
+      score->inputState().setSegment(score->tick2segment(0, false, SegmentType::ChordRest));
       score->inputState().setDuration(TDuration::DurationType::V_QUARTER);
       score->inputState().setNoteEntryMode(true);
       int octave = 5 * 7;
@@ -432,7 +434,7 @@ void TestNote::tpcTranspose2()
       MasterScore* score = readScore(DIR + "tpc-transpose2.mscx");
 
       score->inputState().setTrack(0);
-      score->inputState().setSegment(score->tick2segment(0, false, Segment::Type::ChordRest));
+      score->inputState().setSegment(score->tick2segment(0, false, SegmentType::ChordRest));
       score->inputState().setDuration(TDuration::DurationType::V_QUARTER);
       score->inputState().setNoteEntryMode(true);
       int octave = 5 * 7;
@@ -456,7 +458,7 @@ void TestNote::noteLimits()
       MasterScore* score = readScore(DIR + "empty.mscx");
 
       score->inputState().setTrack(0);
-      score->inputState().setSegment(score->tick2segment(0, false, Segment::Type::ChordRest));
+      score->inputState().setSegment(score->tick2segment(0, false, SegmentType::ChordRest));
       score->inputState().setDuration(TDuration::DurationType::V_QUARTER);
       score->inputState().setNoteEntryMode(true);
 
@@ -497,7 +499,44 @@ void TestNote::tpcDegrees()
       //QCOMPARE(tpc2degree(Tpc::TPC_B_S, Key::C_S), 7);
       }
 
+//---------------------------------------------------------
+///   LongNoteAfterShort_183746
+///    Put a small 128th rest
+///    Then put a long Breve note
+///    This breve will get spread out across multiple measures
+///    Verifies that the resulting notes are tied over at least 3 times (to span 3 measures) and have total duration the same as a breve,
+///    regardless of how the breve was divided up.
+//---------------------------------------------------------
+
+void TestNote::LongNoteAfterShort_183746() {
+
+      Score* score = readScore(DIR + "empty.mscx");
+      score->doLayout();
+
+      score->inputState().setTrack(0);
+      score->inputState().setSegment(score->tick2segment(0, false, SegmentType::ChordRest));
+      score->inputState().setDuration(TDuration::DurationType::V_128TH);
+      score->inputState().setNoteEntryMode(true);
+
+      score->cmdEnterRest(TDuration::DurationType::V_128TH);
+
+      score->inputState().setDuration(TDuration::DurationType::V_BREVE);
+      score->cmdAddPitch(47, 0, 0);
+
+      Segment* s = score->tick2segment(TDuration(TDuration::DurationType::V_128TH).ticks());
+      QVERIFY(s && s->segmentType() == SegmentType::ChordRest);
+
+      Element* e = s->firstElement(0);
+      QVERIFY(e && e->isNote());
+
+      int totalTicks = 0;
+      std::vector<Note*> nl = static_cast<Note*>(e)->tiedNotes();
+      QVERIFY(nl.size() >= 3); // the breve must be divided across at least 3 measures
+      for (Note* n : nl)
+            totalTicks += static_cast<Chord*>(n->parent())->durationTypeTicks();
+      QVERIFY(totalTicks == TDuration(TDuration::DurationType::V_BREVE).ticks()); // total duration same as a breve
+      }
+
 QTEST_MAIN(TestNote)
 
 #include "tst_note.moc"
-

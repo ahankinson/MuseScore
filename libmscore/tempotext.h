@@ -27,11 +27,11 @@ namespace Ms {
 //-------------------------------------------------------------------
 
 class TempoText : public Text  {
-      Q_OBJECT
+      Q_GADGET
       Q_PROPERTY(qreal tempo         READ tempo      WRITE undoSetTempo)
       Q_PROPERTY(bool  followText    READ followText WRITE undoSetFollowText)
 
-      qreal _tempo;          // beats per second
+      qreal _tempo;           // beats per second
       bool _followText;       // parse text to determine tempo
       qreal _relative;
       bool _isRelative;
@@ -40,7 +40,7 @@ class TempoText : public Text  {
    public:
       TempoText(Score*);
       virtual TempoText* clone() const override   { return new TempoText(*this); }
-      virtual Element::Type type() const override { return Element::Type::TEMPO_TEXT; }
+      virtual ElementType type() const override { return ElementType::TEMPO_TEXT; }
       virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
       Segment* segment() const   { return (Segment*)parent(); }

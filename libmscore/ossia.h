@@ -23,14 +23,14 @@ namespace Ms {
 //---------------------------------------------------------
 
 class Ossia : public Element {
-      Q_OBJECT
+      Q_GADGET
 
 
    public:
       Ossia(Score*);
       Ossia(const Ossia&);
       virtual Ossia* clone() const override       { return new Ossia(*this); }
-      virtual Element::Type type() const override { return Element::Type::OSSIA; }
+      virtual ElementType type() const override { return ElementType::OSSIA; }
       };
 
 

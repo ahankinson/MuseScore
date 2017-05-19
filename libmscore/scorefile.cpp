@@ -59,16 +59,16 @@ namespace Ms {
 //   writeMeasure
 //---------------------------------------------------------
 
-static void writeMeasure(XmlWriter& xml, MeasureBase* m, int staffIdx, bool writeSystemElements)
+static void writeMeasure(XmlWriter& xml, MeasureBase* m, int staffIdx, bool writeSystemElements, bool forceTimeSig)
       {
       //
       // special case multi measure rest
       //
       if (m->isMeasure() || staffIdx == 0)
-            m->write(xml, staffIdx, writeSystemElements);
+            m->write(xml, staffIdx, writeSystemElements, forceTimeSig);
 
       if (m->score()->styleB(StyleIdx::createMultiMeasureRests) && m->isMeasure() && toMeasure(m)->mmRest())
-            toMeasure(m)->mmRest()->write(xml, staffIdx, writeSystemElements);
+            toMeasure(m)->mmRest()->write(xml, staffIdx, writeSystemElements, forceTimeSig);
 
       xml.setCurTick(m->endTick());
       }
@@ -212,8 +212,20 @@ void Score::writeMovement(XmlWriter& xml, bool selectionOnly)
                   xml.setTickDiff(xml.curTick());
                   xml.setCurTrack(staffIdx * VOICES);
                   bool writeSystemElements = (staffIdx == staffStart);
-                  for (MeasureBase* m = measureStart; m != measureEnd; m = m->next())
-                        writeMeasure(xml, m, staffIdx, writeSystemElements);
+                  bool firstMeasureWritten = false;
+                  bool forceTimeSig = false;
+                  for (MeasureBase* m = measureStart; m != measureEnd; m = m->next()) {
+                        // force timesig if first measure and selectionOnly
+                        if (selectionOnly && m->isMeasure()) {
+                              if (!firstMeasureWritten) {
+                                    forceTimeSig = true;
+                                    firstMeasureWritten = true;
+                                    }
+                              else
+                                    forceTimeSig = false;
+                              }
+                        writeMeasure(xml, m, staffIdx, writeSystemElements, forceTimeSig);
+                        }
                   xml.etag();
                   }
             }
@@ -232,7 +244,9 @@ void Score::writeMovement(XmlWriter& xml, bool selectionOnly)
 
       if (unhide) {
             endCmd();
-            undoRedo(true);   // undo
+            EditData ed;
+            ed.init();
+            undoRedo(true, ed);   // undo
             }
       }
 
@@ -357,7 +371,7 @@ bool MasterScore::saveFile()
       {
       QString suffix = info.suffix();
       if (info.exists() && !info.isWritable()) {
-            MScore::lastError = tr("The following file is locked: \n%1 \n\nTry saving to a different location.").arg(info.filePath());
+            MScore::lastError = QObject::tr("The following file is locked: \n%1 \n\nTry saving to a different location.").arg(info.filePath());
             return false;
             }
       //
@@ -369,7 +383,7 @@ bool MasterScore::saveFile()
       QString tempName = info.filePath() + QString(".temp");
       QFile temp(tempName);
       if (!temp.open(QIODevice::WriteOnly)) {
-            MScore::lastError = tr("Open Temp File\n%1\nfailed: %2").arg(tempName).arg(QString(strerror(errno)));
+            MScore::lastError = QObject::tr("Open Temp File\n%1\nfailed: %2").arg(tempName).arg(QString(strerror(errno)));
             return false;
             }
       bool rv = suffix == "mscx" ? Score::saveFile(&temp, false) : Score::saveCompressedFile(&temp, info, false);
@@ -378,7 +392,7 @@ bool MasterScore::saveFile()
             }
 
       if (temp.error() != QFile::NoError) {
-            MScore::lastError = tr("MuseScore: Save File failed: %1").arg(temp.errorString());
+            MScore::lastError = QObject::tr("Save File failed: %1").arg(temp.errorString());
             return false;
             }
       temp.close();
@@ -397,8 +411,8 @@ bool MasterScore::saveFile()
             if (dir.exists(backupName)) {
                   if (!dir.remove(backupName)) {
 //                      if (!MScore::noGui)
-//                            QMessageBox::critical(0, tr("MuseScore: Save File"),
-//                               tr("Removing old backup file ") + backupName + tr(" failed"));
+//                            QMessageBox::critical(0, QObject::tr("Save File"),
+//                               QObject::tr("Removing old backup file ") + backupName + tr(" failed"));
                         }
                   }
 
@@ -409,7 +423,7 @@ bool MasterScore::saveFile()
             if (dir.exists(name)) {
                   if (!dir.rename(name, backupName)) {
 //                      if (!MScore::noGui)
-//                            QMessageBox::critical(0, tr("MuseScore: Save File"),
+//                            QMessageBox::critical(0, tr("Save File"),
 //                               tr("Renaming old file <")
 //                               + name + tr("> to backup <") + backupName + tr("> failed"));
                         }
@@ -425,7 +439,7 @@ bool MasterScore::saveFile()
             if (dir.exists(name)) {
                   if (!dir.remove(name)) {
 //                      if (!MScore::noGui)
-//                            QMessageBox::critical(0, tr("MuseScore: Save File"),
+//                            QMessageBox::critical(0, tr("Save File"),
 //                               tr("Removing old file") + name + tr(" failed"));
                         }
                   }
@@ -436,7 +450,7 @@ bool MasterScore::saveFile()
       // rename temp name into file name
       //
       if (!QFile::rename(tempName, name)) {
-            MScore::lastError = tr("Renaming temp. file <%1> to <%2> failed:\n%3").arg(tempName).arg(name).arg(QString(strerror(errno)));
+            MScore::lastError = QObject::tr("Renaming temp. file <%1> to <%2> failed:\n%3").arg(tempName).arg(name).arg(QString(strerror(errno)));
             return false;
             }
       // make file readable by all
@@ -458,7 +472,7 @@ bool Score::saveCompressedFile(QFileInfo& info, bool onlySelection)
       {
       QFile fp(info.filePath());
       if (!fp.open(QIODevice::WriteOnly)) {
-            MScore::lastError = tr("Open File\n%1\nfailed: ")
+            MScore::lastError = QObject::tr("Open File\n%1\nfailed: ")
                + QString(strerror(errno));
             return false;
             }
@@ -570,7 +584,7 @@ bool Score::saveCompressedFile(QIODevice* f, QFileInfo& info, bool onlySelection
                   OmrPage* page = masterScore()->omr()->page(i);
                   const QImage& image = page->image();
                   if (!image.save(&cbuf, "PNG")) {
-                        MScore::lastError = tr("save file: cannot save image (%1x%2)").arg(image.width()).arg(image.height());
+                        MScore::lastError = QObject::tr("save file: cannot save image (%1x%2)").arg(image.width()).arg(image.height());
                         return false;
                         }
                   uz.addFile(path, cbuf.data());
@@ -604,7 +618,7 @@ bool Score::saveFile(QFileInfo& info)
             info.setFile(info.filePath() + ".mscx");
       QFile fp(info.filePath());
       if (!fp.open(QIODevice::WriteOnly)) {
-            MScore::lastError = tr("Open File\n%1\nfailed: %2").arg(info.filePath()).arg(QString(strerror(errno)));
+            MScore::lastError = QObject::tr("Open File\n%1\nfailed: %2").arg(info.filePath()).arg(QString(strerror(errno)));
             return false;
             }
       saveFile(&fp, false);
@@ -626,7 +640,7 @@ bool Score::loadStyle(const QString& fn)
                   return true;
                   }
              else {
-                  MScore::lastError = tr("The style file is not compatible with this version of MuseScore.");
+                  MScore::lastError = QObject::tr("The style file is not compatible with this version of MuseScore.");
                   return false;
                   }
             }
@@ -647,7 +661,7 @@ bool Score::saveStyle(const QString& name)
             info.setFile(info.filePath() + ext);
       QFile f(info.filePath());
       if (!f.open(QIODevice::WriteOnly)) {
-            MScore::lastError = tr("Open Style File\n%1\nfailed: %2").arg(f.fileName().arg(QString(strerror(errno))));
+            MScore::lastError = QObject::tr("Open Style File\n%1\nfailed: %2").arg(f.fileName().arg(QString(strerror(errno))));
             return false;
             }
 
@@ -657,7 +671,7 @@ bool Score::saveStyle(const QString& name)
       style().save(xml, false);     // save complete style
       xml.etag();
       if (f.error() != QFile::NoError) {
-            MScore::lastError = tr("Write Style failed: %1").arg(f.errorString());
+            MScore::lastError = QObject::tr("Write Style failed: %1").arg(f.errorString());
             return false;
             }
       return true;
@@ -669,12 +683,9 @@ bool Score::saveStyle(const QString& name)
 //---------------------------------------------------------
 
 extern QString revision;
-extern bool enableTestMode;
 
 bool Score::saveFile(QIODevice* f, bool msczFormat, bool onlySelection)
       {
-      if (!MScore::testMode)
-            MScore::testMode = enableTestMode;
       XmlWriter xml(this, f);
       xml.setWriteOmr(msczFormat);
       xml.header();
@@ -692,7 +703,7 @@ bool Score::saveFile(QIODevice* f, bool msczFormat, bool onlySelection)
       if (!onlySelection) {
             //update version values for i.e. plugin access
             _mscoreVersion = VERSION;
-            _mscoreRevision = revision.toInt();
+            _mscoreRevision = revision.toInt(0, 16);
             _mscVersion = MSCVERSION;
             }
       return true;
@@ -911,9 +922,11 @@ Score::FileError MasterScore::read1(XmlReader& e, bool ignoreVersionError)
                               return FileError::FILE_TOO_OLD;
                         }
                   Score::FileError error;
-                  if (mscVersion() <= 114)
+/*                  if (mscVersion() <= 114)
                         error = read114(e);
-                  else if (mscVersion() <= 206)
+                  else
+                        */
+                  if (mscVersion() <= 206)
                         error = read206(e);
                   else
                         error = read300(e);
@@ -1038,7 +1051,7 @@ qDebug("createRevision");
 //---------------------------------------------------------
 
 void Score::writeSegments(XmlWriter& xml, int strack, int etrack,
-   Segment* fs, Segment* ls, bool writeSystemElements, bool clip, bool needFirstTick)
+   Segment* fs, Segment* ls, bool writeSystemElements, bool clip, bool needFirstTick, bool forceTimeSig)
       {
       int endTick = ls == 0 ? lastMeasure()->endTick() : ls->tick();
       // in clipboard mode, ls might be in an mmrest
@@ -1063,6 +1076,11 @@ void Score::writeSegments(XmlWriter& xml, int strack, int etrack,
       for (int track = strack; track < etrack; ++track) {
             if (!xml.canWriteVoice(track))
                   continue;
+
+            bool timeSigWritten = false; // for forceTimeSig
+            bool crWritten = false;      // for forceTimeSig
+            bool keySigWritten = false;  // for forceTimeSig
+
             for (Segment* segment = fs; segment && segment != ls; segment = segment->next1()) {
                   if (!segment->enabled())
                         continue;
@@ -1149,6 +1167,24 @@ void Score::writeSegments(XmlWriter& xml, int strack, int etrack,
                         continue;
                   if (e->generated())
                         continue;
+                  if (forceTimeSig && track2voice(track) == 0 && segment->segmentType() == SegmentType::ChordRest && !timeSigWritten && !crWritten) {
+                        // we will miss a key sig!
+                        if (!keySigWritten) {
+                              Key k = score()->staff(track2staff(track))->key(segment->tick());
+                              KeySig* ks = new KeySig(this);
+                              ks->setKey(k);
+                              ks->write(xml);
+                              delete ks;
+                              keySigWritten = true;
+                              }
+                        // we will miss a time sig!
+                        Fraction tsf = sigmap()->timesig(segment->tick()).timesig();
+                        TimeSig* ts = new TimeSig(this);
+                        ts->setSig(tsf);
+                        ts->write(xml);
+                        delete ts;
+                        timeSigWritten = true;
+                        }
                   if (needTick) {
                         // xml.tag("tick", segment->tick() - xml.tickDiff);
                         int tick = xml.clipboardmode() ? segment->tick() : segment->rtick();
@@ -1168,6 +1204,14 @@ void Score::writeSegments(XmlWriter& xml, int strack, int etrack,
 //                        }
                   e->write(xml);
                   segment->write(xml);    // write only once
+                  if (forceTimeSig) {
+                        if (segment->segmentType() == SegmentType::KeySig)
+                              keySigWritten = true;
+                        if (segment->segmentType() == SegmentType::TimeSig)
+                              timeSigWritten = true;
+                        if (segment->segmentType() == SegmentType::ChordRest)
+                              crWritten = true;
+                        }
                   }
             //write spanner ending after the last segment, on the last tick
             if (clip || ls == 0) {

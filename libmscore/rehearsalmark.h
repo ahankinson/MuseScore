@@ -13,7 +13,7 @@
 #ifndef __REHEARSALMARK_H__
 #define __REHEARSALMARK_H__
 
-#include "text.h"
+#include "systemtext.h"
 
 namespace Ms {
 
@@ -21,15 +21,16 @@ namespace Ms {
 //   @@ RehearsalMark
 //---------------------------------------------------------
 
-class RehearsalMark : public Text  {
-      Q_OBJECT
+class RehearsalMark : public SystemText  {
+      Q_GADGET
 
    public:
       RehearsalMark(Score* score);
       virtual RehearsalMark* clone() const override { return new RehearsalMark(*this); }
-      virtual Element::Type type() const override   { return Element::Type::REHEARSAL_MARK; }
+      virtual ElementType type() const override     { return ElementType::REHEARSAL_MARK; }
       Segment* segment() const                      { return (Segment*)parent(); }
       virtual void layout() override;
+      virtual QVariant propertyDefault(P_ID id) const override;
       };
 
 

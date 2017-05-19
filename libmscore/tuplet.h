@@ -14,6 +14,7 @@
 #define __TUPLET_H__
 
 #include "duration.h"
+#include "property.h"
 
 namespace Ms {
 
@@ -32,7 +33,7 @@ class Spanner;
 //------------------------------------------------------------------------
 
 class Tuplet : public DurationElement {
-      Q_OBJECT
+      Q_GADGET
 
       // the tick position of a tuplet is the tick position of its
       // first element:
@@ -48,9 +49,9 @@ class Tuplet : public DurationElement {
       Direction _direction;
       NumberType _numberType;
       BracketType _bracketType;
-      PropertyStyle directionStyle  { PropertyStyle::STYLED };
-      PropertyStyle numberStyle     { PropertyStyle::STYLED };
-      PropertyStyle bracketStyle    { PropertyStyle::STYLED };
+      PropertyFlags directionStyle  { PropertyFlags::STYLED };
+      PropertyFlags numberStyle     { PropertyFlags::STYLED };
+      PropertyFlags bracketStyle    { PropertyFlags::STYLED };
 
       bool _hasBracket;
 
@@ -72,16 +73,16 @@ class Tuplet : public DurationElement {
       Tuplet(const Tuplet&);
       ~Tuplet();
       virtual Tuplet* clone() const override      { return new Tuplet(*this); }
-      virtual Element::Type type() const override { return Element::Type::TUPLET; }
+      virtual ElementType type() const override { return ElementType::TUPLET; }
       virtual void setTrack(int val) override;
 
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
 
       virtual bool isEditable() const override;
-      virtual void editDrag(const EditData&) override;
-      virtual void updateGrips(Grip*, QVector<QRectF>&) const override;
-      virtual int grips() const override { return 2; }
+      virtual void startEdit(EditData&) override;
+      virtual void editDrag(EditData&) override;
+      virtual void updateGrips(EditData&) const override;
 
       virtual void setSelected(bool f) override;
 
@@ -131,7 +132,7 @@ class Tuplet : public DurationElement {
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant& v) override;
       virtual QVariant propertyDefault(P_ID id) const override;
-      virtual PropertyStyle propertyStyle(P_ID) const override;
+      virtual PropertyFlags propertyFlags(P_ID) const override;
       virtual void resetProperty(P_ID id) override;
       virtual void styleChanged() override;
       virtual StyleIdx getPropertyStyle(P_ID) const override;

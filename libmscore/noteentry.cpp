@@ -29,49 +29,92 @@
 namespace Ms {
 
 //---------------------------------------------------------
-//   cmdAddPitch
+//   noteValForPosition
 //---------------------------------------------------------
 
-void Score::cmdAddPitch(int step, bool addFlag, bool insert)
+NoteVal Score::noteValForPosition(Position pos, bool &error)
       {
-      startCmd();
-      Position pos;
-      if (addFlag) {
-            Element* el = selection().element();
-            if (el && el->isNote()) {
-                  Note* selectedNote = toNote(el);
-                  Chord* chord  = selectedNote->chord();
-                  Segment* seg  = chord->segment();
-                  pos.segment   = seg;
-                  pos.staffIdx  = selectedNote->track() / VOICES;
-                  ClefType clef = staff(pos.staffIdx)->clef(seg->tick());
-                  pos.line      = relStep(step, clef);
-                  bool error;
-                  NoteVal nval = noteValForPosition(pos, error);
-                  if (error) {
-                        endCmd();
-                        return;
+      error           = false;
+      Segment* s      = pos.segment;
+      int line        = pos.line;
+      int tick        = s->tick();
+      int staffIdx    = pos.staffIdx;
+      Staff* st       = staff(staffIdx);
+      ClefType clef   = st->clef(tick);
+      const Instrument* instr = st->part()->instrument(s->tick());
+      NoteVal nval;
+      const StringData* stringData = 0;
+
+      switch (st->staffType(tick)->group()) {
+            case StaffGroup::PERCUSSION: {
+                  if (_is.rest()) {
+                        error = true;
+                        break;
                         }
-                  addNote(chord, nval);
-                  endCmd();
-                  return;
+                  const Drumset* ds = instr->drumset();
+                  nval.pitch        = _is.drumNote();
+                  if (nval.pitch < 0) {
+                        error = true;
+                        return nval;
+                        }
+                  nval.headGroup = ds->noteHead(nval.pitch);
+                  if (nval.headGroup == NoteHead::Group::HEAD_INVALID) {
+                        error = true;
+                        return nval;
+                        }
+                  break;
                   }
-            }
+            case StaffGroup::TAB: {
+                  if (_is.rest()) {
+                        error = true;
+                        return nval;
+                        }
+                  stringData = instr->stringData();
+                  if (line < 0 || line >= stringData->strings()) {
+                        error = true;
+                        return nval;
+                        }
+                  // build a default NoteVal for that string
+                  nval.string = line;
+                  if (pos.fret != FRET_NONE)          // if a fret is given, use it
+                        nval.fret = pos.fret;
+                  else {                              // if no fret, use 0 as default
+                        _is.setString(line);
+                        nval.fret = 0;
+                        }
+                  // reduce within fret limit
+                  if (nval.fret > stringData->frets())
+                        nval.fret = stringData->frets();
+                  // for open strings, only accepts fret 0 (strings in StringData are from bottom to top)
+                  int   strgDataIdx = stringData->strings() - line - 1;
+                  if (nval.fret > 0 && stringData->stringList().at(strgDataIdx).open == true)
+                        nval.fret = 0;
+                  nval.pitch = stringData->getPitch(line, nval.fret, st, tick);
+                  break;
+                  }
 
-      pos.segment   = inputState().segment();
-      pos.staffIdx  = inputState().track() / VOICES;
-      ClefType clef = staff(pos.staffIdx)->clef(pos.segment->tick());
-      pos.line      = relStep(step, clef);
-
-      if (inputState().usingNoteEntryMethod(NoteEntryMethod::REPITCH))
-            repitchNote(pos, !addFlag);
-      else {
-            if (insert)
-                  insertChord(pos);
-            else
-                  putNote(pos, !addFlag);
+            case StaffGroup::STANDARD: {
+                  AccidentalVal acci = s->measure()->findAccidental(s, staffIdx, line, error);
+                  if (error)
+                        return nval;
+                  int step           = absStep(line, clef);
+                  int octave         = step/7;
+                  nval.pitch         = step2pitch(step) + octave * 12 + int(acci);
+                  if (styleB(StyleIdx::concertPitch))
+                        nval.tpc1 = step2tpc(step % 7, acci);
+                  else {
+                        nval.pitch += instr->transpose().chromatic;
+                        nval.tpc2 = step2tpc(step % 7, acci);
+                        Interval v = st->part()->instrument(tick)->transpose();
+                        if (v.isZero())
+                              nval.tpc1 = nval.tpc2;
+                        else
+                              nval.tpc1 = Ms::transposeTpc(nval.tpc2, v, true);
+                        }
+                  }
+                  break;
             }
-      endCmd();
+      return nval;
       }
 
 //---------------------------------------------------------
@@ -169,6 +212,7 @@ Note* Score::addPitch(NoteVal& nval, bool addFlag)
                   }
             // add new note to chord
             undoAddElement(note);
+            setPlayNote(true);
             // recreate tie forward if there is a note to tie to
             // one-sided ties will not be recreated
             if (firstTiedNote) {
@@ -239,27 +283,26 @@ void Score::putNote(const QPointF& pos, bool replace, bool insert)
             qDebug("cannot put note here, get position failed");
             return;
             }
-      if (inputState().usingNoteEntryMethod(NoteEntryMethod::REPITCH))
-            repitchNote(p, replace);
+      Score* score = p.segment->score();
+      if (score->inputState().usingNoteEntryMethod(NoteEntryMethod::REPITCH))
+            score->repitchNote(p, replace);
       else {
             if (insert)
-                  insertChord(p);
+                  score->insertChord(p);
             else
-                  putNote(p, replace);
+                  score->putNote(p, replace);
             }
       }
 
 void Score::putNote(const Position& p, bool replace)
       {
-      int staffIdx    = p.staffIdx;
-      Staff* st       = staff(staffIdx);
-      Segment* s      = p.segment;
+      Staff* st   = staff(p.staffIdx);
+      Segment* s  = p.segment;
 
-      _is.setTrack(staffIdx * VOICES + _is.voice());
+      _is.setTrack(p.staffIdx * VOICES + _is.voice());
       _is.setSegment(s);
 
-      if (score()->excerpt() && !score()->excerpt()->tracks().isEmpty()
-       && score()->excerpt()->tracks().key(_is.track(), -1) == -1)
+      if (score()->excerpt() && !score()->excerpt()->tracks().isEmpty() && score()->excerpt()->tracks().key(_is.track(), -1) == -1)
             return;
 
       Direction stemDirection = Direction::AUTO;
@@ -505,7 +548,7 @@ void Score::localInsertChord(const Position& pos)
             s->undoChangeProperty(P_ID::TICK, s->rtick() + len);
       undo(new ChangeMeasureLen(m, m->len() + fraction));
 
-      Segment* s = m->undoGetSegment(Segment::Type::ChordRest, tick);
+      Segment* s = m->undoGetSegment(SegmentType::ChordRest, tick);
       Position p(pos);
       p.segment = s;
 
@@ -514,13 +557,13 @@ void Score::localInsertChord(const Position& pos)
             if (track == trackI)
                   putNote(p, true);
             else {
-                  Segment* fs = m->first(Segment::Type::ChordRest);
+                  Segment* fs = m->first(SegmentType::ChordRest);
                   if (fs->tick() == tick && m->hasVoice(track)) {
                         setRest(fs->tick(),  track, fraction, false, nullptr, false);
                         continue;
                         }
                   Segment* seg1 = 0;
-                  for (Segment* s = fs; s; s = s->next(Segment::Type::ChordRest)) {
+                  for (Segment* s = fs; s; s = s->next(SegmentType::ChordRest)) {
                         if (s->element(track)) {
                               ChordRest* cr = toChordRest(s->element(track));
                               if (s->tick() > tick)
@@ -593,7 +636,7 @@ void Score::globalInsertChord(const Position& pos)
 
       if (track != -1) {
             Measure* m = tick2measure(dtick);
-            Segment* s = m->findSegment(Segment::Type::ChordRest, dtick);
+            Segment* s = m->findSegment(SegmentType::ChordRest, dtick);
             Element* e = s->element(track);
             if (e)
                   select(e->isChord() ? toChord(e)->notes().front() : e);

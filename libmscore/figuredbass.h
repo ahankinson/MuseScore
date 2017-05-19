@@ -13,12 +13,11 @@
 #ifndef __FIGUREDBASS_H__
 #define __FIGUREDBASS_H__
 
-#include "segment.h"
 #include "text.h"
-//#include "libmscore/figuredbass.h"
-#include <vector>
 
 namespace Ms {
+
+class Segment;
 
 /*---------------------------------------------------------
 NOTE ON ARCHITECTURE
@@ -80,7 +79,7 @@ and it is edited (via the normalized text); so it is derived from Text.
 class FiguredBass;
 
 class FiguredBassItem : public Element {
-      Q_OBJECT
+      Q_GADGET
       Q_ENUMS(Modifier)
       Q_ENUMS(Parenthesis)
       Q_ENUMS(ContLine)
@@ -170,7 +169,7 @@ class FiguredBassItem : public Element {
 
       // standard re-implemented virtual functions
       virtual FiguredBassItem*      clone() const override     { return new FiguredBassItem(*this); }
-      virtual Element::Type         type() const override      { return Element::Type::INVALID; }
+      virtual ElementType         type() const override      { return ElementType::INVALID; }
       virtual void      draw(QPainter* painter) const override;
       virtual void      layout() override;
       virtual void      read(XmlReader&) override;
@@ -247,7 +246,7 @@ struct FiguredBassFont {
 //---------------------------------------------------------
 
 class FiguredBass : public Text {
-      Q_OBJECT
+      Q_GADGET
 
 //      Q_PROPERTY(QDeclarativeListProperty<FiguredBassItem> items READ qmlItems)
       Q_PROPERTY(bool   onNote      READ onNote)
@@ -278,14 +277,14 @@ class FiguredBass : public Text {
 
       // standard re-implemented virtual functions
       virtual FiguredBass*    clone() const override     { return new FiguredBass(*this); }
-      virtual Element::Type   type() const override      { return Element::Type::FIGURED_BASS; }
+      virtual ElementType   type() const override      { return ElementType::FIGURED_BASS; }
       virtual void      draw(QPainter* painter) const override;
-      virtual void      endEdit() override;
+      virtual void      endEdit(EditData&) override;
       virtual void      layout() override;
       virtual void      read(XmlReader&) override;
       virtual void      setSelected(bool f) override;
       virtual void      setVisible(bool f) override;
-      virtual void      startEdit(MuseScoreView *msv, const QPointF &pt) override;
+      virtual void      startEdit(EditData&) override;
       virtual void      write(XmlWriter& xml) const override;
 
       // read / write MusicXML
@@ -312,7 +311,7 @@ class FiguredBass : public Text {
       bool              onNote() const          { return _onNote; }
       int               numOfItems() const      { return items.size(); }
       void              setOnNote(bool val)     { _onNote = val;  }
-      Segment *         segment() const         { return static_cast<Segment*>(parent()); }
+      Segment *         segment() const         { return (Segment*)(parent()); }
       int               ticks() const           { return _ticks;  }
       void              setTicks(int val)       { _ticks = val;   }
 

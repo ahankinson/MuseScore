@@ -83,7 +83,7 @@ void SwingDetector::reset()
 
 void SwingDetector::append(ChordRest *cr)
       {
-      if (cr->type() == Element::Type::CHORD || cr->type() == Element::Type::REST) {
+      if (cr->isChord() || cr->isRest()) {
             elements.push_back(cr);
             sumLen += ReducedFraction(cr->globalDuration());
             }
@@ -93,8 +93,7 @@ void SwingDetector::checkNormalSwing()
       {
       if (elements.size() == 2
                   && areAllTuplets()
-                  && (elements[0]->type() == Element::Type::CHORD
-                      || elements[1]->type() == Element::Type::CHORD)
+                  && (elements[0]->isChord() || elements[1]->type() == ElementType::CHORD)
                   && elements[0]->duration().reduced() == Fraction(1, 4)
                   && elements[1]->duration().reduced() == Fraction(1, 8))
             {
@@ -104,9 +103,9 @@ void SwingDetector::checkNormalSwing()
             applySwing();
             }
       else if (elements.size() == 3
-               && elements[0]->type() == Element::Type::CHORD
-               && elements[1]->type() == Element::Type::REST
-               && elements[2]->type() == Element::Type::CHORD
+               && elements[0]->isChord()
+               && elements[1]->isRest()
+               && elements[2]->isChord()
                && elements[0]->duration().reduced() == Fraction(1, 8)
                && elements[1]->duration().reduced() == Fraction(1, 8)
                && elements[2]->duration().reduced() == Fraction(1, 8))
@@ -120,9 +119,9 @@ void SwingDetector::checkShuffle()
       {
       if (elements.size() == 2
                   && areAllNonTuplets()
-                  && elements[0]->type() == Element::Type::CHORD
-                  && (elements[1]->type() == Element::Type::CHORD
-                      || elements[1]->type() == Element::Type::REST)
+                  && elements[0]->isChord()
+                  && (elements[1]->isChord()
+                      || elements[1]->isRest())
                   && elements[0]->duration().reduced() == Fraction(3, 16)  // dotted 8th
                   && elements[1]->duration().reduced() == Fraction(1, 16))
             {
@@ -153,7 +152,7 @@ void SwingDetector::applySwing()
       const int startTick = first->segment()->tick();
       ChordRest *last = elements.back();
       last->segment()->remove(last);
-      Segment *s = last->measure()->getSegment(Segment::Type::ChordRest, startTick + MScore::division / 2);
+      Segment *s = last->measure()->getSegment(SegmentType::ChordRest, startTick + MScore::division / 2);
       s->add(last);
 
       if (elements.size() == 3) {
@@ -214,8 +213,8 @@ void detectSwing(Staff *staff, MidiOperations::Swing swingType)
       const int strack = staff->idx() * VOICES;
       SwingDetector swingDetector(swingType);
 
-      for (Segment *seg = score->firstSegment(Segment::Type::ChordRest); seg;
-                                      seg = seg->next1(Segment::Type::ChordRest)) {
+      for (Segment *seg = score->firstSegment(SegmentType::ChordRest); seg;
+                                      seg = seg->next1(SegmentType::ChordRest)) {
             for (int voice = 0; voice < VOICES; ++voice) {
                   ChordRest *cr = static_cast<ChordRest *>(seg->element(strack + voice));
                   if (!cr)
@@ -226,9 +225,9 @@ void detectSwing(Staff *staff, MidiOperations::Swing swingType)
       if (swingDetector.wasSwingApplied()) {
                         // add swing label to the score
             StaffText* st = new StaffText(score);
-            st->setTextStyleType(TextStyleType::STAFF);
+            st->setSubStyle(SubStyle::STAFF);
             st->setPlainText(swingCaption(swingType));
-            Segment* seg = score->firstSegment(Segment::Type::ChordRest);
+            Segment* seg = score->firstSegment(SegmentType::ChordRest);
             st->setParent(seg);
             st->setTrack(strack);   // voice == 0
             score->addElement(st);

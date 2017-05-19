@@ -13,14 +13,63 @@ unzip bottles.zip
 rm bottles/freetype*
 
 brew update
-brew install bottles/libogg*
-brew install bottles/libvorbis*
-brew install bottles/flac*
-brew install bottles/libsndfile*
-brew install bottles/portaudio*
 
 # additional dependencies
 brew install jack lame
+#brew install libogg libvorbis flac libsndfile portaudio
+
+BREW_CELLAR=$(brew --cellar)
+BREW_PREFIX=$(brew --prefix)
+
+function fixBrewPath {
+  DYLIB_FILE=$1
+  BREW_CELLAR=$(brew --cellar)
+  BREW_PREFIX=$(brew --prefix)
+  chmod 644 $DYLIB_FILE
+  # change ID
+  DYLIB_ID=$(otool -D  $DYLIB_FILE | tail -n 1)
+  if [[ "$DYLIB_ID" == *@@HOMEBREW_CELLAR@@* ]]
+  then
+      PSLASH=$(echo $DYLIB_ID | sed "s,@@HOMEBREW_CELLAR@@,$BREW_CELLAR,g")
+      install_name_tool -id $PSLASH $DYLIB_FILE
+  fi
+  if [[ "$DYLIB_ID" == *@@HOMEBREW_PREFIX@@* ]]
+  then
+      PSLASH=$(echo $DYLIB_ID | sed "s,@@HOMEBREW_PREFIX@@,$BREW_PREFIX,g")
+      install_name_tool -id $PSLASH $DYLIB_FILE
+  fi
+  # Change dependencies
+  for P in `otool -L $DYLIB_FILE | awk '{print $1}'`
+  do
+    if [[ "$P" == *@@HOMEBREW_CELLAR@@* ]]
+    then
+        PSLASH=$(echo $P | sed "s,@@HOMEBREW_CELLAR@@,$BREW_CELLAR,g")
+        install_name_tool -change $P $PSLASH $DYLIB_FILE
+    fi
+    if [[ "$P" == *@@HOMEBREW_PREFIX@@* ]]
+    then
+        PSLASH=$(echo $P | sed "s,@@HOMEBREW_PREFIX@@,$BREW_PREFIX,g")
+        install_name_tool -change $P $PSLASH $DYLIB_FILE
+    fi
+  done
+  chmod 444 $DYLIB_FILE
+}
+export -f fixBrewPath
+
+function installBottleManually {
+  brew unlink $1
+  rm -rf /usr/local/Cellar/$1
+  tar xzvf bottles/$1*.tar.gz -C $BREW_CELLAR
+  find $BREW_CELLAR/$1 -type f -name '*.pc' -exec sed -i '' "s:@@HOMEBREW_CELLAR@@:$BREW_CELLAR:g" {} +
+  find $BREW_CELLAR/$1 -type f -name '*.dylib' -exec bash -c 'fixBrewPath "$1"' _ {} \;
+  brew link $1
+}
+
+installBottleManually libogg
+installBottleManually libvorbis
+installBottleManually flac
+installBottleManually libsndfile
+installBottleManually portaudio
 
 #update ruby
 rvm uninstall 2.0.0-p648
@@ -55,7 +104,17 @@ else
   echo "Qt ${QT_LONG_VERSION} already installed"
 fi
 
-
+#install signing certificate
+export CERTIFICATE_P12=Certificate.p12
+echo $CERTIFICATE_OSX_P12 | base64 - -D -o $CERTIFICATE_P12
+export KEYCHAIN=build.keychain
+security create-keychain -p travis $KEYCHAIN
+security default-keychain -s $KEYCHAIN
+security unlock-keychain -p travis $KEYCHAIN
+# Set keychain timeout to 1 hour for long builds
+# see http://www.egeek.me/2013/02/23/jenkins-and-xcode-user-interaction-is-not-allowed/
+security set-keychain-settings -t 3600 -l $KEYCHAIN
+security import $CERTIFICATE_P12 -k $KEYCHAIN -P "$CERTIFICATE_OSX_PASSWORD" -T /usr/bin/codesign
 
 
 

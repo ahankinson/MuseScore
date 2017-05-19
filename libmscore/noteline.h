@@ -25,13 +25,13 @@ class Note;
 //---------------------------------------------------------
 
 class TextLineSegment : public TextLineBaseSegment {
-      Q_OBJECT
+      Q_GADGET
 
    protected:
 
    public:
       TextLineSegment(Score* s) : TextLineBaseSegment(s)  { }
-      virtual Element::Type type() const override     { return Element::Type::TEXTLINE_SEGMENT; }
+      virtual ElementType type() const override     { return ElementType::TEXTLINE_SEGMENT; }
       virtual TextLineSegment* clone() const override { return new TextLineSegment(*this); }
       TextLine* textLine() const                      { return (TextLine*)spanner(); }
       virtual void layout() override;
@@ -49,7 +49,7 @@ class TextLineSegment : public TextLineBaseSegment {
 //---------------------------------------------------------
 
 class NoteLine : public TextLineBase {
-      Q_OBJECT
+      Q_GADGET
 
       Note* _startNote;
       Note* _endNote;
@@ -60,7 +60,7 @@ class NoteLine : public TextLineBase {
       ~NoteLine() {}
 
       virtual NoteLine* clone() const           { return new NoteLine(*this); }
-      virtual Element::Type type() const        { return Element::Type::NOTELINE; }
+      virtual ElementType type() const        { return ElementType::NOTELINE; }
 
       void setStartNote(Note* n)  { _startNote = n; }
       Note* startNote() const     { return _startNote; }

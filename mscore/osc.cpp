@@ -142,7 +142,25 @@ void MuseScore::oscSelectMeasure(int m)
       qDebug("SelectMeasure %d", m);
       if (cv == 0)
             return;
-      cv->selectMeasure(m);
+//      cv->selectMeasure(m);
+      Score* score = cv->score();
+      int i = 0;
+      for (Measure* measure = score->firstMeasure(); measure; measure = measure->nextMeasure()) {
+            if (++i < m)
+                  continue;
+            score->selection().setState(SelState::RANGE);
+            score->selection().setStartSegment(measure->first());
+            score->selection().setEndSegment(measure->last());
+            score->selection().setStaffStart(0);
+            score->selection().setStaffEnd(score->nstaves());
+            score->selection().updateSelectedElements();
+            score->selection().setState(SelState::RANGE);
+            score->addRefresh(measure->canvasBoundingRect());
+            cv->adjustCanvasPosition(measure, true);
+            score->setUpdateAll();
+            score->update();
+            break;
+            }
       }
 
 
@@ -227,7 +245,7 @@ void MuseScore::oscColorNote(QVariantList list)
       Measure* measure = cs->tick2measure(tick);
       if(!measure)
             return;
-      Segment* s = measure->findSegment(Segment::Type::ChordRest, tick);
+      Segment* s = measure->findSegment(SegmentType::ChordRest, tick);
       if (!s)
             return;
       //get all chords in segment...
@@ -236,7 +254,7 @@ void MuseScore::oscColorNote(QVariantList list)
             Element* e = s->element(i);
             if (e && e->isChordRest()) {
                   ChordRest* cr = static_cast<ChordRest*>(e);
-                  if (cr->type() == Element::Type::CHORD) {
+                  if (cr->type() == ElementType::CHORD) {
                         Chord* chord = static_cast<Chord*>(cr);
                         for (Note* note : chord->notes()) {
                               if (note->pitch() == pitch) {

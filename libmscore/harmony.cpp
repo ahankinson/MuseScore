@@ -24,7 +24,6 @@
 #include "utils.h"
 #include "sym.h"
 #include "xml.h"
-#include "textstyle.h"
 
 namespace Ms {
 
@@ -139,7 +138,7 @@ qDebug("ResolveDegreeList: not found in table");
 //---------------------------------------------------------
 
 Harmony::Harmony(Score* s)
-   : Text(s)
+   : Text(SubStyle::HARMONY, s)
       {
       _rootTpc    = Tpc::TPC_INVALID;
       _baseTpc    = Tpc::TPC_INVALID;
@@ -150,7 +149,6 @@ Harmony::Harmony(Score* s)
       _leftParen  = false;
       _rightParen = false;
       setFlags(ElementFlag::MOVABLE | ElementFlag::SELECTABLE | ElementFlag::ON_STAFF);
-      setTextStyleType(TextStyleType::HARMONY); // call after setting of _id
       }
 
 Harmony::Harmony(const Harmony& h)
@@ -706,11 +704,11 @@ const ChordDescription* Harmony::parseHarmony(const QString& ss, int* root, int*
 //   startEdit
 //---------------------------------------------------------
 
-void Harmony::startEdit(MuseScoreView* view, const QPointF& p)
+void Harmony::startEdit(EditData& ed)
       {
       if (!textList.empty())
             setXmlText(harmonyName());
-      Text::startEdit(view, p);
+      Text::startEdit(ed);
       layout();
       }
 
@@ -718,11 +716,11 @@ void Harmony::startEdit(MuseScoreView* view, const QPointF& p)
 //   edit
 //---------------------------------------------------------
 
-bool Harmony::edit(MuseScoreView* view, Grip grip, int key, Qt::KeyboardModifiers mod, const QString& s)
+bool Harmony::edit(EditData& ed)
       {
-      if (key == Qt::Key_Return)
+      if (ed.key == Qt::Key_Return)
             return true; // Harmony only single line
-      bool rv = Text::edit(view, grip, key, mod, s);
+      bool rv = Text::edit(ed);
       QString str = xmlText();
       int root, base;
       bool badSpell = !str.isEmpty() && !parseHarmony(str, &root, &base, true);
@@ -734,9 +732,9 @@ bool Harmony::edit(MuseScoreView* view, Grip grip, int key, Qt::KeyboardModifier
 //   endEdit
 //---------------------------------------------------------
 
-void Harmony::endEdit()
+void Harmony::endEdit(EditData& ed)
       {
-      Text::endEdit();
+      Text::endEdit(ed);
       layout();
       if (links()) {
             foreach(ScoreElement* e, *links()) {
@@ -769,6 +767,7 @@ void Harmony::endEdit()
       score()->setLayoutAll();
       }
 
+#if 0
 //---------------------------------------------------------
 //   setTextStyle
 //---------------------------------------------------------
@@ -778,6 +777,7 @@ void Harmony::setTextStyle(const TextStyle& st)
       Text::setTextStyle(st);
       render();
       }
+#endif
 
 //---------------------------------------------------------
 //   setHarmony
@@ -816,7 +816,8 @@ void Harmony::setHarmony(const QString& s)
 
 qreal Harmony::baseLine() const
       {
-      return (editMode() || textList.empty()) ? Text::baseLine() : 0.0;
+//      return (editMode() || textList.empty()) ? Text::baseLine() : 0.0;
+      return (textList.empty()) ? Text::baseLine() : 0.0;
       }
 
 //---------------------------------------------------------
@@ -1007,7 +1008,7 @@ const ChordDescription* Harmony::generateDescription()
 
 void Harmony::textChanged()
       {
-      Text::createLayout();
+//      Text::createLayout();
       setHarmony(plainText(true));
       }
 
@@ -1025,14 +1026,14 @@ void Harmony::layout()
             }
 
       qreal yy = 0.0;
-      qreal _spatium  = spatium();
+      //qreal _spatium  = spatium();
 
-      if (parent()->type() == Element::Type::SEGMENT) {
+      if (parent()->type() == ElementType::SEGMENT) {
             Segment* s = static_cast<Segment*>(parent());
             // look for fret diagram
             bool fretsFound = false;
             for (Element* e : s->annotations()) {
-                  if (e->type() == Element::Type::FRET_DIAGRAM && e->track() == track()) {
+                  if (e->type() == ElementType::FRET_DIAGRAM && e->track() == track()) {
                         yy -= score()->styleP(StyleIdx::fretY);
                         e->layout();
                         yy -= e->height();
@@ -1044,40 +1045,43 @@ void Harmony::layout()
             if (!fretsFound)
                   yy -= score()->styleP(StyleIdx::harmonyY);
             }
-      else if (parent()->type() == Element::Type::FRET_DIAGRAM) {
+      else if (parent()->type() == ElementType::FRET_DIAGRAM) {
             qDebug("Harmony %s with fret diagram as parent", qPrintable(_textName)); // not possible?
             yy = score()->styleP(StyleIdx::harmonyFretDist);
             }
-      yy += textStyle().offset(_spatium).y();
+//TODO      yy += textStyle().offset(_spatium).y();
+#if 0
       if (!editMode()) {
             qreal hb = lineHeight() - Text::baseLine();
-            if (textStyle().align() & Align::BOTTOM)
+            if (align() & Align::BOTTOM)
                   yy -= hb;
-            else if (textStyle().align() & Align::VCENTER) {
+            else if (align() & Align::VCENTER) {
                   yy -= hb;
                   yy += (height() * .5);
                   }
-            else if (textStyle().align() & Align::BASELINE) {
+            else if (align() & Align::BASELINE) {
                   }
             else { // Align::TOP
                   yy -= hb;
                   yy += height();
                   }
             }
+#endif
 
-      qreal xx = textStyle().offset(_spatium).x();
+      qreal xx = 0.0; // offset(_spatium).x();
+#if 0
       if (!editMode()) {
             qreal cw = symWidth(SymId::noteheadBlack);
-            if (textStyle().align() & Align::RIGHT) {
+            if (align() & Align::RIGHT) {
                   xx += cw;
                   xx -= width();
                   }
-            else if (textStyle().align() & Align::HCENTER) {
+            else if (align() & Align::HCENTER) {
                   xx += (cw * .5);
                   xx -= (width() * .5);
                   }
             }
-
+#endif
       setPos(xx, yy);
 
       if (!readPos().isNull()) {
@@ -1090,14 +1094,14 @@ void Harmony::layout()
             setReadPos(QPointF());
             }
 
-      if (parent()->type() == Element::Type::FRET_DIAGRAM && parent()->parent()->type() == Element::Type::SEGMENT) {
+      if (parent()->type() == ElementType::FRET_DIAGRAM && parent()->parent()->type() == ElementType::SEGMENT) {
             qDebug("Harmony %s with fret diagram as parent and segment as grandparent", qPrintable(_textName));
 //            MStaff* mstaff = static_cast<Segment*>(parent()->parent())->measure()->mstaff(staffIdx());
 //WS            qreal dist = -(bbox().top());
 //            mstaff->distanceUp = qMax(mstaff->distanceUp, dist + _spatium);
             }
 
-      if (textStyle().hasFrame()) {
+      if (hasFrame()) {
             QRectF saveBbox = bbox();
             setbbox(bboxtight());
             layoutFrame();
@@ -1112,7 +1116,8 @@ void Harmony::layout()
 
 void Harmony::calculateBoundingRect()
       {
-      if (editMode() || textList.empty()) {
+//      if (editMode() || textList.empty()) {
+      if (textList.empty()) {
             Text::layout1();
             setbboxtight(bbox());
             }
@@ -1135,10 +1140,12 @@ void Harmony::calculateBoundingRect()
 void Harmony::draw(QPainter* painter) const
       {
       // painter->setPen(curColor());
-      if (editMode() || textList.empty()) {
+//      if (editMode() || textList.empty()) {
+      if (textList.empty()) {
             Text::draw(painter);
             return;
             }
+#if 0 //TODO
       if (textStyle().hasFrame()) {
             if (textStyle().frameWidth().val() != 0.0) {
                   QColor color = frameColor();
@@ -1159,6 +1166,7 @@ void Harmony::draw(QPainter* painter) const
                   painter->drawRoundedRect(frame, textStyle().frameRound(), r2);
                   }
             }
+#endif
       painter->setBrush(Qt::NoBrush);
       QColor color = textColor();
       painter->setPen(color);
@@ -1340,8 +1348,9 @@ void Harmony::render(const QList<RenderAction>& renderList, qreal& x, qreal& y, 
 //    construct Chord Symbol
 //---------------------------------------------------------
 
-void Harmony::render(const TextStyle* st)
+void Harmony::render(const TextStyle* /*st*/)
       {
+#if 0 // TODO
       int capo = score()->styleI(StyleIdx::capoPosition);
 
       if (st == 0)
@@ -1424,6 +1433,7 @@ void Harmony::render(const TextStyle* st)
 
       if (_rightParen)
             render(" )", x, y);
+#endif
       }
 
 //---------------------------------------------------------
@@ -1585,12 +1595,12 @@ QString Harmony::screenReaderInfo() const
 
       if (const_cast<Harmony*>(this)->parsedForm() && !hTextName().isEmpty()) {
             QString aux = const_cast<Harmony*>(this)->parsedForm()->handle();
-            aux = aux.replace("#", tr("sharp")).replace("<", "");
+            aux = aux.replace("#", QObject::tr("sharp")).replace("<", "");
             QString extension = "";
 
             foreach (QString s, aux.split(">", QString::SkipEmptyParts)) {
                   if(!s.contains("blues"))
-                        s.replace("b", tr("flat"));
+                        s.replace("b", QObject::tr("flat"));
                   extension += s + " ";
                   }
             rez = QString("%1 %2").arg(rez).arg(extension);
@@ -1603,6 +1613,20 @@ QString Harmony::screenReaderInfo() const
             rez = QString("%1 / %2").arg(rez).arg(tpc2name(_baseTpc, NoteSpellingType::STANDARD, NoteCaseType::AUTO, true));
 
       return rez;
+      }
+
+//---------------------------------------------------------
+//   propertyDefault
+//---------------------------------------------------------
+
+QVariant Harmony::propertyDefault(P_ID id) const
+      {
+      switch (id) {
+            case P_ID::SUB_STYLE:
+                  return int(SubStyle::HARMONY);
+            default:
+                  return Text::propertyDefault(id);
+            }
       }
 
 }

@@ -80,7 +80,7 @@ void TestMeasure::insertMeasureMiddle()
 
       score->startCmd();
       Measure* m = score->firstMeasure()->nextMeasure();
-      score->insertMeasure(Element::Type::MEASURE, m);
+      score->insertMeasure(ElementType::MEASURE, m);
       score->endCmd();
 
       QVERIFY(saveCompareScore(score, "measure-1.mscx", DIR + "measure-1-ref.mscx"));
@@ -97,7 +97,7 @@ void TestMeasure::insertMeasureBegin()
 
       score->startCmd();
       Measure* m = score->firstMeasure();
-      score->insertMeasure(Element::Type::MEASURE, m);
+      score->insertMeasure(ElementType::MEASURE, m);
       score->endCmd();
       QVERIFY(saveCompareScore(score, "measure-2.mscx", DIR + "measure-2-ref.mscx"));
 
@@ -113,7 +113,7 @@ void TestMeasure::insertMeasureEnd()
       MasterScore* score = readScore(DIR + "measure-1.mscx");
 
       score->startCmd();
-      score->insertMeasure(Element::Type::MEASURE, 0);
+      score->insertMeasure(ElementType::MEASURE, 0);
       score->endCmd();
 
       QVERIFY(saveCompareScore(score, "measure-3.mscx", DIR + "measure-3-ref.mscx"));
@@ -131,20 +131,20 @@ void TestMeasure::insertBfClefChange()
       Measure* m = score->firstMeasure()->nextMeasure();
       m = m->nextMeasure()->nextMeasure();
       score->startCmd();
-      score->insertMeasure(Element::Type::MEASURE, m);
+      score->insertMeasure(ElementType::MEASURE, m);
       score->endCmd();
       QVERIFY(score->checkClefs());
       QVERIFY(saveCompareScore(score, "measure-insert_bf_clef.mscx", DIR + "measure-insert_bf_clef-ref.mscx"));
-      score->undoRedo(true);
+      score->undoRedo(true, ed);
       QVERIFY(score->checkClefs());
       QVERIFY(saveCompareScore(score, "measure-insert_bf_clef_undo.mscx", DIR + "measure-insert_bf_clef.mscx"));
       m = score->firstMeasure()->nextMeasure()->nextMeasure()->nextMeasure()->nextMeasure()->nextMeasure();
       score->startCmd();
-      score->insertMeasure(Element::Type::MEASURE, m);
+      score->insertMeasure(ElementType::MEASURE, m);
       score->endCmd();
       QVERIFY(score->checkClefs());
       QVERIFY(saveCompareScore(score, "measure-insert_bf_clef-2.mscx", DIR + "measure-insert_bf_clef-2-ref.mscx"));
-      score->undoRedo(true);
+      score->undoRedo(true, ed);
       QVERIFY(score->checkClefs());
       QVERIFY(saveCompareScore(score, "measure-insert_bf_clef_undo.mscx", DIR + "measure-insert_bf_clef.mscx"));
       delete score;
@@ -161,20 +161,20 @@ void TestMeasure::insertBfKeyChange()
       Measure* m = score->firstMeasure()->nextMeasure();
       m = m->nextMeasure()->nextMeasure();
       score->startCmd();
-      score->insertMeasure(Element::Type::MEASURE, m);
+      score->insertMeasure(ElementType::MEASURE, m);
       score->endCmd();
       QVERIFY(score->checkKeys());
       QVERIFY(saveCompareScore(score, "measure-insert_bf_key.mscx", DIR + "measure-insert_bf_key-ref.mscx"));
-      score->undoRedo(true);
+      score->undoRedo(true, ed);
       QVERIFY(score->checkKeys());
       QVERIFY(saveCompareScore(score, "measure-insert_bf_key_undo.mscx", DIR + "measure-insert_bf_key.mscx"));
       m = score->firstMeasure()->nextMeasure()->nextMeasure()->nextMeasure()->nextMeasure()->nextMeasure();
       score->startCmd();
-      score->insertMeasure(Element::Type::MEASURE, m);
+      score->insertMeasure(ElementType::MEASURE, m);
       score->endCmd();
       QVERIFY(score->checkKeys());
       QVERIFY(saveCompareScore(score, "measure-insert_bf_key-2.mscx", DIR + "measure-insert_bf_key-2-ref.mscx"));
-      score->undoRedo(true);
+      score->undoRedo(true, ed);
       QVERIFY(score->checkKeys());
       QVERIFY(saveCompareScore(score, "measure-insert_bf_key_undo.mscx", DIR + "measure-insert_bf_key.mscx"));
       delete score;
@@ -227,7 +227,7 @@ void TestMeasure::spanner_a()
 
       Measure* m = score->firstMeasure()->nextMeasure();
       score->startCmd();
-      score->insertMeasure(Element::Type::MEASURE, m);
+      score->insertMeasure(ElementType::MEASURE, m);
       score->endCmd();
       QVERIFY(saveCompareScore(score, "measure-4.mscx", DIR + "measure-4-ref.mscx"));
       delete score;
@@ -247,7 +247,7 @@ void TestMeasure::spanner_b()
 
       Measure* m = score->firstMeasure();
       score->startCmd();
-      score->insertMeasure(Element::Type::MEASURE, m);
+      score->insertMeasure(ElementType::MEASURE, m);
       score->endCmd();
       QVERIFY(saveCompareScore(score, "measure-5.mscx", DIR + "measure-5-ref.mscx"));
       delete score;
@@ -268,6 +268,7 @@ void TestMeasure::spanner_A()
       score->startCmd();
       score->localTimeDelete();
       score->endCmd();
+      score->doLayout();
       QVERIFY(saveCompareScore(score, "measure-6.mscx", DIR + "measure-6-ref.mscx"));
       delete score;
       }
@@ -374,7 +375,7 @@ void TestMeasure::gap()
       //Select and delete third quarter rest in first Measure (voice 2)
       score->startCmd();
       Measure* m  = score->firstMeasure();
-      Segment* s  = m->undoGetSegment(Segment::Type::ChordRest, 960);
+      Segment* s  = m->undoGetSegment(SegmentType::ChordRest, 960);
       Element* el = s->element(1);
       score->select(el);
       score->cmdDeleteSelection();
@@ -388,7 +389,7 @@ void TestMeasure::gap()
       //Select and delete second quarter rest in third Measure (voice 4)
       score->startCmd();
       m  = m->nextMeasure()->nextMeasure();
-      s  = m->undoGetSegment(Segment::Type::ChordRest, 4320);
+      s  = m->undoGetSegment(SegmentType::ChordRest, 4320);
       el = s->element(3);
       score->select(el);
       score->cmdDeleteSelection();
@@ -401,7 +402,7 @@ void TestMeasure::gap()
 
       //Select and delete first quarter rest in third Measure (voice 4)
       score->startCmd();
-      s  = m->undoGetSegment(Segment::Type::ChordRest, 3840);
+      s  = m->undoGetSegment(SegmentType::ChordRest, 3840);
       el = s->element(3);
       score->select(el);
       score->cmdDeleteSelection();
@@ -429,27 +430,27 @@ void TestMeasure::checkMeasure()
       Element* tst       = 0;
       Measure* m         = score->firstMeasure()->nextMeasure();
 
-      Segment* s = m->undoGetSegment(Segment::Type::ChordRest, 2880);
+      Segment* s = m->undoGetSegment(SegmentType::ChordRest, 2880);
       tst = s->element(1);
       Q_ASSERT(tst);
 
       QVERIFY(tst->isRest() && toRest(tst)->isGap() && toRest(tst)->actualTicks() == 480/*&& toRest(tst)->durationType() == TDuration::DurationType::V_HALF*/);
 
       m = m->nextMeasure();
-//      s = m->undoGetSegment(Segment::Type::ChordRest, 3840);
+//      s = m->undoGetSegment(SegmentType::ChordRest, 3840);
 //      tst = s->element(2);
 //      Q_ASSERT(tst);
 
 //      QVERIFY(tst->isRest() && toRest(tst)->isGap() && toRest(tst)->actualTicks() == 480/*&& toRest(tst)->durationType() == TDuration::DurationType::V_HALF*/);
 
       m = m->nextMeasure();
-      s = m->undoGetSegment(Segment::Type::ChordRest, 6240);
+      s = m->undoGetSegment(SegmentType::ChordRest, 6240);
       tst = s->element(1);
       Q_ASSERT(tst);
 
       QVERIFY(tst->isRest() && toRest(tst)->isGap() && toRest(tst)->actualTicks() == 120/*&& toRest(tst)->durationType() == TDuration::DurationType::V_HALF*/);
 
-      s = m->undoGetSegment(Segment::Type::ChordRest, 6480);
+      s = m->undoGetSegment(SegmentType::ChordRest, 6480);
       tst = s->element(1);
       Q_ASSERT(tst);
 

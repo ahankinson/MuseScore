@@ -17,6 +17,8 @@
 #include "libmscore/score.h"
 #include "libmscore/part.h"
 #include "libmscore/key.h"
+#include "libmscore/icon.h"
+#include "libmscore/staff.h"
 #include "musescore.h"
 
 namespace Ms {
@@ -31,7 +33,7 @@ Score* NoteGroups::createScore(int n, TDuration::DurationType t, std::vector<Cho
       {
       MCursor c;
       c.setTimeSig(_sig);
-      c.createScore("score8");
+      c.createScore("");
       c.addPart("voice");
       c.move(0, 0);
       c.addKeySig(Key::C);
@@ -42,18 +44,25 @@ Score* NoteGroups::createScore(int n, TDuration::DurationType t, std::vector<Cho
       nts->setGroups(ng);
 
       for (int i = 0; i < n; ++i) {
-            Chord* chord = c.addChord(67, t);
+            Chord* chord = c.addChord(77, t);
             int tick = chord->rtick();
             chord->setBeamMode(_groups.beamMode(tick, t));
+            chord->setStemDirection(Direction::UP);
             chords->push_back(chord);
             }
-      c.score()->pageFormat()->setEvenLeftMargin(0.0);
-      c.score()->pageFormat()->setOddLeftMargin(0.0);
+      c.score()->style().set(StyleIdx::pageEvenLeftMargin, 0.0);
+      c.score()->style().set(StyleIdx::pageOddLeftMargin, 0.0);
 
       c.score()->parts().front()->setLongName("");
       c.score()->style().set(StyleIdx::linearStretch, 1.3);
       c.score()->style().set(StyleIdx::MusicalSymbolFont, QString("Bravura"));
       c.score()->style().set(StyleIdx::MusicalTextFont, QString("Bravura Text"));
+      c.score()->style().set(StyleIdx::startBarlineSingle, true);
+
+      c.score()->staff(0)->setLines(0, 1); // single line only
+      c.score()->staff(0)->staffType(0)->setGenClef(false); // no clef
+      c.score()->staff(0)->staffType(0)->setGenTimesig(false); // don't display time sig since ExampleView is unable to reflect custom time sig text/symbols
+
       return c.score();
       }
 
@@ -84,6 +93,9 @@ NoteGroups::NoteGroups(QWidget* parent)
       connect(view8,  SIGNAL(noteClicked(Note*)), SLOT(noteClicked(Note*)));
       connect(view16, SIGNAL(noteClicked(Note*)), SLOT(noteClicked(Note*)));
       connect(view32, SIGNAL(noteClicked(Note*)), SLOT(noteClicked(Note*)));
+      connect(view8,  SIGNAL(beamPropertyDropped(Chord*,Icon*)), SLOT(beamPropertyDropped(Chord*,Icon*)));
+      connect(view16, SIGNAL(beamPropertyDropped(Chord*,Icon*)), SLOT(beamPropertyDropped(Chord*,Icon*)));
+      connect(view32, SIGNAL(beamPropertyDropped(Chord*,Icon*)), SLOT(beamPropertyDropped(Chord*,Icon*)));
       }
 
 //---------------------------------------------------------
@@ -104,6 +116,9 @@ void NoteGroups::setSig(Fraction sig, const Groups& g)
       view16->setScore(createScore(n, TDuration::DurationType::V_16TH, &chords16));
       n   = f.numerator() * (32 / f.denominator());
       view32->setScore(createScore(n, TDuration::DurationType::V_32ND, &chords32));
+      view8->resetMatrix();
+      view16->resetMatrix();
+      view32->resetMatrix();
       }
 
 //---------------------------------------------------------
@@ -132,20 +147,89 @@ void NoteGroups::resetClicked()
       }
 
 //---------------------------------------------------------
-//   note8Clicked
+//   noteClicked
 //---------------------------------------------------------
 
 void NoteGroups::noteClicked(Note* note)
       {
       Chord* chord = note->chord();
       if (chord->beamMode() == Beam::Mode::AUTO)
-            chord->setBeamMode(Beam::Mode::BEGIN);
+            updateBeams(chord, Beam::Mode::BEGIN);
       else if (chord->beamMode() == Beam::Mode::BEGIN)
-            chord->setBeamMode(Beam::Mode::AUTO);
+            updateBeams(chord, Beam::Mode::AUTO);
+      }
+
+//---------------------------------------------------------
+//   beamPropertyDropped
+//---------------------------------------------------------
+
+void NoteGroups::beamPropertyDropped(Chord* chord, Icon* icon)
+      {
+      switch (icon->iconType()) {
+            case IconType::SBEAM:
+                  updateBeams(chord, Beam::Mode::BEGIN);
+                  break;
+            case IconType::MBEAM:
+                  updateBeams(chord, Beam::Mode::AUTO);
+                  break;
+            case IconType::BEAM32:
+                  updateBeams(chord, Beam::Mode::BEGIN32);
+                  break;
+            case IconType::BEAM64:
+                  updateBeams(chord, Beam::Mode::BEGIN64);
+                  break;
+            default:
+                  break;
+            }
+      }
+
+//---------------------------------------------------------
+//   updateBeams
+//     takes into account current state of changeShorterCheckBox to update smaller valued notes as well
+//---------------------------------------------------------
+
+void NoteGroups::updateBeams(Chord* chord, Beam::Mode m)
+      {
+      chord->setBeamMode(m);
       chord->score()->doLayout();
+
+      if (changeShorterCheckBox->checkState() == Qt::Checked) {
+            int tick = chord->tick();
+            bool foundChord = false;
+            for (Chord* c : chords8) {
+                  if (c == chord) {
+                        foundChord = true;
+                        break;
+                        }
+                  }
+            for (Chord* c : chords16) {
+                  if (foundChord) {
+                        if (c->tick() == tick) {
+                              c->setBeamMode(m);
+                              c->score()->doLayout();
+                              break;
+                              }
+                        }
+                  else if (c == chord) {
+                        foundChord = true;
+                        break;
+                        }
+                  }
+            for (Chord* c : chords32) {
+                  if (foundChord) {
+                        if (c->tick() == tick) {
+                              c->setBeamMode(m);
+                              c->score()->doLayout();
+                              break;
+                              }
+                        }
+                  }
+            }
+
       view8->update();
       view16->update();
       view32->update();
       }
+
 }
 

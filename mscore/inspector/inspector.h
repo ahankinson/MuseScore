@@ -1,7 +1,6 @@
 //=============================================================================
 //  MuseScore
 //  Music Composition & Notation
-//  $Id: inspector.h
 //
 //  Copyright (C) 2011-2016 Werner Schweer and others
 //
@@ -15,7 +14,8 @@
 #define __INSPECTOR_H__
 
 #include "inspectorBase.h"
-#include "ui_inspector_element.h"
+#include "inspectorElementBase.h"
+#include "inspectorTextBase.h"
 #include "ui_inspector_bend.h"
 #include "ui_inspector_break.h"
 #include "ui_inspector_stafftypechange.h"
@@ -35,7 +35,6 @@
 #include "ui_inspector_tuplet.h"
 #include "ui_inspector_accidental.h"
 #include "ui_inspector_tempotext.h"
-#include "ui_inspector_dynamic.h"
 #include "ui_inspector_lyric.h"
 #include "ui_inspector_stafftext.h"
 #include "ui_inspector_slur.h"
@@ -49,40 +48,13 @@
 
 namespace Ms {
 
+class Score;
 class Element;
 class Note;
 class Inspector;
 class Segment;
 class Chord;
 class Clef;
-
-//---------------------------------------------------------
-//   UiInspectorElement
-//---------------------------------------------------------
-
-class UiInspectorElement: public Ui::InspectorElement {
-   public:
-      void setupUi(QWidget *InspectorElement);
-      };
-
-//---------------------------------------------------------
-//   InspectorElementBase
-//---------------------------------------------------------
-
-class InspectorElementBase : public InspectorBase {
-      Q_OBJECT
-
-   protected:
-      UiInspectorElement e;
-
-   private slots:
-      void resetAutoplace();
-      void autoplaceChanged(bool);
-
-   public:
-      InspectorElementBase(QWidget* parent);
-      virtual void setElement() override;
-      };
 
 //---------------------------------------------------------
 //   InspectorElement
@@ -311,43 +283,23 @@ class InspectorTremoloBar : public InspectorElementBase {
 //   InspectorTempoText
 //---------------------------------------------------------
 
-class InspectorTempoText : public InspectorElementBase {
+class InspectorTempoText : public InspectorTextBase {
       Q_OBJECT
 
-      Ui::InspectorText t;
       Ui::InspectorTempoText tt;
 
    public:
       InspectorTempoText(QWidget* parent);
-      virtual void setElement() override;
       virtual void postInit() override;
-      };
-
-//---------------------------------------------------------
-//   InspectorDynamic
-//---------------------------------------------------------
-
-class InspectorDynamic : public InspectorElementBase {
-      Q_OBJECT
-
-//      UiInspectorElement e;
-      Ui::InspectorText t;
-      Ui::InspectorDynamic d;
-
-   public:
-      InspectorDynamic(QWidget* parent);
-      virtual void setElement() override;
       };
 
 //---------------------------------------------------------
 //   InspectorLyric
 //---------------------------------------------------------
 
-class InspectorLyric : public InspectorElementBase {
+class InspectorLyric : public InspectorTextBase {
       Q_OBJECT
 
-//      UiInspectorElement e;
-      Ui::InspectorText t;
       Ui::InspectorLyric l;
 
    private slots:
@@ -355,23 +307,19 @@ class InspectorLyric : public InspectorElementBase {
 
    public:
       InspectorLyric(QWidget* parent);
-      virtual void setElement() override;
       };
 
 //---------------------------------------------------------
 //   InspectorLyric
 //---------------------------------------------------------
 
-class InspectorStafftext : public InspectorElementBase {
+class InspectorStaffText : public InspectorTextBase {
       Q_OBJECT
 
-//      UiInspectorElement e;
-      Ui::InspectorText t;
-      Ui::InspectorStafftext s;
+      Ui::InspectorStaffText s;
 
    public:
-      InspectorStafftext(QWidget* parent);
-      virtual void setElement() override;
+      InspectorStaffText(QWidget* parent);
       };
 
 //---------------------------------------------------------
@@ -383,13 +331,13 @@ class Inspector : public QDockWidget {
 
       QScrollArea* sa;
       InspectorBase* ie;
-      QList<Element*> _el;
-      Element* _element;      // currently displayed element
+      Score* _score;
       bool _inspectorEdit;    // set to true when an edit originates from
                               // within the inspector itself
+      Element* oe;
 
    public slots:
-      void reset();
+      void update();
 
    protected:
       virtual void changeEvent(QEvent *event);
@@ -397,10 +345,10 @@ class Inspector : public QDockWidget {
 
    public:
       Inspector(QWidget* parent = 0);
-      void setElement(Element*);
-      void setElements(const QList<Element*>&);
-      Element* element() const            { return _element;       }
-      const QList<Element*>& el() const   { return _el;            }
+      void update(Score* s);
+
+      Element* element() const;
+      const QList<Element*>* el() const;
       void setInspectorEdit(bool val)     { _inspectorEdit = val;  }
       };
 
@@ -447,7 +395,7 @@ class InspectorBracket : public InspectorBase {
 //   InspectorIname
 //---------------------------------------------------------
 
-class InspectorIname : public InspectorBase {
+class InspectorIname : public InspectorTextBase {
       Q_OBJECT
 
       Ui::InspectorIname i;
