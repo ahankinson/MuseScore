@@ -36,6 +36,7 @@ namespace Ms
         void createSection(pugi::xml_node score);
         void createMeasure(Measure* m, pugi::xml_node parentNode);
         void createMeasureStaff(Staff* s, Measure* m, pugi::xml_node parentNode);
+        void createElement(Element* el, pugi::xml_node parentNode);
         pugi::xml_node generateXMLElement(std::string name, pugi::xml_node parentnode);
         void addAttribute(pugi::xml_node node, std::string name, std::string value);
     };

@@ -9,6 +9,7 @@
 #include <array>
 #include "exportmei.h"
 #include "pugixml/pugixml.hpp"
+#include "libmscore/note.h"
 
 
 static int MS_PXML_EXPORT_OPTIONS = pugi::format_default;
@@ -111,13 +112,11 @@ void ExportMEI::createSection(pugi::xml_node score)
         
         for (MeasureBase* mb = this->_score->measures()->first(); mb; mb = mb->next())
         {
-            if (mb->type() != Element::Type::MEASURE) continue;
+            if (mb->type() != ElementType::MEASURE) continue;
             
             Measure* m = static_cast<Measure*>(mb);
             
             this->createMeasure(m, section);
-            
-            
         }
     }
     
@@ -153,9 +152,30 @@ void ExportMEI::createMeasureStaff(Staff* s, Measure* m, pugi::xml_node parentNo
 
             for (Segment* seg = m->first(); seg; seg = seg->next()) {
                 Element* el = seg->element(v);
+                if (!el) continue;
+                
+                
+                
                 pugi::xml_node foo = this->generateXMLElement("foo", xlyr);
 //                qDebug("track %i", el->track());
             }
+        }
+    }
+
+void ExportMEI::createElement(Element *el, pugi::xml_node parentNode)
+    {
+        switch (el->type()) {
+            case ElementType::CHORD:
+                Chord* chord = toChord(el);
+                std::vector<Note*> nl = chord->notes();
+                
+                for (Note* note : nl) {
+                    note->tpc();
+                }
+                break;
+                
+            default:
+                break;
         }
     }
     
