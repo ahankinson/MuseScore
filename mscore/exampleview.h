@@ -74,7 +74,6 @@ class ExampleView : public QFrame, public MuseScoreView {
       virtual QCursor cursor() const;
       virtual void setCursor(const QCursor&);
       virtual int gripCount() const;
-      virtual const QRectF& getGrip(Grip) const;
       virtual void setDropRectangle(const QRectF&);
       virtual void cmdAddSlur(Note* firstNote, Note* lastNote);
       virtual void cmdAddHairpin(bool) {}
@@ -83,6 +82,7 @@ class ExampleView : public QFrame, public MuseScoreView {
       virtual Element* elementNear(QPointF);
       virtual void drawBackground(QPainter*, const QRectF&) const;
       void dragExampleView(QMouseEvent* ev);
+      virtual const QRect geometry() const override { return QFrame::geometry(); }
       };
 
 //---------------------------------------------------------

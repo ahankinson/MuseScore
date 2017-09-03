@@ -60,6 +60,7 @@ private slots:
       void gpDottedTuplets() { gpReadTest("dotted-tuplets", "gp5"); }
       void gpTupletSlur()    { gpReadTest("tuplet-with-slur", "gp4"); }
       void gpBeamsStemsLL()  { gpReadTest("beams-stems-ledger-lines", "gp5"); }
+      void gpxFretDiagram_2Instr() { gpReadTest("fret-diagram_2instruments", "gpx"); }
       void gpxFretDiagram()  { gpReadTest("fret-diagram", "gpx"); }
       void gp5FretDiagram()  { gpReadTest("fret-diagram", "gp5"); }
       void gp4FretDiagram()  { gpReadTest("fret-diagram", "gp4"); }
@@ -128,6 +129,10 @@ private slots:
       void gpxFermata()      { gpReadTest("fermata", "gpx"); }
 //ws: no idea why this does not work      void gpxDirections()   { gpReadTest("directions", "gpx"); }
       void gpxSlur()         { gpReadTest("slur", "gpx"); }
+      void gpxSlurHS()       { gpReadTest("slur_hammer_slur", "gpx"); }
+      void gpxSlur3M()       { gpReadTest("slur_over_3_measures", "gpx"); }
+      void gpxSlurSH()       { gpReadTest("slur_slur_hammer", "gpx"); }
+      void gpxSlurV()        { gpReadTest("slur_voices", "gpx"); }
       void gpxVibrato()      { gpReadTest("vibrato", "gpx"); }
       void gpxVolumeSwell()  { gpReadTest("volume-swell", "gpx"); }
 //      void gpxTremoloBar()   { gpReadTest("tremolo-bar", "gpx"); }
@@ -142,6 +147,8 @@ private slots:
       void gpxOttava3()      { gpReadTest("ottava3", "gpx"); }
       void gpxOttava4()      { gpReadTest("ottava4", "gpx"); }
       void gpxOttava5()      { gpReadTest("ottava5", "gpx"); }
+      void gpxChornamesKeyboard() { gpReadTest("chordnames_keyboard", "gpx"); }
+      void gpxClefs() { gpReadTest("clefs", "gpx"); }
       };
 
 //---------------------------------------------------------

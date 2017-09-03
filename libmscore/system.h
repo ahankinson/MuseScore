@@ -66,16 +66,14 @@ class SysStaff {
       };
 
 //---------------------------------------------------------
-//   @@ System
+//   System
 ///    One row of measures for all instruments;
 ///    a complete piece of the timeline.
 //---------------------------------------------------------
 
 class System : public Element {
-      Q_GADGET
-
-      SystemDivider*  _systemDividerLeft    { 0 };
-      SystemDivider*  _systemDividerRight   { 0 };
+      SystemDivider* _systemDividerLeft    { 0 };     // to the next system
+      SystemDivider* _systemDividerRight   { 0 };
 
       std::vector<MeasureBase*> ml;
       QList<SysStaff*> _staves;
@@ -84,12 +82,13 @@ class System : public Element {
 
       qreal _leftMargin              { 0.0    };     ///< left margin for instrument name, brackets etc.
       mutable bool fixedDownDistance { false  };
+      qreal _distance;                                 // temp. variable used during layout
 
    public:
       System(Score*);
       ~System();
       virtual System* clone() const override      { return new System(*this); }
-      virtual ElementType type() const override { return ElementType::SYSTEM; }
+      virtual ElementType type() const override   { return ElementType::SYSTEM; }
 
       virtual void add(Element*) override;
       virtual void remove(Element*) override;
@@ -147,8 +146,8 @@ class System : public Element {
       SystemDivider* systemDividerLeft() const  { return _systemDividerLeft; }
       SystemDivider* systemDividerRight() const { return _systemDividerRight; }
 
-      virtual Element* nextElement() override;
-      virtual Element* prevElement() override;
+      virtual Element* nextSegmentElement() override;
+      virtual Element* prevSegmentElement() override;
 
       qreal minDistance(System*) const;
       qreal topDistance(int staffIdx, const Shape&) const;
@@ -158,6 +157,10 @@ class System : public Element {
 
       void moveBracket(int staffIdx, int srcCol, int dstCol);
       bool hasFixedDownDistance() const { return fixedDownDistance; }
+      int firstVisibleStaff() const;
+      int nextVisibleStaff(int) const;
+      qreal distance() const { return _distance; }
+      void setDistance(qreal d) { _distance = d; }
       };
 
 typedef QList<System*>::iterator iSystem;

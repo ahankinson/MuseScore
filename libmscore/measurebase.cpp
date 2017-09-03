@@ -112,7 +112,8 @@ void MeasureBase::scanElements(void* data, void (*func)(void*, Element*), bool a
                         e->scanElements(data, func, all);
                   }
             }
-//      func(data, this);
+      if (isBox())
+            func(data, this);
       }
 
 //---------------------------------------------------------
@@ -177,7 +178,7 @@ void MeasureBase::remove(Element* el)
                         break;
                   case LayoutBreak::SECTION:
                         setSectionBreak(false);
-                        score()->setPause(endTick(), 0);
+                        score()->setPause(endTick()-1, 0);
                         score()->setLayoutAll();
                         break;
                   case LayoutBreak::NOBREAK:

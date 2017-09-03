@@ -36,16 +36,6 @@ void TieSegment::updateGrips(EditData& ed) const
       }
 
 //---------------------------------------------------------
-//   startEdit
-//---------------------------------------------------------
-
-void TieSegment::startEdit(EditData& ed)
-      {
-      ed.grips   = int(Grip::GRIPS);
-      ed.curGrip = Grip::END;
-      }
-
-//---------------------------------------------------------
 //   draw
 //---------------------------------------------------------
 
@@ -111,149 +101,40 @@ bool TieSegment::edit(EditData& ed)
 //   changeAnchor
 //---------------------------------------------------------
 
-void TieSegment::changeAnchor(MuseScoreView* viewer, Grip curGrip, Element* element)
+void TieSegment::changeAnchor(EditData& ed, Element* element)
       {
-      if (curGrip == Grip::START) {
+      if (ed.curGrip == Grip::START) {
             spanner()->setStartElement(element);
-            switch (spanner()->anchor()) {
-                  case Spanner::Anchor::NOTE: {
-                        Tie* tie = toTie(spanner());
-                        Note* note = toNote(element);
-                        if (note->chord()->tick() <= tie->endNote()->chord()->tick()) {
-                              tie->startNote()->setTieFor(0);
-                              tie->setStartNote(note);
-                              note->setTieFor(tie);
-                              }
-                        break;
-                        }
-                  case Spanner::Anchor::CHORD:
-                        spanner()->setTick(toChord(element)->tick());
-                        spanner()->setTick2(spanner()->endElement()->tick());
-                        spanner()->setTrack(element->track());
-                        if (score()->spannerMap().removeSpanner(spanner()))
-                              score()->addSpanner(spanner());
-                        break;
-                  case Spanner::Anchor::SEGMENT:
-                  case Spanner::Anchor::MEASURE:
-                        qDebug("TieSegment::changeAnchor: bad anchor");
-                        break;
+            Note* note = toNote(element);
+            if (note->chord()->tick() <= tie()->endNote()->chord()->tick()) {
+                  tie()->startNote()->setTieFor(0);
+                  tie()->setStartNote(note);
+                  note->setTieFor(tie());
                   }
             }
       else {
             spanner()->setEndElement(element);
-            switch (spanner()->anchor()) {
-                  case Spanner::Anchor::NOTE: {
-                        Tie* tie = toTie(spanner());
-                        Note* note = toNote(element);
-                        // do not allow backward ties
-                        if (note->chord()->tick() >= tie->startNote()->chord()->tick()) {
-                              tie->endNote()->setTieBack(0);
-                              tie->setEndNote(note);
-                              note->setTieBack(tie);
-                              }
-                        break;
-                        }
-                  case Spanner::Anchor::CHORD:
-                        spanner()->setTick2(toChord(element)->tick());
-                        spanner()->setTrack2(element->track());
-                        break;
-
-                  case Spanner::Anchor::SEGMENT:
-                  case Spanner::Anchor::MEASURE:
-                        qDebug("TieSegment::changeAnchor: bad anchor");
-                        break;
+            Note* note = toNote(element);
+            // do not allow backward ties
+            if (note->chord()->tick() >= tie()->startNote()->chord()->tick()) {
+                  tie()->endNote()->setTieBack(0);
+                  tie()->setEndNote(note);
+                  note->setTieBack(tie());
                   }
             }
 
       int segments  = spanner()->spannerSegments().size();
-      ups(curGrip).off = QPointF();
+      ups(ed.curGrip).off = QPointF();
       spanner()->layout();
       if (spanner()->spannerSegments().size() != segments) {
             QList<SpannerSegment*>& ss = spanner()->spannerSegments();
 
-            TieSegment* newSegment = toTieSegment(curGrip == Grip::END ? ss.back() : ss.front());
+            TieSegment* newSegment = toTieSegment(ed.curGrip == Grip::END ? ss.back() : ss.front());
             score()->endCmd();
             score()->startCmd();
-            viewer->startEdit(newSegment, curGrip);
+            ed.view->startEdit(newSegment, ed.curGrip);
             score()->setLayoutAll();
             }
-      }
-
-//---------------------------------------------------------
-//   gripAnchor
-//---------------------------------------------------------
-
-QPointF TieSegment::gripAnchor(Grip grip) const
-      {
-      SlurPos spos;
-      tie()->slurPos(&spos);
-
-      QPointF sp(system()->pagePos());
-      QPointF p1(spos.p1 + spos.system1->pagePos());
-      QPointF p2(spos.p2 + spos.system2->pagePos());
-      switch (spannerSegmentType()) {
-            case SpannerSegmentType::SINGLE:
-                  if (grip == Grip::START)
-                        return p1;
-                  else if (grip == Grip::END)
-                        return p2;
-                  break;
-
-            case SpannerSegmentType::BEGIN:
-                  if (grip == Grip::START)
-                        return p1;
-                  else if (grip == Grip::END)
-                        return system()->abbox().topRight();
-                  break;
-
-            case SpannerSegmentType::MIDDLE:
-                  if (grip == Grip::START)
-                        return sp;
-                  else if (grip == Grip::END)
-                        return system()->abbox().topRight();
-                  break;
-
-            case SpannerSegmentType::END:
-                  if (grip == Grip::START)
-                        return sp;
-                  else if (grip == Grip::END)
-                        return p2;
-                  break;
-            }
-      return QPointF();
-      }
-
-//---------------------------------------------------------
-//   getGrip
-//---------------------------------------------------------
-
-QPointF TieSegment::getGrip(Grip n) const
-      {
-      switch (n) {
-            case Grip::START:
-            case Grip::END:
-                  return (ups(n).p - gripAnchor(n)) / spatium() + ups(n).off / spatium();
-            default:
-                  return ups(n).off / spatium();
-            }
-      }
-
-//---------------------------------------------------------
-//   setGrip
-//---------------------------------------------------------
-
-void TieSegment::setGrip(Grip n, const QPointF& pt)
-      {
-      switch (n) {
-            case Grip::START:
-            case Grip::END:
-                  ups(n).off = ((pt * spatium()) - (ups(n).p - gripAnchor(n)));
-                  break;
-            default:
-                  ups(n).off = pt * spatium();
-                  break;
-            }
-      tie()->layout();
       }
 
 //---------------------------------------------------------
@@ -282,7 +163,7 @@ void TieSegment::editDrag(EditData& ed)
                                  && tie->startNote()->chord()->tick() < note->chord()->tick()) {
                                     ed.view->setDropTarget(note);
                                     if (note != tie->endNote()) {
-                                          changeAnchor(ed.view, g, note);
+                                          changeAnchor(ed, note);
                                           return;
                                           }
                                     }
@@ -419,24 +300,31 @@ void TieSegment::computeBezier(QPointF p6o)
       ups(Grip::DRAG).p     = t.map(p5);
       ups(Grip::SHOULDER).p = t.map(p6);
 
-      QPointF staffOffset;
-      if (system() && track() >= 0)
-            staffOffset = QPointF(0.0, -system()->staff(staffIdx())->y());
+//      QPointF staffOffset;
+//      if (system() && track() >= 0)
+//            staffOffset = QPointF(0.0, -system()->staff(staffIdx())->y());
 
-      path.translate(staffOffset);
-      shapePath.translate(staffOffset);
+//      path.translate(staffOffset);
+//      shapePath.translate(staffOffset);
 
       QPainterPath p;
       p.moveTo(QPointF());
-      p.cubicTo(p3 + p3o - th, p4 + p4o - th, p2);
+//      p.cubicTo(p3 + p3o - th, p4 + p4o - th, p2);
+      p.cubicTo(p3 + p3o, p4 + p4o, p2);
       _shape.clear();
       QPointF start;
       start = t.map(start);
+
+      qreal minH = qAbs(3.0 * w);
       int nbShapes = 15;
       for (int i = 1; i <= nbShapes; i++) {
             QPointF point = t.map(p.pointAtPercent(i/float(nbShapes)));
-            QRectF re(start, point);
-            re.translate(staffOffset);
+            QRectF re = QRectF(start, point).normalized();
+            if (re.height() < minH) {
+                  qreal d = (minH - re.height()) * .5;
+                  re.adjust(0.0, -d, 0.0, d);
+                  }
+//            re.translate(staffOffset);
             _shape.add(re);
             start = point;
             }
@@ -460,17 +348,20 @@ void TieSegment::layoutSegment(const QPointF& p1, const QPointF& p2)
       QRectF bbox = path.boundingRect();
 
       // adjust position to avoid staff line if necessary
-      Staff* st = staff();
+      Staff* st          = staff();
       bool reverseAdjust = false;
+
       if (slurTie()->isTie() && st && !st->isTabStaff(slurTie()->tick())) {
             // multinote chords with ties need special handling
             // otherwise, adjusted tie might crowd an unadjusted tie unnecessarily
-            Tie* t = toTie(slurTie());
-            Note* sn = t->startNote();
+            Tie* t    = toTie(slurTie());
+            Note* sn  = t->startNote();
             Chord* sc = sn ? sn->chord() : 0;
+
             // normally, the adjustment moves ties according to their direction (eg, up if tie is up)
             // but we will reverse this for notes within chords when appropriate
             // for two-note chords, it looks better to have notes on spaces tied outside the lines
+
             if (sc) {
                   int notes = sc->notes().size();
                   bool onLine = !(sn->line() & 1);
@@ -478,16 +369,16 @@ void TieSegment::layoutSegment(const QPointF& p1, const QPointF& p2)
                         reverseAdjust = true;
                   }
             }
-      qreal sp = spatium();
+      qreal sp          = spatium();
       qreal minDistance = 0.5;
-      autoAdjustOffset = QPointF();
+      autoAdjustOffset  = QPointF();
       if (bbox.height() < minDistance * 2 * sp && st && !st->isTabStaff(slurTie()->tick())) {
             // slur/tie is fairly flat
-            bool up = slurTie()->up();
-            qreal ld = st->lineDistance(tick()) * sp;
-            qreal topY = bbox.top() / ld;
+            bool up       = slurTie()->up();
+            qreal ld      = st->lineDistance(tick()) * sp;
+            qreal topY    = bbox.top() / ld;
             qreal bottomY = bbox.bottom() / ld;
-            int lineY = up ? qRound(topY) : qRound(bottomY);
+            int lineY     = up ? qRound(topY) : qRound(bottomY);
             if (lineY >= 0 && lineY < st->lines(tick()) * st->lineDistance(tick())) {
                   // on staff
                   if (qAbs(topY - lineY) < minDistance && qAbs(bottomY - lineY) < minDistance) {
@@ -505,7 +396,8 @@ void TieSegment::layoutSegment(const QPointF& p1, const QPointF& p2)
                         }
                   }
             }
-      setbbox(path.boundingRect());
+
+      setbbox(bbox);
       if ((staffIdx() > 0) && score()->mscVersion() < 206 && !readPos().isNull()) {
             QPointF staffOffset;
             if (system() && track() >= 0)
@@ -525,6 +417,7 @@ void TieSegment::setAutoAdjust(const QPointF& offset)
       if (!diff.isNull()) {
             path.translate(diff);
             shapePath.translate(diff);
+            _shape.translate(diff);
             for (int i = 0; i < int(Grip::GRIPS); ++i)
                   _ups[i].p += diff;
             autoAdjustOffset = offset;
@@ -552,10 +445,8 @@ bool TieSegment::isEdited() const
 
 void Tie::slurPos(SlurPos* sp)
       {
-      bool useTablature = staff() != nullptr && staff()->isTabStaff(tick());
-      StaffType* stt = nullptr;
-      if (useTablature)
-            stt = staff()->staffType(tick());
+      bool useTablature = staff() && staff()->isTabStaff(tick());
+      StaffType* stt    = useTablature ? staff()->staffType(tick()) : 0;
       qreal _spatium    = spatium();
       qreal hw          = startNote()->tabHeadWidth(stt);   // if stt == 0, defaults to headWidth()
       qreal __up        = _up ? -1.0 : 1.0;
@@ -571,13 +462,11 @@ void Tie::slurPos(SlurPos* sp)
       qreal yOffInside  = useTablature ? yOffOutside * 0.5 : hw * .3 * __up;
 
       Chord* sc   = startNote()->chord();
-      Q_ASSERT(sc);
       sp->system1 = sc->measure()->system();
       if (!sp->system1) {
             Measure* m = sc->measure();
             qDebug("No system: measure is %d has %d count %d", m->isMMRest(), m->hasMMRest(), m->mmRestCount());
             }
-      Q_ASSERT(sp->system1);
 
       qreal xo;
       qreal yo;
@@ -587,6 +476,10 @@ void Tie::slurPos(SlurPos* sp)
       // similar code is used in Chord::layoutPitched()
       // to allocate extra space to enforce minTieLength
       // so keep these in sync
+
+      sp->p1    = sc->pos() + sc->segment()->pos() + sc->measure()->pos();
+      Chord* ec = endNote()->chord();
+      sp->p2    = ec->pos() + ec->segment()->pos() + ec->measure()->pos();
 
       //------p1
       if ((sc->notes().size() > 1) || (sc->stem() && (sc->up() == _up))) {
@@ -598,7 +491,7 @@ void Tie::slurPos(SlurPos* sp)
             xo = startNote()->x() + hw * 0.65;
             yo = startNote()->pos().y() + yOffOutside;
             }
-      sp->p1 = sc->pagePos() - sp->system1->pagePos() + QPointF(xo, yo);
+      sp->p1 += QPointF(xo, yo);
 
       //------p2
       if (endNote() == 0) {
@@ -606,12 +499,8 @@ void Tie::slurPos(SlurPos* sp)
             sp->system2 = sp->system1;
             return;
             }
-      Chord* ec   = endNote()->chord();
       sp->system2 = ec->measure()->system();
-      if (!sp->system2) {
-            qDebug("Tie::slurPos no system2");
-            sp->system2 = sp->system1;
-            }
+
       hw = endNote()->tabHeadWidth(stt);
       if ((ec->notes().size() > 1) || (ec->stem() && !ec->up() && !_up))
             xo = endNote()->x() - hw * 0.12;
@@ -619,7 +508,7 @@ void Tie::slurPos(SlurPos* sp)
             xo = endNote()->x() + hw * 0.15;
       else
             xo = endNote()->x() + hw * 0.35;
-      sp->p2 = ec->pagePos() - sp->system2->pagePos() + QPointF(xo, yo);
+      sp->p2 += QPointF(xo, yo);
       }
 
 //---------------------------------------------------------
@@ -735,10 +624,11 @@ void Tie::calculateDirection()
       }
 
 //---------------------------------------------------------
-//   layout
+//   layoutFor
+//    layout the first SpannerSegment of a slur
 //---------------------------------------------------------
 
-void Tie::layout()
+void Tie::layoutFor(System* system)
       {
       //
       //    show short bow
@@ -768,84 +658,74 @@ void Tie::layout()
             segment->layoutSegment(sPos.p1, sPos.p2);
             return;
             }
-
       calculateDirection();
-
-      qreal w   = startNote()->headWidth();
-      qreal xo1 = w * 1.12;
-      qreal h   = w * 0.3;
-      qreal yo  = _up ? -h : h;
-
-      QPointF off1(xo1, yo);
-      QPointF off2(0.0, yo);
-
-      // TODO: cleanup
 
       SlurPos sPos;
       slurPos(&sPos);
 
-      // p1, p2, s1, s2
-
-      const QList<System*>& systems = score()->systems();
       setPos(0, 0);
 
-      //---------------------------------------------------------
-      //   count number of segments, if no change, all
-      //    user offsets (drags) are retained
-      //---------------------------------------------------------
-
-      int sysIdx1 = systems.indexOf(sPos.system1);
-      if (sysIdx1 == -1) {
-            qDebug("system not found");
-            for (System* s : systems)
-                  qDebug("   search %p in %p", sPos.system1, s);
-            return;
+      int n;
+      if (sPos.system1 != sPos.system2) {
+            n = 2;
+            sPos.p2 = QPointF(system->width(), sPos.p1.y());
             }
+      else
+            n = 1;
 
-      int sysIdx2     = systems.indexOf(sPos.system2);
-      if (sysIdx2 < 0)
-            sysIdx2 = sysIdx1;
-      unsigned nsegs  = sysIdx2 - sysIdx1 + 1;
-      fixupSegments(nsegs);
-
-      int i = 0;
-      for (uint ii = 0; ii < nsegs; ++ii) {
-            System* system = systems[sysIdx1++];
-            if (system->vbox())
-                  continue;
-            TieSegment* segment = segmentAt(i);
-            segment->setSystem(system);
-
-            // case 1: one segment
-            if (sPos.system1 == sPos.system2) {
-                  segment->layoutSegment(sPos.p1, sPos.p2);
-                  segment->setSpannerSegmentType(SpannerSegmentType::SINGLE);
-                  }
-            // case 2: start segment
-            else if (i == 0) {
-                  qreal x = system->bbox().width();
-                  segment->layoutSegment(sPos.p1, QPointF(x, sPos.p1.y()));
-                  segment->setSpannerSegmentType(SpannerSegmentType::BEGIN);
-                  }
-            // case 4: end segment
-            else {
-                  qreal x = firstNoteRestSegmentX(system);
-
-                  segment->layoutSegment(QPointF(x, sPos.p2.y()), sPos.p2);
-                  segment->setSpannerSegmentType(SpannerSegmentType::END);
-                  }
-            ++i;
-            }
+      fixupSegments(n);
+      TieSegment* segment = segmentAt(0);
+      segment->setParent(system);
+      segment->layoutSegment(sPos.p1, sPos.p2);
+      segment->setSpannerSegmentType(sPos.system1 != sPos.system2 ? SpannerSegmentType::BEGIN : SpannerSegmentType::SINGLE);
       }
 
+//---------------------------------------------------------
+//   layoutBack
+//    layout the second SpannerSegment of a splitted slur
+//---------------------------------------------------------
+
+void Tie::layoutBack(System* system)
+      {
+      SlurPos sPos;
+      slurPos(&sPos);
+
+      fixupSegments(2);
+      TieSegment* segment = segmentAt(1);
+      segment->setParent(system);
+
+      qreal x;
+      Segment* seg = endNote()->chord()->segment()->prev();
+      if (seg) {
+            // find maximum width
+            qreal width = 0.0;
+            int n = score()->nstaves();
+            for (int i = 0; i < n; ++i) {
+                  if (!system->staff(i)->show())
+                        continue;
+                  Element* e = seg->element(i * VOICES);
+                  if (e)
+                        width = qMax(width, e->width());
+                  }
+            x = seg->measure()->pos().x() + seg->pos().x() + width;
+            }
+      else
+            x = 0.0;
+
+      segment->layoutSegment(QPointF(x, sPos.p2.y()), sPos.p2);
+      segment->setSpannerSegmentType(SpannerSegmentType::END);
+      }
+
+#if 0
 //---------------------------------------------------------
 //   startEdit
 //---------------------------------------------------------
 
 void Tie::startEdit(EditData& ed)
       {
+      printf("tie start edit %p %p\n", editStartNote, editEndNote);
       editStartNote = startNote();
-      editEndNote = endNote();
+      editEndNote   = endNote();
       SlurTie::startEdit(ed);
       }
 
@@ -855,12 +735,13 @@ void Tie::startEdit(EditData& ed)
 
 void Tie::endEdit(EditData& ed)
       {
-      if (editStartNote != startNote() || editEndNote != endNote()) {
-            score()->undoStack()->push1(new ChangeSpannerElements(this, editStartNote, editEndNote));
-            }
+      printf("tie::endEdit\n");
+//      if (editStartNote != startNote() || editEndNote != endNote()) {
+//            score()->undoStack()->push1(new ChangeSpannerElements(this, editStartNote, editEndNote));
+//            }
       SlurTie::endEdit(ed);
-      score()->setLayoutAll();
       }
+#endif
 
 //---------------------------------------------------------
 //   setStartNote

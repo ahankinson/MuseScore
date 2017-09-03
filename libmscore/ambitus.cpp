@@ -721,19 +721,19 @@ QVariant Ambitus::propertyDefault(P_ID id) const
       }
 
 //---------------------------------------------------------
-//   nextElement
+//   nextSegmentElement
 //---------------------------------------------------------
 
-Element* Ambitus::nextElement()
+Element* Ambitus::nextSegmentElement()
       {
       return segment()->firstInNextSegments(staffIdx());
       }
 
 //---------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //---------------------------------------------------------
 
-Element* Ambitus::prevElement()
+Element* Ambitus::prevSegmentElement()
       {
       return segment()->lastInPrevSegments(staffIdx());
       }
@@ -749,15 +749,6 @@ QString Ambitus::accessibleInfo() const
                                                           .arg(QString::number(topOctave()))
                                                           .arg(tpc2name(bottomTpc(), NoteSpellingType::STANDARD, NoteCaseType::AUTO, false))
                                                           .arg(QString::number(bottomOctave()));
-      }
-
-//---------------------------------------------------------
-//   screenReaderInfo
-//---------------------------------------------------------
-
-QString Ambitus::screenReaderInfo() const
-      {
-      return accessibleInfo();
       }
 }
 

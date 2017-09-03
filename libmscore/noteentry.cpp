@@ -47,10 +47,8 @@ NoteVal Score::noteValForPosition(Position pos, bool &error)
 
       switch (st->staffType(tick)->group()) {
             case StaffGroup::PERCUSSION: {
-                  if (_is.rest()) {
-                        error = true;
+                  if (_is.rest())
                         break;
-                        }
                   const Drumset* ds = instr->drumset();
                   nval.pitch        = _is.drumNote();
                   if (nval.pitch < 0) {
@@ -320,8 +318,10 @@ void Score::putNote(const Position& p, bool replace)
                   }
             case StaffGroup::TAB:
                   stringData = st->part()->instrument(s->tick())->stringData();
+                  _is.setDrumNote(-1);
                   break;
             case StaffGroup::STANDARD:
+                  _is.setDrumNote(-1);
                   break;
             }
 

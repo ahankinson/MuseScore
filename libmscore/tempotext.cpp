@@ -352,9 +352,10 @@ void TempoText::layout()
             }
 
       if (s && autoplace()) {
+            int firstStaffIdx = s->measure()->system()->firstVisibleStaff();
             qreal minDistance = score()->styleP(StyleIdx::tempoMinDistance);
-            Shape s1 = s->measure()->staffShape(staffIdx());
-            Shape s2 = shape().translated(s->pos() + pos());
+            Shape s1          = s->measure()->staffShape(firstStaffIdx);
+            Shape s2          = shape().translated(s->pos() + pos());
             if (placeAbove()) {
                   qreal d = s2.minVerticalDistance(s1);
                   if (d > -minDistance)

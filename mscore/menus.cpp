@@ -866,7 +866,7 @@ Palette* MuseScore::newBracketsPalette()
          { BracketType::SQUARE, "Square"  },
          { BracketType::LINE,   "Line"    }}
          } ) {
-            Bracket* b1 = new Bracket(gscore);
+            Bracket* b1      = new Bracket(gscore);
             BracketItem* bi1 = new BracketItem(gscore);
             bi1->setBracketType(t.first);
             b1->setBracketItem(bi1);
@@ -1211,7 +1211,6 @@ Palette* MuseScore::newLinesPalette(PaletteType t)
             pedal->setBeginText("<sym>keyboardPedalPed</sym>");
             pedal->setContinueText("(<sym>keyboardPedalPed</sym>)");
             pedal->setEndText("<sym>keyboardPedalUp</sym>");
-//TODO            pedal->setEndTextAlign(Aling::TOP | Align::HCENTER);
             pedal->setLineVisible(false);
             sp->append(pedal, QT_TRANSLATE_NOOP("Palette", "Pedal"));
             }

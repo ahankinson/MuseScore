@@ -585,6 +585,8 @@ Note::Note(const Note& n, bool link)
       _fixed             = n._fixed;
       _fixedLine         = n._fixedLine;
       _accidental        = 0;
+      _cachedNoteheadSym = n._cachedNoteheadSym;
+      _cachedSymNull     = n._cachedSymNull;
 
       if (n._accidental)
             add(new Accidental(*(n._accidental)));
@@ -970,20 +972,13 @@ void Note::add(Element* e)
             case ElementType::BEND:
                   _el.push_back(e);
                   break;
-            case ElementType::TIE:
-                  {
+            case ElementType::TIE: {
                   Tie* tie = toTie(e);
                   tie->setStartNote(this);
                   tie->setTrack(track());
                   setTieFor(tie);
                   if (tie->endNote())
                         tie->endNote()->setTieBack(tie);
-                  int n = tie->spannerSegments().size();
-                  for (int i = 0; i < n; ++i) {
-                        SpannerSegment* ss = tie->spannerSegments().at(i);
-                        if (ss->system())
-                              ss->system()->add(ss);
-                        }
                   }
                   break;
             case ElementType::ACCIDENTAL:
@@ -1019,17 +1014,11 @@ void Note::remove(Element* e)
                   if (!_el.remove(e))
                         qDebug("Note::remove(): cannot find %s", e->name());
                   break;
-            case ElementType::TIE:
-                  {
+            case ElementType::TIE: {
                   Tie* tie = toTie(e);
                   setTieFor(0);
                   if (tie->endNote())
                         tie->endNote()->setTieBack(0);
-                  for (SpannerSegment* ss : tie->spannerSegments()) {
-                        Q_ASSERT(ss->spanner() == tie);
-                        if (ss->system())
-                              ss->system()->remove(ss);
-                        }
                   }
                   break;
 
@@ -1522,6 +1511,7 @@ void Note::endDrag(EditData& ed)
       Staff* staff = score()->staff(chord()->vStaffIdx());
       int tick     = chord()->tick();
 
+      NoteEditData* ned = static_cast<NoteEditData*>(ed.getData(this));
       if (staff->isTabStaff(tick)) {
 #if 0 // TODO
             // on TABLATURE staves, dragging a note keeps same pitch on a different string (if possible)
@@ -1549,7 +1539,6 @@ void Note::endDrag(EditData& ed)
 #endif
             }
       else {
-            NoteEditData* ned = static_cast<NoteEditData*>(ed.getData(this));
             for (Note* nn : tiedNotes()) {
                   for (PropertyData pd : ned->propertyData) {
                         score()->undoPropertyChanged(nn, pd.id, pd.data);
@@ -1660,7 +1649,7 @@ Element* Note::drop(EditData& data)
 
             case ElementType::SLUR:
                   delete e;
-                  data.view->cmdAddSlur(this, 0);
+                  data.view->cmdAddSlur(chord(), nullptr);
                   return 0;
 
             case ElementType::HAIRPIN:
@@ -2188,6 +2177,10 @@ void Note::scanElements(void* data, void (*func)(void*, Element*), bool all)
             func(data, _accidental);
       for (NoteDot* dot : _dots)
             func(data, dot);
+      if (_tieFor && !_tieFor->spannerSegments().empty())
+            _tieFor->spannerSegments().front()->scanElements(data, func, all);
+      if (_tieBack && _tieBack->spannerSegments().size() > 1)
+            _tieBack->spannerSegments().back()->scanElements(data, func, all);
       }
 
 //---------------------------------------------------------
@@ -2226,7 +2219,7 @@ void Note::reset()
       {
       undoChangeProperty(P_ID::USER_OFF, QPointF());
       chord()->undoChangeProperty(P_ID::USER_OFF, QPointF());
-      chord()->undoChangeProperty(P_ID::STEM_DIRECTION, Direction(Direction::AUTO));
+      chord()->undoChangeProperty(P_ID::STEM_DIRECTION, QVariant::fromValue<Direction>(Direction::AUTO));
       }
 
 //---------------------------------------------------------
@@ -2341,20 +2334,20 @@ void Note::updateRelLine(int relLine, bool undoable)
       {
       if (!staff())
             return;
-      int idx       = staffIdx() + chord()->staffMove();
-      Staff* stf    = score()->staff(idx);
-      StaffType* st = stf->staffType(tick());
+      int idx      = staffIdx() + chord()->staffMove();
+      Staff* staff = score()->staff(idx);
+      StaffType* st = staff->staffType(tick());
 
       if (chord()->staffMove()) {
             // check that destination staff makes sense (might have been deleted)
             idx          += chord()->staffMove();
             int minStaff = part()->startTrack() / VOICES;
             int maxStaff = part()->endTrack() / VOICES;
-            if (idx < minStaff || idx >= maxStaff || st->group() != staff()->staffType(tick())->group())
+            if (idx < minStaff || idx >= maxStaff || st->group() != this->staff()->staffType(tick())->group())
                   chord()->undoChangeProperty(P_ID::STAFF_MOVE, 0);
             }
 
-      ClefType clef = stf->clef(chord()->tick());
+      ClefType clef = staff->clef(chord()->tick());
       int line      = relStep(relLine, clef);
 
       if (undoable && _line != INVALID_LINE)
@@ -2430,7 +2423,7 @@ QVariant Note::getProperty(P_ID propertyId) const
             case P_ID::MIRROR_HEAD:
                   return int(userMirror());
             case P_ID::DOT_POSITION:
-                  return userDotPosition();
+                  return QVariant::fromValue<Direction>(userDotPosition());
             case P_ID::HEAD_GROUP:
                   return int(headGroup());
             case P_ID::VELO_OFFSET:
@@ -2636,7 +2629,7 @@ void Note::undoSetUserMirror(MScore::DirectionH val)
 
 void Note::undoSetUserDotPosition(Direction val)
       {
-      undoChangeProperty(P_ID::DOT_POSITION, val);
+      undoChangeProperty(P_ID::DOT_POSITION, QVariant::fromValue<Direction>(val));
       }
 
 //---------------------------------------------------------
@@ -2679,7 +2672,7 @@ QVariant Note::propertyDefault(P_ID propertyId) const
             case P_ID::MIRROR_HEAD:
                   return int(MScore::DirectionH::AUTO);
             case P_ID::DOT_POSITION:
-                  return Direction(Direction::AUTO);
+                  return QVariant::fromValue<Direction>(Direction::AUTO);
             case P_ID::HEAD_GROUP:
                   return int(NoteHead::Group::HEAD_NORMAL);
             case P_ID::VELO_OFFSET:
@@ -2857,19 +2850,114 @@ QString Note::subtypeName() const
       }
 
 //---------------------------------------------------------
+//   nextInEl
+//   returns next element in _el
+//---------------------------------------------------------
+
+Element* Note::nextInEl(Element* e)
+      {
+      if (e == _el.back())
+            return nullptr;
+      auto i = std::find(_el.begin(), _el.end(), e);
+      return *(i+1);
+      }
+
+//---------------------------------------------------------
+//   prevInEl
+//   returns prev element in _el
+//---------------------------------------------------------
+
+Element* Note::prevInEl(Element* e)
+      {
+      if (e == _el.front())
+            return nullptr;
+      auto i = std::find(_el.begin(), _el.end(), e);
+      return *(i-1);
+      }
+
+//---------------------------------------------------------
 //   nextElement
 //---------------------------------------------------------
 
 Element* Note::nextElement()
       {
-      if (chord()->isGrace())
-            return Element::nextElement();
-
-      const std::vector<Note*>& notes = chord()->notes();
-      if (this == notes.front())
-            return chord()->nextElement();
-      auto i = std::find(notes.begin(), notes.end(), this);
-      return *(i-1);
+      Element* e = score()->selection().element();
+      if (!e && !score()->selection().elements().isEmpty() )
+            e = score()->selection().elements().first();
+      switch (e->type()) {
+            case ElementType::SYMBOL:
+            case ElementType::IMAGE:
+            case ElementType::FINGERING:
+            case ElementType::TEXT:
+            case ElementType::BEND: {
+                  Element* next = nextInEl(e); // return next element in _el
+                  if (next)
+                        return next;
+                  else if (_tieFor)
+                        return _tieFor->frontSegment();
+                  else if (!_spannerFor.empty()) {
+                        for (auto i : _spannerFor) {
+                              if (i->type() == ElementType::GLISSANDO)
+                                    return i->spannerSegments().front();
+                              }
+                        }
+                  else
+                        return nullptr;
+                  }
+            case ElementType::TIE_SEGMENT: {
+                  if (!_spannerFor.empty()) {
+                      for (auto i : _spannerFor) {
+                            if (i->type() == ElementType::GLISSANDO)
+                                  return i->spannerSegments().front();
+                                  }
+                            }
+                  Chord* c = chord();
+                  return c->nextElement();
+                  }
+            case ElementType::GLISSANDO_SEGMENT: {
+                  Chord* c = chord();
+                  return c->nextElement();
+                  }
+            case ElementType::ACCIDENTAL: {
+                  if (!_el.empty()) {
+                        return _el[0];
+                        }
+                  else if (_tieFor) {
+                        return _tieFor->frontSegment();
+                        }
+                  else if (!_spannerFor.empty()) {
+                        for (auto i : _spannerFor) {
+                              if (i->type() == ElementType::GLISSANDO)
+                                    return i->spannerSegments().front();
+                              }
+                        }
+                  else {
+                        return nullptr;
+                        }
+                  }
+            case ElementType::NOTE: {
+                  /*if (_accidental) {
+                        return _accidental;
+                        }*/
+                  if (!_el.empty()) {
+                        return _el[0];
+                        }
+                  else if (_tieFor) {
+                        return _tieFor->frontSegment();
+                        }
+                  else if (!_spannerFor.empty()) {
+                        for (auto i : _spannerFor) {
+                              if (i->type() == ElementType::GLISSANDO)
+                                    return i->spannerSegments().front();
+                              }
+                        }
+                  else {
+                        return nullptr;
+                        }
+                  }
+            default:
+                  return nullptr;
+            }
       }
 
 //---------------------------------------------------------
@@ -2878,12 +2966,102 @@ Element* Note::nextElement()
 
 Element* Note::prevElement()
       {
+      Element* e = score()->selection().element();
+      if (!e && !score()->selection().elements().isEmpty() )
+            e = score()->selection().elements().last();
+      switch (e->type()) {
+            case ElementType::SYMBOL:
+            case ElementType::IMAGE:
+            case ElementType::FINGERING:
+            case ElementType::TEXT:
+            case ElementType::BEND: {
+                  Element* prev = prevInEl(e); // return prev element in _el
+                  if (prev)
+                        return prev;
+                  /*else if (_accidental)
+                        return _accidental;*/
+                  else
+                        return this;
+                  }
+            case ElementType::TIE_SEGMENT: {
+                  if (!_el.empty())
+                        return _el.back();
+                  /*else if (_accidental)
+                        return _accidental;*/
+                  else
+                        return this;
+                  }
+            case ElementType::GLISSANDO_SEGMENT: {
+                  if (_tieFor)
+                        return _tieFor->frontSegment();
+                  else if (!_el.empty())
+                        return _el.back();
+                  /*else if (_accidental)
+                        return _accidental;*/
+                  else
+                        return this;
+                  }
+            case ElementType::ACCIDENTAL:
+                  return this;
+            default:
+                  return nullptr;
+            }
+      }
+
+//---------------------------------------------------------
+//   lastElementBeforeSegment
+//---------------------------------------------------------
+
+Element* Note::lastElementBeforeSegment()
+      {
+      if (!_spannerFor.empty()) {
+            for (auto i : _spannerFor) {
+                  if (i->type() == ElementType::GLISSANDO)
+                        return i->spannerSegments().front();
+                  }
+            }
+      if (_tieFor) {
+            return _tieFor->frontSegment();
+            }
+      else if (!_el.empty()) {
+              return _el.back();
+            }
+      /*else if (_accidental) {
+            return _accidental;
+            }*/
+      else {
+            return this;
+            }
+      }
+
+//---------------------------------------------------------
+//   nextSegmentElement
+//---------------------------------------------------------
+
+Element* Note::nextSegmentElement()
+      {
       if (chord()->isGrace())
-            return Element::prevElement();
+            return Element::nextSegmentElement();
+
+      const std::vector<Note*>& notes = chord()->notes();
+      if (this == notes.front())
+            return chord()->nextSegmentElement();
+      auto i = std::find(notes.begin(), notes.end(), this);
+      return *(i-1);
+      }
+
+//---------------------------------------------------------
+//   prevSegmentElement
+//---------------------------------------------------------
+
+Element* Note::prevSegmentElement()
+      {
+      if (chord()->isGrace())
+            return Element::prevSegmentElement();
 
       const std::vector<Note*>& notes = chord()->notes();
       if (this == notes.back())
-            return chord()->prevElement();
+            return chord()->prevSegmentElement();
       auto i = std::find(notes.begin(), notes.end(), this);
       return *++i;
       }
@@ -2972,8 +3150,7 @@ void Note::setAccidentalType(AccidentalType type)
 
 Shape Note::shape() const
       {
-      Shape shape;
-      shape.add(symBbox(noteHead()));
+      Shape shape(bbox());
       for (NoteDot* dot : _dots)
             shape.add(symBbox(SymId::augmentationDot).translated(dot->pos()));
       if (_accidental)

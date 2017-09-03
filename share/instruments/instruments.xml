@@ -48,7 +48,7 @@
             <Instrument id="piccolo">
                   <longName>Piccolo</longName>
                   <shortName>Picc.</shortName>
-                  <description>Piccolo</description>
+                  <description>Piccolo Flute</description>
                   <musicXMLid>wind.flutes.flute.piccolo</musicXMLid>
                   <transposingClef>G</transposingClef>
                   <concertClef>G8va</concertClef>
@@ -64,6 +64,22 @@
                   <genre>jazz</genre>
                   <genre>orchestra</genre>
             </Instrument>
+                  <Instrument id="db-piccolo">
+                        <longName>D♭ Piccolo</longName>
+                        <shortName>D♭ Picc.</shortName>
+                        <description>Piccolo Flute in Db</description>
+                        <musicXMLid>wind.flutes.flute.piccolo</musicXMLid>
+                        <transposingClef>G</transposingClef>
+                        <concertClef>G8va</concertClef>
+                        <barlineSpan>1</barlineSpan>
+                        <aPitchRange>75-106</aPitchRange>
+                        <pPitchRange>75-109</pPitchRange>
+                        <transposeDiatonic>8</transposeDiatonic>
+                        <transposeChromatic>13</transposeChromatic>
+                        <Channel>
+                              <program value="72"/>
+                        </Channel>
+                  </Instrument>
             <Instrument id="flute">
                   <longName>Flute</longName>
                   <shortName>Fl.</shortName>
@@ -390,7 +406,7 @@
                   <longName>Irish Flute</longName>
                   <shortName>Ir. Fl.</shortName>
                   <description>6 hole tranverse flute</description>
-                  <musicXMLid>wind.flutes.flute</musicXMLid>
+                  <musicXMLid>wind.flutes.flute.irish</musicXMLid>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>62-86</aPitchRange>
@@ -726,7 +742,7 @@
                   <longName>Sopranino Recorder</longName>
                   <shortName>Si. Rec.</shortName>
                   <description>Sopranino Recorder</description>
-                  <musicXMLid>wind.flutes.recorder</musicXMLid>
+                  <musicXMLid>wind.flutes.recorder.sopranino</musicXMLid>
                   <clef>G8va</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>77-100</aPitchRange>
@@ -740,7 +756,7 @@
                   <longName>Soprano Recorder</longName>
                   <shortName>S. Rec.</shortName>
                   <description>Soprano Recorder</description>
-                  <musicXMLid>wind.flutes.recorder</musicXMLid>
+                  <musicXMLid>wind.flutes.recorder.soprano</musicXMLid>
                   <clef>G8va</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>72-93</aPitchRange>
@@ -754,7 +770,7 @@
                   <longName>Alto Recorder</longName>
                   <shortName>A. Rec.</shortName>
                   <description>Alto Recorder</description>
-                  <musicXMLid>wind.flutes.recorder</musicXMLid>
+                  <musicXMLid>wind.flutes.recorder.alto</musicXMLid>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>65-88</aPitchRange>
@@ -768,7 +784,7 @@
                   <longName>Tenor Recorder</longName>
                   <shortName>T. Rec.</shortName>
                   <description>Tenor Recorder</description>
-                  <musicXMLid>wind.flutes.recorder</musicXMLid>
+                  <musicXMLid>wind.flutes.recorder.tenor</musicXMLid>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>60-81</aPitchRange>
@@ -782,7 +798,7 @@
                   <longName>Bass Recorder</longName>
                   <shortName>B. Rec.</shortName>
                   <description>Bass Recorder</description>
-                  <musicXMLid>wind.flutes.recorder</musicXMLid>
+                  <musicXMLid>wind.flutes.recorder.bass</musicXMLid>
                   <clef>F8va</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>53-74</aPitchRange>
@@ -796,7 +812,7 @@
                   <longName>Greatbass Recorder</longName>
                   <shortName>Gb. Rec.</shortName>
                   <description>Greatbass Recorder</description>
-                  <musicXMLid>wind.flutes.recorder</musicXMLid>
+                  <musicXMLid>wind.flutes.recorder.great-bass</musicXMLid>
                   <clef>F8va</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>48-69</aPitchRange>
@@ -810,7 +826,7 @@
                   <longName>Contrabass Recorder</longName>
                   <shortName>Cb. Rec.</shortName>
                   <description>Contrabass Recorder</description>
-                  <musicXMLid>wind.flutes.recorder</musicXMLid>
+                  <musicXMLid>wind.flutes.recorder.contrabass</musicXMLid>
                   <clef>F</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>41-62</aPitchRange>
@@ -840,8 +856,8 @@
                   <musicXMLid>wind.flutes.whistle.tin</musicXMLid>
                   <clef>G8va</clef>
                   <barlineSpan>1</barlineSpan>
-                  <aPitchRange>74-98</aPitchRange>
-                  <pPitchRange>74-98</pPitchRange>
+                  <aPitchRange>72-96</aPitchRange>
+                  <pPitchRange>72-102</pPitchRange>
                   <Channel>
                         <program value="78"/>
                   </Channel>
@@ -853,21 +869,21 @@
                   <musicXMLid>wind.flutes.whistle.tin.bflat</musicXMLid>
                   <clef>G8va</clef>
                   <barlineSpan>1</barlineSpan>
-                  <aPitchRange>74-98</aPitchRange>
-                  <pPitchRange>74-98</pPitchRange>
+                  <aPitchRange>70-94</aPitchRange>
+                  <pPitchRange>70-100</pPitchRange>
                   <Channel>
                         <program value="78"/>
                   </Channel>
             </Instrument>
             <Instrument id="d-tin-whistle">
-                  <longName>Tin Whistle</longName>
-                  <shortName>Tin Wh.</shortName>
+                  <longName>D Tin Whistle</longName>
+                  <shortName>D Tin Wh.</shortName>
                   <description>same as 6 hole Flageolet but metal construction</description>
                   <musicXMLid>wind.flutes.whistle.tin.d</musicXMLid>
                   <clef>G8va</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>74-98</aPitchRange>
-                  <pPitchRange>74-98</pPitchRange>
+                  <pPitchRange>74-104</pPitchRange>
                   <Channel>
                         <program value="78"/>
                   </Channel>
@@ -920,7 +936,7 @@
                   <longName>Oboe d'amore</longName>
                   <shortName>Ob. d'a.</shortName>
                   <description>Oboe d'amore</description>
-                  <musicXMLid>wind.reed.oboe=damore</musicXMLid>
+                  <musicXMLid>wind.reed.oboe-damore</musicXMLid>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>56-84</aPitchRange>
@@ -1913,7 +1929,7 @@
                   <longName>Dulcian</longName>
                   <shortName>Du.</shortName>
                   <description>Dulcian</description>
-                  <musicXMLid>wind.reed.dilcian</musicXMLid>
+                  <musicXMLid>wind.reed.dulcian</musicXMLid>
                   <clef>F</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>40-62</aPitchRange>
@@ -3131,7 +3147,7 @@
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>58-85</aPitchRange>
                   <pPitchRange>58-88</pPitchRange>
-                  <transposeDiatonic>3</transposeDiatonic>
+                  <transposeDiatonic>2</transposeDiatonic>
                   <transposeChromatic>4</transposeChromatic>
                   <Channel>
                         <program value="56"/>
@@ -3846,8 +3862,8 @@
                   <musicXMLid>brass.trombone</musicXMLid>
                   <clef>F</clef>
                   <barlineSpan>1</barlineSpan>
-                  <aPitchRange>35-70</aPitchRange>
-                  <pPitchRange>35-74</pPitchRange>
+                  <aPitchRange>40-71</aPitchRange>
+                  <pPitchRange>36-74</pPitchRange>
                   <Channel>
                         <program value="57"/>
                   </Channel>
@@ -3864,8 +3880,8 @@
                   <transposingClef>G</transposingClef>
                   <concertClef>F</concertClef>
                   <barlineSpan>1</barlineSpan>
-                  <aPitchRange>35-70</aPitchRange>
-                  <pPitchRange>35-74</pPitchRange>
+                  <aPitchRange>40-71</aPitchRange>
+                  <pPitchRange>36-74</pPitchRange>
                   <transposeDiatonic>-8</transposeDiatonic>
                   <transposeChromatic>-14</transposeChromatic>
                   <Channel>
@@ -3921,8 +3937,8 @@
                   <musicXMLid>brass.trombone.bass</musicXMLid>
                   <clef>F</clef>
                   <barlineSpan>1</barlineSpan>
-                  <aPitchRange>36-70</aPitchRange>
-                  <pPitchRange>36-74</pPitchRange>
+                  <aPitchRange>32-68</aPitchRange>
+                  <pPitchRange>27-72</pPitchRange>
                   <Channel>
                         <program value="57"/>
                   </Channel>
@@ -5609,7 +5625,7 @@
                   <longName>Wood Blocks</longName>
                   <shortName>Wd. Bl.</shortName>
                   <description>Wood Blocks</description>
-                  <musicXMLid>wood.wood.block</musicXMLid>
+                  <musicXMLid>wood.wood-block</musicXMLid>
                   <clef>PERC</clef>
                   <stafftype staffTypePreset="perc1Line">percussion</stafftype>
                   <barlineSpan>1</barlineSpan>
@@ -6282,7 +6298,7 @@
                         <head>normal</head>
                         <line>0</line>
                         <voice>0</voice>
-                        <name>HanClap</name>
+                        <name>Hand Clap</name>
                         <stem>1</stem>
                         <shortcut>A</shortcut>
                   </Drum>
@@ -6635,145 +6651,188 @@
                   <stafftype staffTypePreset="perc5Line">percussion</stafftype>
                   <clef>PERC</clef>
                   <drumset>1</drumset>
-                  <Drum pitch="24">
-                        <head>normal</head>
-                        <line>7</line>
-                        <voice>0</voice>
-                        <name>Drum 4</name>
-                        <shortcut>A</shortcut>
-                  </Drum>
-                  <Drum pitch="25">
-                        <head>cross</head>
-                        <line>7</line>
-                        <voice>0</voice>
-                        <name>Drum 4 Rim</name>
-                        <shortcut>B</shortcut>
-                  </Drum>
-                  <Drum pitch="26">
-                        <head>diamond</head>
-                        <line>7</line>
-                        <voice>0</voice>
-                        <name>Drum 4 Buzz</name>
-                  </Drum>
-                  <Drum pitch="27">
-                        <head>xcircle</head>
-                        <line>7</line>
-                        <voice>0</voice>
-                        <name>Drum 4 Muted</name>
-                  </Drum>
-                  <Drum pitch="28">
-                        <head>slash</head>
-                        <line>7</line>
-                        <voice>0</voice>
-                        <name>Drum 4 Shell</name>
-                  </Drum>
-                  <Drum pitch="48">
-                        <head>normal</head>
-                        <line>5</line>
-                        <voice>0</voice>
-                        <name>Drum 3</name>
-                        <shortcut>C</shortcut>
-                  </Drum>
-                  <Drum pitch="49">
-                        <head>cross</head>
-                        <line>5</line>
-                        <voice>0</voice>
-                        <name>Drum 3 Rim</name>
-                        <shortcut>D</shortcut>
-                  </Drum>
-                  <Drum pitch="50">
-                        <head>diamond</head>
-                        <line>5</line>
-                        <voice>0</voice>
-                        <name>Drum 3 Buzz</name>
-                  </Drum>
-                  <Drum pitch="51">
-                        <head>xcircle</head>
-                        <line>5</line>
-                        <voice>0</voice>
-                        <name>Drum 3 Muted</name>
-                  </Drum>
-                  <Drum pitch="52">
-                        <head>slash</head>
-                        <line>5</line>
-                        <voice>0</voice>
-                        <name>Drum 3 Shell</name>
-                  </Drum>
-                  <Drum pitch="72">
-                        <head>normal</head>
-                        <line>3</line>
-                        <voice>0</voice>
-                        <name>Drum 2</name>
-                        <shortcut>E</shortcut>
-                  </Drum>
-                  <Drum pitch="73">
-                        <head>cross</head>
-                        <line>3</line>
-                        <voice>0</voice>
-                        <name>Drum 2 Rim</name>
-                        <shortcut>F</shortcut>
-                  </Drum>
-                  <Drum pitch="75">
-                        <head>xcircle</head>
-                        <line>3</line>
-                        <voice>0</voice>
-                        <name>Drum 2 Muted</name>
-                  </Drum>
-                  <Drum pitch="96">
-                        <head>normal</head>
-                        <line>1</line>
-                        <voice>0</voice>
-                        <name>Drum 1</name>
-                        <shortcut>G</shortcut>
-                  </Drum>
-                  <Drum pitch="97">
-                        <head>cross</head>
-                        <line>1</line>
-                        <voice>0</voice>
-                        <name>Drum 1 Rim</name>
-                  </Drum>
-                  <Drum pitch="99">
-                        <head>xcircle</head>
-                        <line>1</line>
-                        <voice>0</voice>
-                        <name>Drum 1 Muted</name>
-                  </Drum>
-                  <Drum pitch="120">
-                        <head>normal</head>
-                        <line>-1</line>
-                        <voice>0</voice>
-                        <name>Spock</name>
-                  </Drum>
-                  <Drum pitch="121">
-                        <head>cross</head>
-                        <line>-1</line>
-                        <voice>0</voice>
-                        <name>Spock Rim</name>
-                  </Drum>
-                  <Drum pitch="122">
-                        <head>diamond</head>
-                        <line>-1</line>
-                        <voice>0</voice>
-                        <name>Spock Buzz</name>
-                  </Drum>
-                  <Drum pitch="123">
-                        <head>cross</head>
-                        <line>-1</line>
-                        <voice>0</voice>
-                        <name>Stick Click</name>
-                  </Drum>
-                  <Drum pitch="98">
-                        <head>diamond</head>
-                        <line>1</line>
-                        <voice>0</voice>
-                        <name>Drum 1 Buzz</name>
-                  </Drum>
-                  <Drum pitch="74">
-                        <head>diamond</head>
-                        <line>3</line>
-                        <voice>0</voice>
-                        <name>Drum 2 Buzz</name>
-                  </Drum>
+                    <Drum pitch="36">
+                      <head>0</head>
+                      <line>7</line>
+                      <voice>0</voice>
+                      <name>Drum4</name>
+                      <shortcut>A</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="37">
+                      <head>1</head>
+                      <line>7</line>
+                      <voice>0</voice>
+                      <name>Drum4 Rim</name>
+                      <shortcut>B</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="38">
+                      <head>2</head>
+                      <line>7</line>
+                      <voice>0</voice>
+                      <name>Drum4 Buzz</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="39">
+                      <head>6</head>
+                      <line>7</line>
+                      <voice>0</voice>
+                      <name>Drum4 Muted</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="40">
+                      <head>5</head>
+                      <line>7</line>
+                      <voice>0</voice>
+                      <name>Drum4 Shell</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="43">
+                      <head>3</head>
+                      <line>-1</line>
+                      <voice>0</voice>
+                      <name>sticks</name>
+                      <stem>2</stem>
+                      </Drum>
+                    <Drum pitch="48">
+                      <head>0</head>
+                      <line>5</line>
+                      <voice>0</voice>
+                      <name>Drum3</name>
+                      <shortcut>C</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="49">
+                      <head>1</head>
+                      <line>5</line>
+                      <voice>0</voice>
+                      <name>Drum3 Rim</name>
+                      <shortcut>D</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="50">
+                      <head>2</head>
+                      <line>5</line>
+                      <voice>0</voice>
+                      <name>Drum3 Buzz</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="51">
+                      <head>6</head>
+                      <line>5</line>
+                      <voice>0</voice>
+                      <name>Drum3 Muted</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="52">
+                      <head>5</head>
+                      <line>5</line>
+                      <voice>0</voice>
+                      <name>Drum3 Shell</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="60">
+                      <head>0</head>
+                      <line>3</line>
+                      <voice>0</voice>
+                      <name>Drum2</name>
+                      <shortcut>E</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="61">
+                      <head>1</head>
+                      <line>3</line>
+                      <voice>0</voice>
+                      <name>Drum2 Rim</name>
+                      <shortcut>F</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="62">
+                      <head>2</head>
+                      <line>3</line>
+                      <voice>0</voice>
+                      <name>Drum2 Buzz</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="63">
+                      <head>6</head>
+                      <line>3</line>
+                      <voice>0</voice>
+                      <name>Drum2 Muted</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="72">
+                      <head>0</head>
+                      <line>1</line>
+                      <voice>0</voice>
+                      <name>Drum1</name>
+                      <shortcut>G</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="73">
+                      <head>1</head>
+                      <line>1</line>
+                      <voice>0</voice>
+                      <name>Drum1 Rim</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="74">
+                      <head>2</head>
+                      <line>1</line>
+                      <voice>0</voice>
+                      <name>Drum1 Buzz</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="75">
+                      <head>6</head>
+                      <line>1</line>
+                      <voice>0</voice>
+                      <name>Drum1 Muted</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="84">
+                      <head>0</head>
+                      <line>-1</line>
+                      <voice>0</voice>
+                      <name>Spock 1</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="85">
+                      <head>1</head>
+                      <line>-1</line>
+                      <voice>0</voice>
+                      <name>Spock 1 Rim</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="86">
+                      <head>2</head>
+                      <line>-1</line>
+                      <voice>0</voice>
+                      <name>Spock 1 Buzz</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="96">
+                      <head>0</head>
+                      <line>-2</line>
+                      <voice>0</voice>
+                      <name>Spock 2</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="97">
+                      <head>1</head>
+                      <line>-2</line>
+                      <voice>0</voice>
+                      <name>Spock 2 Rim</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="98">
+                      <head>2</head>
+                      <line>-2</line>
+                      <voice>0</voice>
+                      <name>Spock 2 Buzz</name>
+                      <stem>1</stem>
+                      </Drum>
                   <Articulation>
                         <gateTime>100%</gateTime>
                         <velocity>100%</velocity>
@@ -6785,7 +6844,7 @@
                         <velocity>500%</velocity>
                   </Articulation>
                   <channel>
-                        <program>95</program>
+                        <program>96</program>
                   </channel>
                   <genre>common</genre>
             </Instrument>
@@ -6797,73 +6856,90 @@
                   <stafftype staffTypePreset="perc5Line">percussion</stafftype>
                   <clef>PERC</clef>
                   <drumset>1</drumset>
-                  <Drum pitch="1">
-                        <head>normal</head>
-                        <line>7</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 1</name>
-                        <shortcut>A</shortcut>
-                  </Drum>
-                  <Drum pitch="2">
-                        <head>cross</head>
-                        <line>7</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 1 Rim Knock</name>
-                        <shortcut>B</shortcut>
-                  </Drum>
-                  <Drum pitch="24">
-                        <head>normal</head>
-                        <line>5</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 2</name>
-                        <shortcut>C</shortcut>
-                  </Drum>
-                  <Drum pitch="26">
-                        <head>cross</head>
-                        <line>5</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 2 Rim Knock</name>
-                        <shortcut>D</shortcut>
-                  </Drum>
-                  <Drum pitch="48">
-                        <head>normal</head>
-                        <line>3</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 3</name>
-                        <shortcut>E</shortcut>
-                  </Drum>
-                  <Drum pitch="50">
-                        <head>cross</head>
-                        <line>3</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 3 Rim Knock</name>
-                        <shortcut>F</shortcut>
-                  </Drum>
-                  <Drum pitch="69">
-                        <head>normal</head>
-                        <line>1</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 4</name>
-                        <shortcut>G</shortcut>
-                  </Drum>
-                  <Drum pitch="71">
-                        <head>cross</head>
-                        <line>1</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 4 Rim Knock</name>
-                  </Drum>
-                  <Drum pitch="96">
-                        <head>normal</head>
-                        <line>-1</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 5</name>
-                  </Drum>
-                  <Drum pitch="98">
-                        <head>cross</head>
-                        <line>-1</line>
-                        <voice>0</voice>
-                        <name>Bass Drum 5 Rim Knock</name>
-                  </Drum>
+                    <Drum pitch="37">
+                      <head>0</head>
+                      <line>7</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 1</name>
+                      <shortcut>A</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="39">
+                      <head>1</head>
+                      <line>7</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 1 Rim Knock</name>
+                      <shortcut>B</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="49">
+                      <head>0</head>
+                      <line>5</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 2</name>
+                      <shortcut>C</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="51">
+                      <head>1</head>
+                      <line>5</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 2 Rim Knock</name>
+                      <shortcut>D</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="61">
+                      <head>0</head>
+                      <line>3</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 3</name>
+                      <shortcut>E</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="63">
+                      <head>1</head>
+                      <line>3</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 3 Rim Knock</name>
+                      <shortcut>F</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="73">
+                      <head>0</head>
+                      <line>1</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 4</name>
+                      <shortcut>G</shortcut>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="75">
+                      <head>1</head>
+                      <line>1</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 4 Rim Knock</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="85">
+                      <head>0</head>
+                      <line>-1</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 5</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="87">
+                      <head>1</head>
+                      <line>-1</line>
+                      <voice>0</voice>
+                      <name>Bass Drum 5 Rim Knock</name>
+                      <stem>1</stem>
+                      </Drum>
+                    <Drum pitch="90">
+                      <head>5</head>
+                      <line>4</line>
+                      <voice>0</voice>
+                      <name>Simultaneous Hit</name>
+                      <stem>1</stem>
+                      </Drum>
                   <Articulation>
                         <gateTime>100%</gateTime>
                         <velocity>100%</velocity>
@@ -6875,7 +6951,7 @@
                         <velocity>500%</velocity>
                   </Articulation>
                   <channel>
-                        <program>57</program>
+                        <program>59</program>
                   </channel>
                   <genre>common</genre>
             </Instrument>
@@ -8812,6 +8888,32 @@
                   <genre>common</genre>
                   <genre>jazz</genre>
             </Instrument>
+            <Instrument id="guitar-steel-treble-clef">
+                  <trackName>Acoustic Guitar (Treble Clef)</trackName>
+                  <longName>Guitar</longName>
+                  <shortName>Guit.</shortName>
+                  <description>Acoustic Steel-strung Guitar (Treble Clef)</description>
+                  <musicXMLid>pluck.guitar.acoustic</musicXMLid>
+                  <StringData>
+                        <frets>19</frets>
+                        <string>52</string>
+                        <string>57</string>
+                        <string>62</string>
+                        <string>67</string>
+                        <string>71</string>
+                        <string>76</string>
+                  </StringData>
+                  <transposingClef>G</transposingClef>
+                  <concertClef>G8vb</concertClef>
+                  <barlineSpan>1</barlineSpan>
+                  <aPitchRange>40-83</aPitchRange>
+                  <pPitchRange>40-83</pPitchRange>
+                  <transposeDiatonic>-7</transposeDiatonic>
+                  <transposeChromatic>-12</transposeChromatic>
+                  <Channel>
+                        <program value="25"/>
+                  </Channel>
+            </Instrument>
             <Instrument id="guitar-steel-tablature">
                   <trackName>Acoustic Guitar [Tablature]</trackName>
                   <init>guitar-steel</init>
@@ -8913,6 +9015,31 @@
                   <genre>common</genre>
                   <genre>jazz</genre>
             </Instrument>
+            <Instrument id="electric-guitar-treble-clef">
+                  <trackName>Electric Guitar (Treble Clef)</trackName>
+                  <longName>Electric Guitar</longName>
+                  <shortName>El. Guit.</shortName>
+                  <description>Electric Guitar</description>
+                  <musicXMLid>pluck.guitar.electric</musicXMLid>
+                  <StringData>
+                        <frets>24</frets>
+                        <string>40</string>
+                        <string>45</string>
+                        <string>50</string>
+                        <string>55</string>
+                        <string>59</string>
+                        <string>64</string>
+                  </StringData>
+                  <clef>G8vb</clef>
+                  <barlineSpan>1</barlineSpan>
+                  <aPitchRange>40-86</aPitchRange>
+                  <pPitchRange>40-86</pPitchRange>
+                  <transposeDiatonic>-7</transposeDiatonic>
+                  <transposeChromatic>-12</transposeChromatic>
+                  <Channel>
+                        <program value="27"/>
+                  </Channel>
+            </Instrument>
             <Instrument id="electric-guitar-tablature">
                   <trackName>Electric Guitar [Tablature]</trackName>
                   <init>electric-guitar</init>
@@ -8958,6 +9085,33 @@
                   <Channel>
                         <program value="107"/>
                   </Channel>
+                  <genre>ethnic</genre>
+            </Instrument>
+            <Instrument id="oud">
+                  <longName>Oud</longName>
+                  <shortName>O.</shortName>
+                  <description>Oud</description>
+                  <musicXMLid>pluck.oud</musicXMLid>
+                  <StringData>
+                        <frets>15</frets>
+                        <string>48</string>
+                        <string>53</string>
+                        <string>57</string>
+                        <string>62</string>
+                        <string>67</string>
+                        <string>72</string>
+                  </StringData>
+                  <transposingClef>G</transposingClef>
+                  <concertClef>G8vb</concertClef>
+                  <barlineSpan>1</barlineSpan>
+                  <aPitchRange>36-75</aPitchRange>
+                  <pPitchRange>36-75</pPitchRange>
+                  <transposeDiatonic>-7</transposeDiatonic>
+                  <transposeChromatic>-12</transposeChromatic>
+                  <Channel>
+                        <program value="25"/>
+                  </Channel>
+                  <genre>earlymusic</genre>
                   <genre>ethnic</genre>
             </Instrument>
             <Instrument id="lute">
@@ -9669,7 +9823,7 @@
                   <longName>Prima</longName>
                   <shortName>Pr.</shortName>
                   <description>Prima</description>
-                  <musicXMLid>pluck.tambura.prima</musicXMLid>
+                  <musicXMLid>pluck.tambura</musicXMLid>
                   <StringData>
                         <frets>15</frets>
                         <string>52</string>
@@ -9692,7 +9846,7 @@
                   <longName>Brač</longName>
                   <shortName>Br.</shortName>
                   <description>Brač</description>
-                  <musicXMLid>pluck.tambura.brac</musicXMLid>
+                  <musicXMLid>pluck.tambura</musicXMLid>
                   <StringData>
                         <frets>15</frets>
                         <string>40</string>
@@ -9713,7 +9867,7 @@
                   <longName>Čelo</longName>
                   <shortName>Č.</shortName>
                   <description>Čelo</description>
-                  <musicXMLid>pluck.tambura.celo</musicXMLid>
+                  <musicXMLid>pluck.tambura</musicXMLid>
                   <StringData>
                         <frets>15</frets>
                         <string>40</string>
@@ -9736,7 +9890,7 @@
                   <longName>Bugarija</longName>
                   <shortName>Bu.</shortName>
                   <description>Bugarija</description>
-                  <musicXMLid>pluck.tambura.bugarija</musicXMLid>
+                  <musicXMLid>pluck.tambura</musicXMLid>
                   <StringData>
                         <frets>15</frets>
                         <string>38</string>
@@ -9759,7 +9913,7 @@
                   <longName>Berda</longName>
                   <shortName>Be.</shortName>
                   <description>Berda</description>
-                  <musicXMLid>pluck.tambura.berda</musicXMLid>
+                  <musicXMLid>pluck.tambura</musicXMLid>
                   <StringData>
                         <frets>15</frets>
                         <string>28</string>

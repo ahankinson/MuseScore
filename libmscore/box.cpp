@@ -96,13 +96,10 @@ void Box::draw(QPainter* painter) const
 
 void Box::startEdit(EditData& ed)
       {
+      Element::startEdit(ed);
       ed.grips   = 1;
       ed.curGrip = Grip::START;
       editMode   = true;
-      if (isHBox())
-            undoPushProperty(P_ID::BOX_WIDTH);
-      else
-            undoPushProperty(P_ID::BOX_HEIGHT);
       }
 
 //---------------------------------------------------------
@@ -112,6 +109,19 @@ void Box::startEdit(EditData& ed)
 bool Box::edit(EditData&)
       {
       return false;
+      }
+
+//---------------------------------------------------------
+//   startEditDrag
+//---------------------------------------------------------
+
+void Box::startEditDrag(EditData& ed)
+      {
+      ElementEditData* eed = ed.getData(this);
+      if (isHBox())
+            eed->pushProperty(P_ID::BOX_WIDTH);
+      else
+            eed->pushProperty(P_ID::BOX_HEIGHT);
       }
 
 //---------------------------------------------------------
@@ -796,25 +806,6 @@ void VBox::layout()
       else
             bbox().setRect(0.0, 0.0, 50, 50);
       Box::layout();
-      }
-
-//---------------------------------------------------------
-//   getGrip
-//---------------------------------------------------------
-
-QPointF VBox::getGrip(Grip) const
-      {
-      return QPointF(0.0, boxHeight().val());
-      }
-
-//---------------------------------------------------------
-//   setGrip
-//---------------------------------------------------------
-
-void VBox::setGrip(Grip, const QPointF& pt)
-      {
-      setBoxHeight(Spatium(pt.y()));
-      layout();
       }
 
 //---------------------------------------------------------

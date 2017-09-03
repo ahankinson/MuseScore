@@ -146,7 +146,7 @@ void ShortcutCaptureDialog::keyPress(QKeyEvent* e)
 
             for (const QKeySequence& ks : skeys) {
                   if (ks == key) {
-                        msgString = tr("Shortcut conflicts with ") + ss->descr();
+                        msgString = tr("Shortcut conflicts with %1").arg(ss->descr());
                         conflict = true;
                         break;
                         }
@@ -154,7 +154,7 @@ void ShortcutCaptureDialog::keyPress(QKeyEvent* e)
 
             for (const QKeySequence& ks : ss->keys()) {
                   if (ks == key) {
-                        msgString = tr("Shortcut conflicts with ") + ss->descr();
+                        msgString = tr("Shortcut conflicts with %1").arg(ss->descr());
                         conflict = true;
                         break;
                         }
@@ -202,6 +202,7 @@ void ShortcutCaptureDialog::clearClicked()
             nshrtLabel->setAccessibleName(tr("New shortcut"));
 
       nshrtLabel->setAccessibleName(tr("New shortcut"));
+      messageLabel->setText("");
       addButton->setEnabled(false);
       replaceButton->setEnabled(false);
       nshrtLabel->setText("");

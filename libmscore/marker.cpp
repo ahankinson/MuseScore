@@ -178,7 +178,7 @@ void Marker::layout()
       Text::layout1();
       // although normally laid out to parent (measure) width,
       // force to center over barline if left-aligned
-      if (layoutToParentWidth() && !(align() & (Align::RIGHT|Align::HCENTER)))
+      if (layoutToParentWidth() && !(align() & (Align::RIGHT | Align::HCENTER)))
             rxpos() -= width() * 0.5;
       adjustReadPos();
       }
@@ -294,10 +294,10 @@ QVariant Marker::propertyDefault(P_ID propertyId) const
 
 
 //---------------------------------------------------------
-//   nextElement
+//   nextSegmentElement
 //---------------------------------------------------------
 
-Element* Marker::nextElement()
+Element* Marker::nextSegmentElement()
       {
       Segment* seg;
       if (markerType() == Marker::Type::FINE) {
@@ -309,17 +309,17 @@ Element* Marker::nextElement()
             seg = prevMeasure->last();
             return seg->firstElement(staffIdx());
             }
-      return Element::nextElement();
+      return Element::nextSegmentElement();
       }
 
 //---------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //---------------------------------------------------------
 
-Element* Marker::prevElement()
+Element* Marker::prevSegmentElement()
       {
       //it's the same barline
-      return nextElement();
+      return nextSegmentElement();
       }
 
 //---------------------------------------------------------

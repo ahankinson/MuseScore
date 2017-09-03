@@ -1,41 +1,32 @@
 import QtQuick 2.0
-import MuseScore 1.0
+import MuseScore 3.0
 
 MuseScore {
       menuPath: "Plugins.p1"
       onRun: {
             openLog("p1.log");
-            logn("test script p1")
+            logn("test script p1: read score elements")
 
-            // check Direction enum
-            log2("     Direction.AUTO: ", Direction.AUTO);
-            log2("     Direction.UP:   ", Direction.UP);
-            log2("     Direction.DOWN: ", Direction.DOWN);
-
-            var cursor = curScore.newCursor();
-            cursor.voice = 0;
+            var cursor      = curScore.newCursor();
+            cursor.voice    = 0;
             cursor.staffIdx = 0;
-            log2("filter:", cursor.filter);
-            cursor.filter = -1;
-            log2("filter:", cursor.filter);
+            cursor.filter   = -1;
             cursor.rewind(0);
 
-            while (cursor.segment) {
-                  if (cursor.element) {
-                        var type = cursor.element.type;
-                        var e    = cursor.element;
-                        logn(e._name());
-                        log2("type is:", type);
-                        if (cursor.element.type == Element.CHORD) {
-                            log2("  durationType:", e.durationType);
-                            log2("  beamMode:", e.beamMode);
-                            log2("  small:",    e.small);
-                            log2("  stemDirection:", e.stemDirection);
+            while (cursor.segment()) {
+                  var e = cursor.element();
+                  if (e) {
+                        log2("found:", e.name + " (" + e.type + ") at " + e.tick);
+                        if (e.type == Ms.CHORD) {
+                            log2("  durationType:",  e.durationType);
+                            log2("  beamMode:",      e.get("beam_mode"));
+                            log2("  small:",         e.get("small"));
+                            log2("  stemDirection:", e.get("stem_direction"));
 
-                            logn("  duration:");
-                            log2("    numerator:",   e.duration.numerator);
-                            log2("    denominator:", e.duration.denominator);
-                            log2("    ticks:",       e.duration.ticks);
+                            log2("  duration:", e.duration);
+//                            log2("    numerator:",   e.duration.numerator);
+//                            log2("    denominator:", e.duration.denominator);
+//                            log2("    ticks:",       e.duration.ticks);
 //                            var notes = e.notes;
 //                            for (var i = 0; i < notes.length; i++) {
 //                                var note = notes[i];
@@ -73,13 +64,13 @@ MuseScore {
 //                                      }
 //                                }
                             }
-                        if (type == Element.REST) {
-                            logn("  duration:");
-                            log2("    numerator:",   e.duration.numerator);
-                            log2("    denominator:", e.duration.denominator);
-                            log2("    ticks:",       e.duration.ticks);
-                            log2("  beamMode:", e.beamMode);
-                            log2("  small:", e.small);
+                        if (e.type == Ms.REST) {
+//                            logn("  duration:");
+//                            log2("    numerator:",   e.duration.numerator);
+//                            log2("    denominator:", e.duration.denominator);
+//                            log2("    ticks:",       e.duration.ticks);
+//                            log2("  beamMode:", e.beamMode);
+//                            log2("  small:", e.small);
                             }
                         }
                   cursor.next();

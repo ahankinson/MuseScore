@@ -111,7 +111,6 @@ static constexpr PropertyMetaData propertyList[] = {
       { P_ID::TEXT,                    "text",                    false, 0,                       P_TYPE::STRING          },
       { P_ID::HTML_TEXT,               "html_text",               false, 0,                       P_TYPE::STRING          },
       { P_ID::USER_MODIFIED,           "user_modified",           false, 0,                       P_TYPE::BOOL            },
-//      { P_ID::BEAM_POS,                "beam_pos",                false, 0,                       P_TYPE::POINT_SP        },
       { P_ID::BEAM_POS,                "beam_pos",                false, 0,                       P_TYPE::POINT           },
       { P_ID::BEAM_MODE,               "beam_mode",               true, "BeamMode",               P_TYPE::BEAM_MODE       },
       { P_ID::BEAM_NO_SLOPE,           "beam_no_slope",           true, "noSlope",                P_TYPE::BOOL            },
@@ -174,7 +173,7 @@ static constexpr PropertyMetaData propertyList[] = {
       { P_ID::TIMESIG,                 "timesig",                 false, 0,                       P_TYPE::FRACTION        },
       { P_ID::TIMESIG_GLOBAL,          "timesig_global",          false, 0,                       P_TYPE::FRACTION        },
       { P_ID::TIMESIG_STRETCH,         "timesig_stretch",         false, 0,                       P_TYPE::FRACTION        },
-      { P_ID::TIMESIG_TYPE,            "timesig_type",            true,  0,                       P_TYPE::INT             },
+      { P_ID::TIMESIG_TYPE,            "timesig_type",            true,  "subtype",               P_TYPE::INT             },
       { P_ID::SPANNER_TICK,            "spanner_tick",            true,  "tick",                  P_TYPE::INT             },
       { P_ID::SPANNER_TICKS,           "spanner_ticks",           true,  "ticks",                 P_TYPE::INT             },
       { P_ID::SPANNER_TRACK2,          "spanner_track2",          true,  "track2",                P_TYPE::INT             },
@@ -287,7 +286,7 @@ static constexpr PropertyMetaData propertyList[] = {
       { P_ID::BEGIN_TEXT_OFFSET,       "begin_text_offset",       false, "beginTextOffset",       P_TYPE::POINT           },
 
       { P_ID::CONTINUE_TEXT,           "continue_text",           false, "continueText",          P_TYPE::STRING          },
-      { P_ID::CONTINUE_TEXT_ALIGN,     "continue_text_align",     false, "cotinueTextAlign",      P_TYPE::ALIGN           },
+      { P_ID::CONTINUE_TEXT_ALIGN,     "continue_text_align",     false, "continueTextAlign",     P_TYPE::ALIGN           },
       { P_ID::CONTINUE_TEXT_PLACE,     "continue_text_place",     false, "continueTextPlace",     P_TYPE::INT             },
       { P_ID::CONTINUE_FONT_FACE,      "continue_font_face",      false, "continueFontFace",      P_TYPE::FONT            },
       { P_ID::CONTINUE_FONT_SIZE,      "continue_font_size",      false, "continueFontSize",      P_TYPE::REAL            },
@@ -410,7 +409,7 @@ QVariant getProperty(P_ID id, XmlReader& e)
                   }
 
             case P_TYPE::DIRECTION:
-                  return QVariant::fromValue(Direction(e.readElementText()));
+                  return QVariant::fromValue<Direction>(toDirection(e.readElementText()));
 
             case P_TYPE::DIRECTION_H:
                   {

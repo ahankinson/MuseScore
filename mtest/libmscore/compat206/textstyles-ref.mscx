@@ -21,7 +21,9 @@
       <repeatBarTips>1</repeatBarTips>
       <clefLeftMargin>0.64</clefLeftMargin>
       <clefKeyRightMargin>1.75</clefKeyRightMargin>
+      <clefBarlineDistance>0.18</clefBarlineDistance>
       <stemWidth>0.16</stemWidth>
+      <barNoteDistance>1.2</barNoteDistance>
       <lastSystemFillLimit>0.25</lastSystemFillLimit>
       <pedalPosBelow>0</pedalPosBelow>
       <trillPosAbove>0</trillPosAbove>
@@ -81,8 +83,6 @@
       <rehearsalMarkFontBold>0</rehearsalMarkFontBold>
       <rehearsalMarkFramePadding>0.2</rehearsalMarkFramePadding>
       <repeatLeftFontFace>MuseJazz Text</repeatLeftFontFace>
-      <repeatLeftFontSize>12</repeatLeftFontSize>
-      <repeatLeftAlign>right,baseline</repeatLeftAlign>
       <repeatRightFontFace>MuseJazz Text</repeatRightFontFace>
       <repeatRightAlign>right,top</repeatRightAlign>
       <frameFontFace>MuseJazz Text</frameFontFace>
@@ -93,6 +93,7 @@
       <ottavaFontSize>10</ottavaFontSize>
       <ottavaFontItalic>1</ottavaFontItalic>
       <pedalFontFace>MuseJazz Text</pedalFontFace>
+      <hairpinFontFace>MuseJazz Text</hairpinFontFace>
       <bendFontFace>MuseJazz Text</bendFontFace>
       <headerFontFace>MuseJazz Text</headerFontFace>
       <footerFontFace>MuseJazz Text</footerFontFace>
@@ -193,7 +194,6 @@
         <TimeSig>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <StaffText>
           <text>staff</text>
@@ -325,7 +325,8 @@
         </Measure>
       <Measure number="11">
         <StaffText>
-          <style>default</style>
+          <style>Expression</style>
+          <offset x="0" y="5.5"/>
           <text>technique</text>
           </StaffText>
         <Rest>

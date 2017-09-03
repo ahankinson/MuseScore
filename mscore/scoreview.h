@@ -174,7 +174,6 @@ class ScoreView : public QWidget, public MuseScoreView {
       virtual void mouseDoubleClickEvent(QMouseEvent*);
 
       virtual void keyPressEvent(QKeyEvent*) override;
-      void _keyPressEvent(QKeyEvent*);
       virtual void keyReleaseEvent(QKeyEvent*) override;
 
       virtual void contextMenuEvent(QContextMenuEvent*) override;
@@ -215,7 +214,6 @@ class ScoreView : public QWidget, public MuseScoreView {
       void cmdCreateTuplet(ChordRest* cr, Tuplet* tuplet);
       void cmdRepeatSelection();
       void cmdChangeEnharmonic(bool);
-
 
       MeasureBase* insertMeasure(ElementType, MeasureBase*);
       MeasureBase* checkSelectionStateForInsertMeasure();
@@ -261,6 +259,7 @@ class ScoreView : public QWidget, public MuseScoreView {
       void triggerCmdRealtimeAdvance();
       void cmdRealtimeAdvance();
       void extendCurrentNote();
+      void seqStopped();
 
    public slots:
       void setViewRect(const QRectF&);
@@ -288,6 +287,7 @@ class ScoreView : public QWidget, public MuseScoreView {
       void viewRectChanged();
       void scaleChanged(double);
       void offsetChanged(double, double);
+      void sizeChanged();
 
    public:
       ScoreView(QWidget* parent = 0);
@@ -313,7 +313,8 @@ class ScoreView : public QWidget, public MuseScoreView {
 
       void setMag(qreal m);
       bool navigatorVisible() const;
-      void cmd(const QAction* a);
+      void cmd(const QAction*);
+      void cmd(const char*);
 
       void startUndoRedo(bool);
       void zoomStep(qreal step, const QPoint& pos);
@@ -321,28 +322,22 @@ class ScoreView : public QWidget, public MuseScoreView {
       void contextPopup(QContextMenuEvent* ev);
       bool editKeyLyrics(QKeyEvent*);
       void dragScoreView(QMouseEvent* ev);
-      void dragNoteEntry(QMouseEvent* ev);
-      void noteEntryButton(QMouseEvent* ev);
       void doDragElement(QMouseEvent* ev);
       void doDragLasso(QMouseEvent* ev);
       void doDragFoto(QMouseEvent* ev);
       void doDragEdit(QMouseEvent* ev);
       bool testElementDragTransition(QMouseEvent* ev);
-      bool editElementDragTransition(QMouseEvent* ev);
       bool fotoEditElementDragTransition(QMouseEvent* ev);
       bool editScoreViewDragTransition(QMouseEvent* e);
       bool editSelectTransition(QMouseEvent* me);
-      void cmdAddSlur();
+      void addSlur();
+      virtual void cmdAddSlur(ChordRest*, ChordRest*) override;
       virtual void cmdAddHairpin(HairpinType) override;
       void cmdAddNoteLine();
-      virtual void cmdAddSlur(Note* firstNote, Note* lastNote);
 
       bool noteEntryMode() const { return state == ViewState::NOTE_ENTRY; }
       bool editMode() const      { return state == ViewState::EDIT; }
       bool fotoMode() const;
-
-      void editInputTransition(QInputMethodEvent* ie);
-      void onEditPasteTransition(QMouseEvent* ev);
 
       virtual void setDropRectangle(const QRectF&);
       virtual void setDropTarget(const Element*) override;
@@ -369,7 +364,6 @@ class ScoreView : public QWidget, public MuseScoreView {
       bool searchPage(int i);
       bool searchRehearsalMark(const QString& s);
       void gotoMeasure(Measure*);
-      void postCmd(const char*)   {}            // TODO: remove
       void setFocusRect();
       void changeVoice(int voice);
       virtual void drawBackground(QPainter* p, const QRectF& r) const;
@@ -393,14 +387,13 @@ class ScoreView : public QWidget, public MuseScoreView {
       void setCursorVisible(bool v);
       void showOmr(bool flag);
       void midiNoteReceived(int pitch, bool chord, int velocity);
-      void setEditPos(const QPointF&);
 
       virtual void moveCursor() override;
 
       virtual void layoutChanged();
       virtual void dataChanged(const QRectF&);
       virtual void updateAll()    { update(); }
-      virtual void adjustCanvasPosition(const Element* el, bool playBack);
+      virtual void adjustCanvasPosition(const Element* el, bool playBack, int staff = -1) override;
       virtual void setCursor(const QCursor& c) { QWidget::setCursor(c); }
       virtual QCursor cursor() const { return QWidget::cursor(); }
       void loopUpdate(bool val)   {  loopToggled(val); }
@@ -418,6 +411,8 @@ class ScoreView : public QWidget, public MuseScoreView {
       void editTremoloBarProperties(TremoloBar*);
       EditData& getEditData()        { return editData; }
       void changeState(ViewState);
+
+      virtual const QRect geometry() const override { return QWidget::geometry(); }
       };
 
 } // namespace Ms

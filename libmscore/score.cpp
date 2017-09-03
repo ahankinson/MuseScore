@@ -199,7 +199,6 @@ void MeasureBaseList::insert(MeasureBase* fm, MeasureBase* lm)
 
 void MeasureBaseList::remove(MeasureBase* fm, MeasureBase* lm)
       {
-      printf("remove measures %p %p\n", fm, lm);
       --_size;
       for (MeasureBase* m = fm; m != lm; m = m->next())
             --_size;
@@ -396,7 +395,7 @@ void Score::fixTicks()
             //  implement section break rest
             //
             if (isMaster() && m->sectionBreak() && m->pause() != 0.0)
-                  setPause(m->tick() + m->ticks(), m->pause());
+                  setPause(m->tick() + m->ticks() - 1, m->pause());
 
             //
             // implement fermata as a tempo change
@@ -2227,6 +2226,23 @@ void Score::insertStaff(Staff* staff, int ridx)
                   continue;
             if (s->staffIdx() >= idx) {
                   int t = s->track() + VOICES;
+                  if (t >= ntracks())
+                        t = ntracks() - 1;
+                  s->setTrack(t);
+                  for (SpannerSegment* ss : s->spannerSegments())
+                        ss->setTrack(t);
+                  if (s->track2() != -1) {
+                        t = s->track2() + VOICES;
+                        s->setTrack2(t < ntracks() ? t : s->track());
+                        }
+                  }
+            }
+#if 0
+      for (Spanner* s : staff->score()->unmanagedSpanners()) {
+            if (s->systemFlag())
+                  continue;
+            if (s->staffIdx() >= idx) {
+                  int t = s->track() + VOICES;
                   s->setTrack(t < ntracks() ? t : ntracks() - 1);
                   if (s->track2() != -1) {
                         t = s->track2() + VOICES;
@@ -2234,6 +2250,7 @@ void Score::insertStaff(Staff* staff, int ridx)
                         }
                   }
             }
+#endif
       }
 
 //---------------------------------------------------------
@@ -2247,13 +2264,29 @@ void Score::removeStaff(Staff* staff)
             Spanner* s = i->second;
             if (s->staffIdx() > idx) {
                   int t = s->track() - VOICES;
-                  s->setTrack(t >=0 ? t : 0);
+                  if (t < 0)
+                        t = 0;
+                  s->setTrack(t);
+                  for (SpannerSegment* ss : s->spannerSegments())
+                        ss->setTrack(t);
                   if (s->track2() != -1) {
                         t = s->track2() - VOICES;
-                        s->setTrack2(t >=0 ? t : s->track());
+                        s->setTrack2(t >= 0 ? t : s->track());
                         }
                   }
             }
+#if 0
+      for (Spanner* s : staff->score()->unmanagedSpanners()) {
+            if (s->staffIdx() > idx) {
+                  int t = s->track() - VOICES;
+                  s->setTrack(t >= 0 ? t : 0);
+                  if (s->track2() != -1) {
+                        t = s->track2() - VOICES;
+                        s->setTrack2(t >= 0 ? t : s->track());
+                        }
+                  }
+            }
+#endif
       _staves.removeAll(staff);
       staff->part()->removeStaff(staff);
       }
@@ -2354,6 +2387,10 @@ void Score::cmdRemoveStaff(int staffIdx)
       QList<Spanner*> sl;
       for (auto i = _spanner.cbegin(); i != _spanner.cend(); ++i) {
             Spanner* s = i->second;
+            if (s->staffIdx() == staffIdx && (staffIdx != 0 || !s->systemFlag()))
+                  sl.append(s);
+            }
+      for (Spanner* s : _unmanagedSpanner) {
             if (s->staffIdx() == staffIdx && (staffIdx != 0 || !s->systemFlag()))
                   sl.append(s);
             }
@@ -2913,10 +2950,10 @@ void Score::collectMatch(void* data, Element* e)
       if ((p->staffStart != -1)
          && ((p->staffStart > e->staffIdx()) || (p->staffEnd <= e->staffIdx())))
             return;
-      if (e->isChord() || e->isRest() || e->isArticulation() || e->isAccidental() || e->isLyrics() || e->isBeam() || e->isHook() || e->isStem() || e->isSlurSegment() || e->isNoteDot() || e->isFingering() || e->isTuplet()) {
-            if (p->voice != -1 && p->voice != e->voice())
-                  return;
-            }
+
+      if (p->voice != -1 && p->voice != e->voice())
+            return;
+
       if (p->system) {
             Element* ee = e;
             do {
@@ -3255,9 +3292,9 @@ void Score::cmdSelectSection()
 //   undo
 //---------------------------------------------------------
 
-void Score::undo(UndoCommand* cmd) const
+void Score::undo(UndoCommand* cmd, EditData* ed) const
       {
-      undoStack()->push(cmd);
+      undoStack()->push(cmd, ed);
       }
 
 //---------------------------------------------------------
@@ -3351,7 +3388,6 @@ void Score::appendPart(const QString& name)
                   }
             undoInsertStaff(staff, i);
             }
-
       part->staves()->front()->setBarLineSpan(part->nstaves());
       undoInsertPart(part, n);
       fixTicks();

@@ -48,6 +48,7 @@ void LineSegment::startEdit(EditData& ed)
       {
       ed.grips   = 3;
       ed.curGrip = Grip::END;
+      Element::startEdit(ed);
       }
 
 //---------------------------------------------------------
@@ -102,59 +103,6 @@ void LineSegment::updateGrips(EditData& ed) const
       }
 
 //---------------------------------------------------------
-//   setGrip
-//---------------------------------------------------------
-
-void LineSegment::setGrip(Grip grip, const QPointF& p)
-      {
-      QPointF pt(p * spatium());
-
-      switch (grip) {
-            case Grip::START: {
-                  QPointF delta(pt - userOff());
-                  setUserOff(pt);
-                  setUserOff2(userOff2() - delta);
-                  }
-                  break;
-            case Grip::END:
-                  setUserOff2(pt);
-                  break;
-            case Grip::MIDDLE:
-                  setUserOff(pt);
-                  break;
-            case Grip::APERTURE:
-            default:
-                  break;
-            }
-      layout();   // needed?
-      }
-
-//---------------------------------------------------------
-//   getGrip
-//---------------------------------------------------------
-
-QPointF LineSegment::getGrip(Grip grip) const
-      {
-      QPointF p;
-      switch (grip) {
-            case Grip::START:
-                  p = userOff();
-                  break;
-            case Grip::END:
-                  p = userOff2();
-                  break;
-            case Grip::MIDDLE:
-                  p = userOff();
-                  break;
-            case Grip::APERTURE:
-            default:
-                  break;
-            }
-      p /= spatium();
-      return p;
-      }
-
-//---------------------------------------------------------
 //   gripAnchor
 //    return page coordinates
 //---------------------------------------------------------
@@ -205,22 +153,9 @@ QPointF LineSegment::gripAnchor(Grip grip) const
 
 void LineSegment::startEditDrag(EditData& ed)
       {
-      ElementEditData* hed = new ElementEditData();
-      hed->e    = this;
-      hed->pushProperty(P_ID::USER_OFF);
-      hed->pushProperty(P_ID::USER_OFF2);
-      ed.addData(hed);
-      }
-
-//---------------------------------------------------------
-//   endEditDrag
-//---------------------------------------------------------
-
-void LineSegment::endEditDrag(EditData& ed)
-      {
-      ElementEditData* eed = static_cast<ElementEditData*>(ed.getData(this));
-      for (PropertyData pd : eed->propertyData)
-            score()->undoPropertyChanged(this, pd.id, pd.data);
+      ElementEditData* eed = ed.getData(this);
+      eed->pushProperty(P_ID::USER_OFF);
+      eed->pushProperty(P_ID::USER_OFF2);
       }
 
 //---------------------------------------------------------
@@ -277,10 +212,8 @@ bool LineSegment::edit(EditData& ed)
                         }
                   if (s1 == 0 || s2 == 0 || s1->tick() >= s2->tick())
                         return true;
-                  if (s1->tick() != spanner()->tick())
-                        spanner()->undoChangeProperty(P_ID::SPANNER_TICK, s1->tick());
-                  if (s2->tick() != spanner()->tick2())
-                        spanner()->undoChangeProperty(P_ID::SPANNER_TICKS, s2->tick()-s1->tick());
+                  spanner()->undoChangeProperty(P_ID::SPANNER_TICK, s1->tick());
+                  spanner()->undoChangeProperty(P_ID::SPANNER_TICKS, s2->tick() - s1->tick());
                   }
                   break;
             case Spanner::Anchor::NOTE:
@@ -367,11 +300,11 @@ bool LineSegment::edit(EditData& ed)
                   if (m1->tick() > m2->tick())
                         return true;
                   if (l->startElement() != m1) {
-                        l->setTick(m1->tick());
-                        l->setTicks(m2->endTick() - m1->tick());
+                        spanner()->undoChangeProperty(P_ID::SPANNER_TICK,  m1->tick());
+                        spanner()->undoChangeProperty(P_ID::SPANNER_TICKS, m2->endTick() - m1->tick());
                         }
                   else if (l->endElement() != m2) {
-                        l->setTicks(m2->endTick() - m1->tick());
+                        spanner()->undoChangeProperty(P_ID::SPANNER_TICKS, m2->endTick() - m1->tick());
                         }
                   }
             }
@@ -410,9 +343,6 @@ void LineSegment::editDrag(EditData& ed)
       // Only for resizing according to the diagonal properties
       QPointF deltaResize(ed.delta.x(), line()->diagonal() ? ed.delta.y() : 0.0);
 
-      // Only for moving, no y limitaion
-      QPointF deltaMove(ed.delta.x(), ed.delta.y());
-
       switch (ed.curGrip) {
             case Grip::START: // Resize the begin of element (left grip)
                   setUserOff(userOff() + deltaResize);
@@ -423,26 +353,28 @@ void LineSegment::editDrag(EditData& ed)
                   _userOff2 += deltaResize;
                   undoChangeProperty(P_ID::AUTOPLACE, false);
                   break;
-            case Grip::MIDDLE: // Move the element (middle grip)
+            case Grip::MIDDLE: { // Move the element (middle grip)
+                  // Only for moving, no y limitaion
+                  QPointF deltaMove(ed.delta.x(), ed.delta.y());
                   setUserOff(userOff() + deltaMove);
                   undoChangeProperty(P_ID::AUTOPLACE, false);
+                  }
                   break;
             default:
                   break;
             }
-      if ((line()->anchor() == Spanner::Anchor::NOTE)
-         && (ed.curGrip == Grip::START || ed.curGrip == Grip::END)) {
+      if (line()->anchor() == Spanner::Anchor::NOTE && ed.isStartEndGrip()) {
             //
             // if we touch a different note, change anchor
             //
             Element* e = ed.view->elementNear(ed.pos);
-            if (e && e->type() == ElementType::NOTE) {
+            if (e && e->isNote()) {
                   SLine* l = line();
                   if (ed.curGrip == Grip::END && e != line()->endElement()) {
                         qDebug("LineSegment: move end anchor");
-                        Note* noteOld = static_cast<Note*>(l->endElement());
-                        Note* noteNew = static_cast<Note*>(e);
-                        Note* sNote = static_cast<Note*>(l->startElement());
+                        Note* noteOld = toNote(l->endElement());
+                        Note* noteNew = toNote(e);
+                        Note* sNote   = toNote(l->startElement());
                         // do not change anchor if new note is before start note
                         if (sNote && sNote->chord() && noteNew->chord() && sNote->chord()->tick() < noteNew->chord()->tick()) {
                               noteOld->removeSpannerBack(l);
@@ -452,9 +384,8 @@ void LineSegment::editDrag(EditData& ed)
                               _userOff2 += noteOld->canvasPos() - noteNew->canvasPos();
                               }
                         }
-                  else if (ed.curGrip == Grip::START && e != l->startElement()) {
+                  else if (ed.curGrip == Grip::START && e != l->startElement())
                         qDebug("LineSegment: move start anchor (not impl.)");
-                        }
                   }
             }
       triggerLayout();
@@ -972,7 +903,7 @@ void SLine::layout()
       if (sysIdx1 == -1 || sysIdx2 == -1)
             return;
 
-      for (int i = sysIdx1; i < sysIdx2+1;  ++i) {
+      for (int i = sysIdx1; i <= sysIdx2;  ++i) {
             if (systems.at(i)->vbox())
                   continue;
             ++segmentsNeeded;

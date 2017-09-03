@@ -43,7 +43,6 @@
 #include "zerberus/zerberus.h"
 #include "fluid/fluid.h"
 #include "pathlistdialog.h"
-#include "mstyle/mconfig.h"
 #include "resourceManager.h"
 #include "synthesizer/msynthesizer.h"
 
@@ -114,12 +113,16 @@ void Preferences::init()
 
       rememberLastConnections = true;
 
-      alsaDevice         = "default";
-      alsaSampleRate     = 48000;
-      alsaPeriodSize     = 1024;
-      alsaFragments      = 3;
-      portaudioDevice    = -1;
-      portMidiInput      = "";
+      alsaDevice                = "default";
+      alsaSampleRate            = 48000;
+      alsaPeriodSize            = 1024;
+      alsaFragments             = 3;
+      portaudioDevice           = -1;
+      portMidiInput             = "";
+      portMidiInputBufferCount  = 100;
+      portMidiOutput            = "";
+      portMidiOutputBufferCount = 65536;
+      portMidiOutputLatencyMilliseconds = 0;
 
       antialiasedDrawing       = true;
       sessionStart             = SessionStart::SCORE;
@@ -154,7 +157,7 @@ void Preferences::init()
       mag                     = 1.0;
       showMidiControls        = false;
 
-#if defined(Q_OS_MAC) || defined(Q_OS_WIN)
+#if defined(Q_OS_MAC) || (defined(Q_OS_WIN) && !defined(FOR_WINSTORE))
       checkUpdateStartup      = true;
 #else
       checkUpdateStartup      = false;
@@ -185,6 +188,7 @@ void Preferences::init()
       myTemplatesPath = QFileInfo(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("templates_directory",  "Templates"))).absoluteFilePath();
       myPluginsPath   = QFileInfo(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("plugins_directory",    "Plugins"))).absoluteFilePath();
       mySoundfontsPath = QFileInfo(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("soundfonts_directory", "Soundfonts"))).absoluteFilePath();
+      myShortcutPath = QFileInfo(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("shortcuts_directory", "Shortcuts"))).absoluteFilePath();
 
       MScore::setNudgeStep(.1);         // cursor key (default 0.1)
       MScore::setNudgeStep10(1.0);      // Ctrl + cursor key (default 1.0)
@@ -257,7 +261,9 @@ void Preferences::write()
       s.setValue("alsaPeriodSize",     alsaPeriodSize);
       s.setValue("alsaFragments",      alsaFragments);
       s.setValue("portaudioDevice",    portaudioDevice);
-      s.setValue("portMidiInput",   portMidiInput);
+      s.setValue("portMidiInput",      portMidiInput);
+      s.setValue("portMidiOutput",     portMidiOutput);
+      s.setValue("portMidiOutputLatencyMilliseconds", portMidiOutputLatencyMilliseconds);
 
       s.setValue("layoutBreakColor",   MScore::layoutBreakColor.name(QColor::NameFormat::HexArgb));
       s.setValue("frameMarginColor",   MScore::frameMarginColor.name(QColor::NameFormat::HexArgb));
@@ -315,11 +321,7 @@ void Preferences::write()
       s.setValue("useOsc", useOsc);
       s.setValue("oscPort", oscPort);
       QString styleName = "light_fusion";
-      if (globalStyle == MuseScoreStyleType::DARK_OXYGEN)
-            styleName = "dark";
-      else if (globalStyle == MuseScoreStyleType::LIGHT_OXYGEN)
-            styleName = "light";
-      else if (globalStyle == MuseScoreStyleType::DARK_FUSION)
+      if (globalStyle == MuseScoreStyleType::DARK_FUSION)
             styleName = "dark_fusion";
       s.setValue("style", styleName);
       s.setValue("animations", animations);
@@ -331,6 +333,7 @@ void Preferences::write()
       s.setValue("myTemplatesPath", myTemplatesPath);
       s.setValue("myPluginsPath", myPluginsPath);
       s.setValue("mySoundfontsPath", mySoundfontsPath);
+      s.setValue("myShortcutPath", myShortcutPath);
 
       s.setValue("hraster", MScore::hRaster());
       s.setValue("vraster", MScore::vRaster());
@@ -432,6 +435,8 @@ void Preferences::read()
       alsaFragments      = s.value("alsaFragments", alsaFragments).toInt();
       portaudioDevice    = s.value("portaudioDevice", portaudioDevice).toInt();
       portMidiInput      = s.value("portMidiInput", portMidiInput).toString();
+      portMidiOutput     = s.value("portMidiOutput", portMidiOutput).toString();
+      portMidiOutputLatencyMilliseconds = s.value("portMidiOutputLatencyMilliseconds", portMidiOutputLatencyMilliseconds).toInt();
       MScore::layoutBreakColor   = readColor("layoutBreakColor", MScore::layoutBreakColor);
       MScore::frameMarginColor   = readColor("frameMarginColor", MScore::frameMarginColor);
       antialiasedDrawing      = s.value("antialiasedDrawing", antialiasedDrawing).toBool();
@@ -476,11 +481,7 @@ void Preferences::read()
       useOsc                 = s.value("useOsc", useOsc).toBool();
       oscPort                = s.value("oscPort", oscPort).toInt();
       QString sName          = s.value("style", "light_fusion").toString();
-      if (sName == "dark")
-            globalStyle  = MuseScoreStyleType::DARK_OXYGEN;
-      else if (sName == "light")
-            globalStyle  = MuseScoreStyleType::LIGHT_OXYGEN;
-      else if (sName == "dark_fusion")
+      if (sName == "dark_fusion")
             globalStyle  = MuseScoreStyleType::DARK_FUSION;
       else if (sName == "light_fusion")
             globalStyle  = MuseScoreStyleType::LIGHT_FUSION;
@@ -493,6 +494,7 @@ void Preferences::read()
       myTemplatesPath  = s.value("myTemplatesPath",  myTemplatesPath).toString();
       myPluginsPath    = s.value("myPluginsPath",    myPluginsPath).toString();
       mySoundfontsPath = s.value("mySoundfontsPath", mySoundfontsPath).toString();
+      myShortcutPath   = s.value("myShortcutPath",   myShortcutPath).toString();
 
       //Create directories if they are missing
       QDir dir;
@@ -685,6 +687,8 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
 
       connect(shortcutList,   SIGNAL(itemActivated(QTreeWidgetItem*, int)), SLOT(defineShortcutClicked()));
       connect(resetShortcut,  SIGNAL(clicked()), SLOT(resetShortcutClicked()));
+      connect(saveShortcutList,  SIGNAL(clicked()), SLOT(saveShortcutListClicked()));
+      connect(loadShortcutList,  SIGNAL(clicked()), SLOT(loadShortcutListClicked()));
       connect(clearShortcut,  SIGNAL(clicked()), SLOT(clearShortcutClicked()));
       connect(defineShortcut, SIGNAL(clicked()), SLOT(defineShortcutClicked()));
       connect(resetToDefault, SIGNAL(clicked()), SLOT(resetAllValues()));
@@ -723,8 +727,8 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
       updateRemote();
 
       MuseScore::restoreGeometry(this);
-#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
-      General->removeTab(General->indexOf(tabUpdate)); // updateTab not needed on Linux
+#if !defined(Q_OS_MAC) && (!defined(Q_OS_WIN) || defined(FOR_WINSTORE))
+      General->removeTab(General->indexOf(tabUpdate)); // updateTab not needed on Linux and not wanted in Windows Store
 #endif
       }
 
@@ -953,7 +957,7 @@ void PreferenceDialog::updateValues()
                   connect(portaudioApi, SIGNAL(activated(int)), SLOT(portaudioApiActivated(int)));
 #ifdef USE_PORTMIDI
                   PortMidiDriver* midiDriver = static_cast<PortMidiDriver*>(audio->mididriver());
-                  if(midiDriver){
+                  if (midiDriver) {
                         QStringList midiInputs = midiDriver->deviceInList();
                         int curMidiInIdx = 0;
                         portMidiInput->clear();
@@ -963,6 +967,19 @@ void PreferenceDialog::updateValues()
                                     curMidiInIdx = i;
                               }
                         portMidiInput->setCurrentIndex(curMidiInIdx);
+
+                        QStringList midiOutputs = midiDriver->deviceOutList();
+                        int curMidiOutIdx = -1; // do not set a midi out device if user never selected one
+                        portMidiOutput->clear();
+                        portMidiOutput->addItem("", -1);
+                        for(int i = 0; i < midiOutputs.size(); ++i) {
+                              portMidiOutput->addItem(midiOutputs.at(i), i);
+                              if (midiOutputs.at(i) == prefs.portMidiOutput)
+                                    curMidiOutIdx = i + 1;
+                              }
+                        portMidiOutput->setCurrentIndex(curMidiOutIdx);
+
+                        portMidiOutputLatencyMilliseconds->setValue(prefs.portMidiOutputLatencyMilliseconds);
                         }
 #endif
                   }
@@ -976,7 +993,7 @@ void PreferenceDialog::updateValues()
       //
       // score settings
       //
-      scale->setValue(prefs.mag*100.0);
+      scale->setValue(prefs.mag * 100.0);
       showMidiControls->setChecked(prefs.showMidiControls);
 
       defaultPlayDuration->setValue(MScore::defaultPlayDuration);
@@ -1127,6 +1144,22 @@ void PreferenceDialog::resetShortcutClicked()
 
       active->setText(1, shortcut->keysToString());
       shortcutsChanged = true;
+      }
+
+void PreferenceDialog::saveShortcutListClicked()
+      {
+      QString saveFileName = QFileDialog::getSaveFileName(this, tr("Save Shortcuts"), prefs.myShortcutPath + "/shortcuts.xml", tr("MuseScore Shortcuts File") + " (*.xml)", 0, preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog);
+      prefs.myShortcutPath = saveFileName;
+      Shortcut::saveToNewFile(saveFileName);
+      }
+
+void PreferenceDialog::loadShortcutListClicked()
+      {
+      QString loadFileName = QFileDialog::getOpenFileName(this, tr("Load Shortcuts"), prefs.myShortcutPath, tr("MuseScore Shortcuts File") +  " (*.xml)", 0, preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog);
+      if (!loadFileName.isNull()) {
+            prefs.myShortcutPath = loadFileName;
+            Shortcut::loadFromNewFile(loadFileName);
+            }
       }
 
 //---------------------------------------------------------
@@ -1310,6 +1343,8 @@ void PreferenceDialog::buttonBoxClicked(QAbstractButton* button)
                   break;
             case QDialogButtonBox::Ok:
                   apply();
+                  // intentional ??
+                  // fall through
             case QDialogButtonBox::Cancel:
             default:
                   hide();
@@ -1424,6 +1459,15 @@ void PreferenceDialog::apply()
 
 #ifdef USE_PORTMIDI
       prefs.portMidiInput = portMidiInput->currentText();
+      prefs.portMidiOutput = portMidiOutput->currentText();
+      if (seq->driver() && static_cast<PortMidiDriver*>(static_cast<Portaudio*>(seq->driver())->mididriver())->isSameCoreMidiIacBus(prefs.portMidiInput, prefs.portMidiOutput)) {
+            QMessageBox msgBox;
+            msgBox.setWindowTitle(tr("Possible MIDI Loopback"));
+            msgBox.setIcon(QMessageBox::Warning);
+            msgBox.setText(tr("Warning: You used the same CoreMIDI IAC bus for input and output.  This will cause problematic loopback, whereby MuseScore's outputted MIDI messages will be sent back to MuseScore as input, causing confusion.  To avoid this problem, access Audio MIDI Setup via Spotlight to create a dedicated virtual port for MuseScore's MIDI output, restart MuseScore, return to Preferences, and select your new virtual port for MuseScore's MIDI output.  Other programs may then use that dedicated virtual port to receive MuseScore's MIDI output."));
+            msgBox.exec();
+            }
+      prefs.portMidiOutputLatencyMilliseconds = portMidiOutputLatencyMilliseconds->value();
 #endif
 
       if (lastSession->isChecked())
@@ -1530,9 +1574,6 @@ void PreferenceDialog::apply()
       prefs.oscPort = oscPort->value();
 
       prefs.globalStyle = MuseScoreStyleType(styleName->currentIndex());
-
-      prefs.animations = animations->isChecked();
-      MgStyleConfigData::animationsEnabled = prefs.animations;
 
       if (languageChanged) {
             setMscoreLocale(prefs.language);

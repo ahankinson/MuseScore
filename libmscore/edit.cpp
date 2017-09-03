@@ -703,33 +703,30 @@ void Score::cmdAddTimeSig(Measure* fm, int staffIdx, TimeSig* ts, bool local)
             return;
             }
 
-      if (ots && ots->sig().identical(ns) && ots->stretch() == ts->stretch()) {
-            ots->undoChangeProperty(P_ID::TIMESIG, QVariant::fromValue(ns));
-            ots->undoChangeProperty(P_ID::GROUPS,  QVariant::fromValue(ts->groups()));
-            if (ts->hasCustomText()) {
-                  ots->undoChangeProperty(P_ID::NUMERATOR_STRING, ts->numeratorString());
-                  ots->undoChangeProperty(P_ID::DENOMINATOR_STRING, ts->denominatorString());
-                  }
-            foreach (Score* score, scoreList()) {
+//      if (ots && ots->sig().identical(ns) && ots->stretch() == ts->stretch()) {
+      if (ots && ots->sig() == ns && ots->stretch() == ts->stretch()) {
+            //
+            // the measure duration does not change,
+            // so its ok to just update the time signatures
+            //
+            TimeSig* nts = staff(staffIdx)->nextTimeSig(tick+1);
+            Measure* lm  = nts ? nts->segment()->measure() : 0;
+            for (Score* score : scoreList()) {
                   Measure* fm = score->tick2measure(tick);
-                  for (Measure* m = fm; m; m = m->nextMeasure()) {
-                        if ((m != fm) && m->first(SegmentType::TimeSig))
-                              break;
+                  for (Measure* m = fm; m != lm; m = m->nextMeasure()) {
                         bool changeActual = m->len() == m->timesig();
                         undoChangeProperty(m, P_ID::TIMESIG_NOMINAL, QVariant::fromValue(ns));
                         if (changeActual)
                               undoChangeProperty(m, P_ID::TIMESIG_ACTUAL,  QVariant::fromValue(ns));
-                        // undoChangeProperty(ots, P_ID::GROUPS,  QVariant::fromValue(ts->groups()));
                         }
                   }
             int n = nstaves();
             for (int staffIdx = 0; staffIdx < n; ++staffIdx) {
                   TimeSig* nsig = toTimeSig(seg->element(staffIdx * VOICES));
-                  undoChangeProperty(nsig, P_ID::TIMESIG_TYPE, int(ts->timeSigType()));
-                  if (ts->hasCustomText()) {
-                        nsig->undoChangeProperty(P_ID::NUMERATOR_STRING, ts->numeratorString());
-                        nsig->undoChangeProperty(P_ID::DENOMINATOR_STRING, ts->denominatorString());
-                        }
+                  nsig->undoChangeProperty(P_ID::TIMESIG_TYPE,       int(ts->timeSigType()));
+                  nsig->undoChangeProperty(P_ID::NUMERATOR_STRING,   ts->numeratorString());
+                  nsig->undoChangeProperty(P_ID::DENOMINATOR_STRING, ts->denominatorString());
+                  nsig->undoChangeProperty(P_ID::GROUPS,             QVariant::fromValue(ts->groups()));
                   }
             }
       else {
@@ -806,10 +803,9 @@ void Score::cmdAddTimeSig(Measure* fm, int staffIdx, TimeSig* ts, bool local)
                               nsig->undoChangeProperty(P_ID::SHOW_COURTESY, ts->showCourtesySig());
                               nsig->undoChangeProperty(P_ID::TIMESIG_TYPE, int(ts->timeSigType()));
                               nsig->undoChangeProperty(P_ID::TIMESIG, QVariant::fromValue(ts->sig()));
-                              if (ts->hasCustomText()) {
-                                    nsig->undoChangeProperty(P_ID::NUMERATOR_STRING, ts->numeratorString());
-                                    nsig->undoChangeProperty(P_ID::DENOMINATOR_STRING, ts->denominatorString());
-                                    }
+                              nsig->undoChangeProperty(P_ID::NUMERATOR_STRING, ts->numeratorString());
+                              nsig->undoChangeProperty(P_ID::DENOMINATOR_STRING, ts->denominatorString());
+
                               // HACK do it twice to accommodate undo
                               nsig->undoChangeProperty(P_ID::TIMESIG_TYPE, int(ts->timeSigType()));
                               nsig->undoChangeProperty(P_ID::TIMESIG_STRETCH, QVariant::fromValue(ts->stretch()));
@@ -1255,19 +1251,19 @@ void Score::cmdFlip()
                               continue;
                   else {
                         Direction dir = chord->up() ? Direction::DOWN : Direction::UP;
-                        undoChangeProperty(chord, P_ID::STEM_DIRECTION, dir);
+                        undoChangeProperty(chord, P_ID::STEM_DIRECTION, QVariant::fromValue<Direction>(dir));
                         }
                   }
 
             else if (e->isBeam()) {
                   Beam* beam = toBeam(e);
                   Direction dir = beam->up() ? Direction::DOWN : Direction::UP;
-                  undoChangeProperty(beam, P_ID::STEM_DIRECTION, dir);
+                  undoChangeProperty(beam, P_ID::STEM_DIRECTION, QVariant::fromValue<Direction>(dir));
                   }
             else if (e->isSlurTieSegment()) {
                   SlurTie* slur = toSlurTieSegment(e)->slurTie();
                   Direction dir = slur->up() ? Direction::DOWN : Direction::UP;
-                  undoChangeProperty(slur, P_ID::SLUR_DIRECTION, dir);
+                  undoChangeProperty(slur, P_ID::SLUR_DIRECTION, QVariant::fromValue<Direction>(dir));
                   }
             else if (e->isHairpinSegment()) {
                   Hairpin* h = toHairpinSegment(e)->hairpin();
@@ -1306,12 +1302,12 @@ void Score::cmdFlip()
             else if (e->isTuplet()) {
                   Tuplet* tuplet = toTuplet(e);
                   Direction d = tuplet->isUp() ? Direction::DOWN : Direction::UP;
-                  undoChangeProperty(tuplet, P_ID::DIRECTION, d);
+                  undoChangeProperty(tuplet, P_ID::DIRECTION, QVariant::fromValue<Direction>(d));
                   }
             else if (e->isNoteDot()) {
                   Note* note = toNote(e->parent());
                   Direction d = note->dotIsUp() ? Direction::DOWN : Direction::UP;
-                  undoChangeProperty(note, P_ID::DOT_POSITION, d);
+                  undoChangeProperty(note, P_ID::DOT_POSITION, QVariant::fromValue<Direction>(d));
                   }
             else if (e->isTempoText()
                || e->isStaffText()
@@ -1383,6 +1379,7 @@ void Score::deleteItem(Element* el)
                   // else fall through
                   el = chord;
                   }
+                  // fall through
 
             case ElementType::CHORD:
                   {
@@ -1439,6 +1436,7 @@ void Score::deleteItem(Element* el)
                   Segment* segment = rm->segment();
                   undoAddCR(rest, segment->measure(), segment->tick());
                   }
+                  // fall through
 
             case ElementType::REST:
                   //
@@ -1538,7 +1536,7 @@ void Score::deleteItem(Element* el)
                               }
                         // Set input position
                         // TODO If deleted element is last of a sequence, use prev?
-                        if (_is.noteEntryMode())
+                        if (noteEntryMode())
                               score()->move("prev-chord");
                         }
                   }
@@ -1861,6 +1859,8 @@ void Score::cmdDeleteSelection()
                   Spanner* sp = i.value;
                   if (sp->isVolta())
                         continue;
+                  if (!selectionFilter().canSelectVoice(sp->track()))
+                        continue;
                   if (sp->track() >= track1 && sp->track() < track2) {
                         if (sp->tick() >= stick1 && sp->tick() < stick2
                             && sp->tick2() >= stick1 && sp->tick2() < stick2) {
@@ -2049,7 +2049,7 @@ void Score::cmdDeleteSelection()
 
       deselectAll();
       // make new selection if appropriate
-      if (_is.noteEntryMode())
+      if (noteEntryMode())
             cr = _is.cr();
       if (cr) {
             if (cr->isChord())
@@ -2073,7 +2073,7 @@ void Score::cmdFullMeasureRest()
       int track2 = -1;
       Rest* r = nullptr;
 
-      if (inputState().noteEntryMode()) {
+      if (noteEntryMode()) {
             s1 = inputState().segment();
             if (!s1 || s1->rtick() != 0)
                   return;
@@ -2148,7 +2148,7 @@ void Score::cmdFullMeasureRest()
                               removeChordRest(cr, true);
                               r = addRest(m->tick(), track, TDuration(TDuration::DurationType::V_MEASURE), 0);
                               }
-                        else if (inputState().noteEntryMode()) {
+                        else if (noteEntryMode()) {
                               // might be no cr at input position
                               r = addRest(m->tick(), track, TDuration(TDuration::DurationType::V_MEASURE), 0);
                               }
@@ -3148,7 +3148,7 @@ void Score::undoPropertyChanged(Element* e, P_ID t, const QVariant& st)
                         // property in linked element has not changed yet
                         // push() calls redo() to change it
                         if (ee->getProperty(t) != e->getProperty(t))
-                              undoStack()->push(new ChangeProperty(ee, t, e->getProperty(t)));
+                              undoStack()->push(new ChangeProperty(ee, t, e->getProperty(t)), 0);
                         }
                   }
             }
@@ -3194,7 +3194,7 @@ void Score::undoChangePitch(Note* note, int pitch, int tpc1, int tpc2)
       {
       for (ScoreElement* e : note->linkList()) {
             Note* n = static_cast<Note*>(e);
-            undoStack()->push(new ChangePitch(n, pitch, tpc1, tpc2));
+            undoStack()->push(new ChangePitch(n, pitch, tpc1, tpc2), 0);
             }
       }
 
@@ -3213,11 +3213,11 @@ void Score::undoChangeFretting(Note* note, int pitch, int string, int fret, int 
       if (l) {
             for (ScoreElement* e : *l) {
                   Note* n = static_cast<Note*>(e);
-                  undoStack()->push(new ChangeFretting(n, pitch, string, fret, tpc1, tpc2));
+                  undo(new ChangeFretting(n, pitch, string, fret, tpc1, tpc2));
                   }
             }
       else
-            undoStack()->push(new ChangeFretting(note, pitch, string, fret, tpc1, tpc2));
+            undo(new ChangeFretting(note, pitch, string, fret, tpc1, tpc2));
       }
 
 //---------------------------------------------------------

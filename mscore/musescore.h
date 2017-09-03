@@ -75,6 +75,7 @@ class ScriptEngine;
 class KeyEditor;
 class ChordStyleEditor;
 class Navigator;
+class Timeline;
 class PianoTools;
 class MediaDialog;
 class Workspace;
@@ -85,6 +86,7 @@ class Capella;
 class Inspector;
 class OmrPanel;
 class NScrollArea;
+class TDockWidget;
 class Sym;
 class MasterPalette;
 class PluginCreator;
@@ -227,11 +229,18 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       static const std::list<const char*> _advancedNoteInputMenuEntries;
       std::list<const char*> _noteInputMenuEntries { _allNoteInputMenuEntries };
 
+      static const std::list<const char*> _allFileOperationEntries;
+      std::list<const char*> _fileOperationEntries { _allFileOperationEntries };
+
+      static const std::list<const char*> _allPlaybackControlEntries;
+      std::list<const char*> _playbackControlEntries { _allPlaybackControlEntries };
+      
       QVBoxLayout* layout;    // main window layout
       QSplitter* splitter;
       ScoreTab* tab1;
       ScoreTab* tab2;
       NScrollArea* _navigator;
+      TDockWidget* _timeline;
       ImportMidiPanel* importmidiPanel     { 0 };
       QFrame* importmidiShowPanel;
       QSplitter* mainWindow;
@@ -428,6 +437,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void showInspector(bool);
       void showOmrPanel(bool);
       void showNavigator(bool);
+      void showTimeline(bool);
       void showSelectionWindow(bool);
       void showSearchDialog();
       void showToolbarEditor();
@@ -669,6 +679,8 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       Q_INVOKABLE QString getLocaleISOCode() const;
       Navigator* navigator() const;
       NScrollArea* navigatorScrollArea() const { return _navigator; }
+      Timeline* timeline() const;
+      TDockWidget* timelineScrollArea() const { return _timeline; }
       QWidget*   searchDialog() const;
       SelectionWindow* getSelectionWindow() const { return selectionWindow; }
       void updateLayer();
@@ -746,6 +758,12 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       static const std::list<const char*>& basicNoteInputMenuEntries() { return _basicNoteInputMenuEntries; }
       static const std::list<const char*>& advancedNoteInputMenuEntries() { return _advancedNoteInputMenuEntries; }
       std::list<const char*>* noteInputMenuEntries()                 { return &_noteInputMenuEntries; }
+
+      static const std::list<const char*>& allFileOperationEntries() { return _allFileOperationEntries; }
+      std::list<const char*>* fileOperationEntries()              { return &_fileOperationEntries; }
+
+      static const std::list<const char*>& allPlaybackControlEntries() { return _allPlaybackControlEntries; }
+      std::list<const char*>* playbackControlEntries()      { return &_playbackControlEntries; }
 
       void setNoteInputMenuEntries(std::list<const char*> l)         { _noteInputMenuEntries = l; }
       void populateNoteInputMenu();

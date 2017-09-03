@@ -193,7 +193,7 @@ bool GuitarPro4::readNote(int string, int staffIdx, Note* note)
       if (noteBits & 0x1) {               // note != beat
             int a = readUChar();          // length
             int b = readUChar();          // t
-            qDebug("          Time independend note len, len %d t %d", a, b);
+            qDebug("          Time-independent note len, len %d t %d", a, b);
             }
       if (noteBits & 0x2) {               // note is dotted
             //readUChar();
@@ -263,7 +263,9 @@ bool GuitarPro4::readNote(int string, int staffIdx, Note* note)
             if (modMask1 & EFFECT_HAMMER)
                   slur = true;
             if (modMask1 & EFFECT_LET_RING)
-                  addLetRing(note);
+                  addLetRing(note->chord(), note->staffIdx(), true);
+            else
+                  addLetRing(note->chord(), note->staffIdx(), false);
             if (modMask1 & EFFECT_GRACE) {
                   int fret = readUChar();            // grace fret
                   int dynamic = readUChar();            // grace dynamic
@@ -351,7 +353,9 @@ bool GuitarPro4::readNote(int string, int staffIdx, Note* note)
                   chord->add(a);
                   }
             if (modMask2 & EFFECT_PALM_MUTE)
-                  addPalmMute(note);
+                  addPalmMute(note->chord(), note->staffIdx(), true);
+            else
+                  addPalmMute(note->chord(), note->staffIdx(), false);
 
             if (modMask2 & EFFECT_TREMOLO) {    // tremolo picking length
                   int tremoloDivision = readUChar();
@@ -394,6 +398,9 @@ bool GuitarPro4::readNote(int string, int staffIdx, Note* note)
                         delete art;
 
                   }
+            }
+      else {
+            addLetRing(note->chord(), note->staffIdx(), false);
             }
       if (fretNumber == -1) {
             qDebug("Note: no fret number, tie %d", tieNote);
@@ -663,8 +670,14 @@ void GuitarPro4::read(QFile* fp)
             }
 
       slurs = new Slur*[staves];
-      for (int i = 0; i < staves; ++i)
+      letRings = new Pedal*[staves];
+      palmMutes = new TextLine*[staves];
+      for (int i = 0; i < staves; ++i) {
             slurs[i] = 0;
+            letRings[i] = 0;
+            palmMutes[i] = 0;
+            }
+
       Measure* measure = score->firstMeasure();
       bool mixChange = false;
       for (int bar = 0; bar < measures; ++bar, measure = measure->nextMeasure()) {
@@ -801,7 +814,6 @@ void GuitarPro4::read(QFile* fp)
                         Staff* staff = cr->staff();
                         int numStrings = staff->part()->instrument()->stringData()->strings();
                         bool hasSlur = false;
-
                         for (int i = 6; i >= 0; --i) {
                               if (strings & (1 << i) && ((6-i) < numStrings)) {
                                     Note* note = new Note(score);
@@ -828,26 +840,8 @@ void GuitarPro4::read(QFile* fp)
                         if (slides[track] == -2) {
                               slide = 0;
                               slides[track] = -1;
-                        }
-                        if (hasSlur && (slurs[staffIdx] == 0)) {
-                              Slur* slur = new Slur(score);
-                              slur->setParent(0);
-                              slur->setTrack(track);
-                              slur->setTrack2(track);
-                              slur->setTick(cr->tick());
-                              slur->setTick2(cr->tick());
-                              slurs[staffIdx] = slur;
-                              score->addElement(slur);
                               }
-                        else if (slurs[staffIdx] && !hasSlur) {
-                              // TODO: check slur
-                              Slur* s = slurs[staffIdx];
-                              slurs[staffIdx] = 0;
-                              s->setTick2(cr->tick());
-                              s->setTrack2(cr->track());
-                              }
-                        else if (slurs[staffIdx] && hasSlur) {
-                              }
+                        createSlur(hasSlur, staffIdx, cr);
                         if (cr && (cr->type() == ElementType::CHORD) && slide > 0)
                               createSlide(convertGP4SlideNum(slide), cr, staffIdx);
                         restsForEmptyBeats(segment, measure, cr, l, track, tick);

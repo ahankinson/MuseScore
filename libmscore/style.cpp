@@ -98,8 +98,8 @@ static const StyleType styleTypes[] {
 
       { StyleIdx::endBarWidth,             "endBarWidth",             Spatium(0.5) },       // 0.5
       { StyleIdx::doubleBarDistance,       "doubleBarDistance",       Spatium(0.30) },
-      { StyleIdx::endBarDistance,          "endBarDistance",          Spatium(0.40) },     // 0.3
-      { StyleIdx::repeatBarlineDotSeparation, "repeatBarlineDotSeparation", Spatium(0.40) },
+      { StyleIdx::endBarDistance,          "endBarDistance",          Spatium(.40 + (.5) * .5) },     // 0.3
+      { StyleIdx::repeatBarlineDotSeparation, "repeatBarlineDotSeparation", Spatium(.40 + .16 * .5) },
       { StyleIdx::repeatBarTips,           "repeatBarTips",           QVariant(false) },
       { StyleIdx::startBarlineSingle,      "startBarlineSingle",      QVariant(false) },
       { StyleIdx::startBarlineMultiple,    "startBarlineMultiple",    QVariant(true) },
@@ -131,7 +131,7 @@ static const StyleType styleTypes[] {
       { StyleIdx::systemHeaderDistance,    "systemHeaderDistance",    Spatium(2.5) },     // gould: 2.5
       { StyleIdx::systemHeaderTimeSigDistance, "systemHeaderTimeSigDistance", Spatium(2.0) },  // gould: 2.0
 
-      { StyleIdx::clefBarlineDistance,     "clefBarlineDistance",     Spatium(0.18) },      // was 0.5
+      { StyleIdx::clefBarlineDistance,     "clefBarlineDistance",     Spatium(0.5) },
       { StyleIdx::timesigBarlineDistance,  "timesigBarlineDistance",  Spatium(0.5) },
       { StyleIdx::stemWidth,               "stemWidth",               Spatium(0.13) },      // 0.09375
       { StyleIdx::shortenStem,             "shortenStem",             QVariant(true) },
@@ -139,7 +139,7 @@ static const StyleType styleTypes[] {
       { StyleIdx::shortestStem,            "shortestStem",            Spatium(2.25) },
       { StyleIdx::beginRepeatLeftMargin,   "beginRepeatLeftMargin",   Spatium(1.0) },
       { StyleIdx::minNoteDistance,         "minNoteDistance",         Spatium(0.25) },      // 0.4
-      { StyleIdx::barNoteDistance,         "barNoteDistance",         Spatium(1.2) },
+      { StyleIdx::barNoteDistance,         "barNoteDistance",         Spatium(1.0) },     // was 1.2
 
       { StyleIdx::barAccidentalDistance,   "barAccidentalDistance",   Spatium(.3) },
       { StyleIdx::multiMeasureRestMargin,  "multiMeasureRestMargin",  Spatium(1.2) },
@@ -179,6 +179,7 @@ static const StyleType styleTypes[] {
       { StyleIdx::pedalLineWidth,          "pedalLineWidth",          Spatium(.15) },
       { StyleIdx::pedalLineStyle,          "pedalListStyle",          QVariant(int(Qt::SolidLine)) },
       { StyleIdx::pedalBeginTextOffset,    "pedalBeginTextOffset",    QPointF(0.0, 0.15) },
+      { StyleIdx::pedalHookHeight,         "pedalHookHeight",         Spatium(-1.2) },
 
       { StyleIdx::trillPlacement,          "trillPlacement",          int(Element::Placement::ABOVE)  },
       { StyleIdx::trillPosAbove,           "trillPosAbove",           Spatium(-1) },
@@ -246,8 +247,9 @@ static const StyleType styleTypes[] {
       { StyleIdx::ArpeggioHookLen,         "ArpeggioHookLen",         Spatium(.8) },
       { StyleIdx::SlurEndWidth,            "slurEndWidth",            Spatium(.07) },
       { StyleIdx::SlurMidWidth,            "slurMidWidth",            Spatium(.15) },
-      { StyleIdx::SlurDottedWidth,         "slurDottedWidth",         Spatium(.1) },
+      { StyleIdx::SlurDottedWidth,         "slurDottedWidth",         Spatium(.10)  },
       { StyleIdx::MinTieLength,            "minTieLength",            Spatium(1.0) },
+      { StyleIdx::SlurMinDistance,         "slurMinDistance",         Spatium(0.5) },
       { StyleIdx::SectionPause,            "sectionPause",            QVariant(qreal(3.0)) },
       { StyleIdx::MusicalSymbolFont,       "musicalSymbolFont",       QVariant(QString("Emmentaler")) },
       { StyleIdx::MusicalTextFont,         "musicalTextFont",         QVariant(QString("MScore Text")) },
@@ -304,7 +306,7 @@ static const StyleType styleTypes[] {
       { StyleIdx::tupletNoteLeftDistance,  "tupletNoteLeftDistance",  Spatium(0.0) },
       { StyleIdx::tupletNoteRightDistance, "tupletNoteRightDistance", Spatium(0.0) },
       { StyleIdx::tupletBracketWidth,      "tupletBracketWidth",      Spatium(0.1) },
-      { StyleIdx::tupletDirection,         "tupletDirection",         Direction(Direction::AUTO) },
+      { StyleIdx::tupletDirection,         "tupletDirection",         QVariant::fromValue<Direction>(Direction::AUTO) },
       { StyleIdx::tupletNumberType,        "tupletNumberType",        int(Tuplet::NumberType::SHOW_NUMBER) },
       { StyleIdx::tupletBracketType,       "tupletBracketType",       int(Tuplet::BracketType::AUTO_BRACKET) },
 
@@ -636,12 +638,14 @@ static const StyleType styleTypes[] {
       { StyleIdx::ottavaFontBold,                "ottavaFontBold",               false },
       { StyleIdx::ottavaFontItalic,              "ottavaFontItalic",             false },
       { StyleIdx::ottavaFontUnderline,           "ottavaFontUnderline",          false },
+      { StyleIdx::ottavaTextAlign,               "ottavaTextAlign",              QVariant::fromValue(Align::LEFT | Align::VCENTER) },
 
       { StyleIdx::pedalFontFace,                 "pedalFontFace",                "FreeSerif" },
       { StyleIdx::pedalFontSize,                 "pedalFontSize",                12.0 },
       { StyleIdx::pedalFontBold,                 "pedalFontBold",                false },
       { StyleIdx::pedalFontItalic,               "pedalFontItalic",              false },
       { StyleIdx::pedalFontUnderline,            "pedalFontUnderline",           false },
+      { StyleIdx::pedalTextAlign,                "pedalTextAlign",               QVariant::fromValue(Align::LEFT | Align::BASELINE) },
 
       { StyleIdx::hairpinFontFace,               "hairpinFontFace",              "FreeSerif" },
       { StyleIdx::hairpinFontSize,               "hairpinFontSize",              12.0 },
@@ -895,6 +899,7 @@ const std::vector<StyledProperty> dynamicsStyle {
       { StyleIdx::dynamicsFontBold,                   P_ID::FONT_BOLD              },
       { StyleIdx::dynamicsFontItalic,                 P_ID::FONT_ITALIC            },
       { StyleIdx::dynamicsFontUnderline,              P_ID::FONT_UNDERLINE         },
+      { StyleIdx::dynamicsAlign,                      P_ID::ALIGN                  },
       };
 
 const std::vector<StyledProperty> expressionStyle {
@@ -913,6 +918,7 @@ const std::vector<StyledProperty> tempoStyle {
       { StyleIdx::tempoFontUnderline,                 P_ID::FONT_UNDERLINE         },
       { StyleIdx::tempoOffset,                        P_ID::OFFSET                 },
       { StyleIdx::tempoSystemFlag,                    P_ID::SYSTEM_FLAG            },
+      { StyleIdx::tempoAlign,                         P_ID::ALIGN                  },
       };
 
 const std::vector<StyledProperty> metronomeStyle {
@@ -1045,14 +1051,29 @@ const std::vector<StyledProperty> ottavaStyle {
       { StyleIdx::ottavaFontBold,                     P_ID::FONT_BOLD              },
       { StyleIdx::ottavaFontItalic,                   P_ID::FONT_ITALIC            },
       { StyleIdx::ottavaFontUnderline,                P_ID::FONT_UNDERLINE         },
+      { StyleIdx::ottavaTextAlign,                    P_ID::BEGIN_TEXT_ALIGN       },
       };
 
 const std::vector<StyledProperty> pedalStyle {
-      { StyleIdx::pedalFontFace,                      P_ID::FONT_FACE              },
-      { StyleIdx::pedalFontSize,                      P_ID::FONT_SIZE              },
-      { StyleIdx::pedalFontBold,                      P_ID::FONT_BOLD              },
-      { StyleIdx::pedalFontItalic,                    P_ID::FONT_ITALIC            },
-      { StyleIdx::pedalFontUnderline,                 P_ID::FONT_UNDERLINE         },
+      { StyleIdx::pedalFontFace,                      P_ID::BEGIN_FONT_FACE        },
+      { StyleIdx::pedalFontFace,                      P_ID::CONTINUE_FONT_FACE     },
+      { StyleIdx::pedalFontFace,                      P_ID::END_FONT_FACE          },
+      { StyleIdx::pedalFontSize,                      P_ID::BEGIN_FONT_SIZE        },
+      { StyleIdx::pedalFontSize,                      P_ID::CONTINUE_FONT_SIZE     },
+      { StyleIdx::pedalFontSize,                      P_ID::END_FONT_SIZE          },
+      { StyleIdx::pedalFontBold,                      P_ID::BEGIN_FONT_BOLD        },
+      { StyleIdx::pedalFontBold,                      P_ID::CONTINUE_FONT_BOLD     },
+      { StyleIdx::pedalFontBold,                      P_ID::END_FONT_BOLD          },
+      { StyleIdx::pedalFontItalic,                    P_ID::BEGIN_FONT_ITALIC      },
+      { StyleIdx::pedalFontItalic,                    P_ID::CONTINUE_FONT_ITALIC   },
+      { StyleIdx::pedalFontItalic,                    P_ID::END_FONT_ITALIC        },
+      { StyleIdx::pedalFontUnderline,                 P_ID::BEGIN_FONT_UNDERLINE   },
+      { StyleIdx::pedalFontUnderline,                 P_ID::CONTINUE_FONT_UNDERLINE},
+      { StyleIdx::pedalFontUnderline,                 P_ID::END_FONT_UNDERLINE     },
+      { StyleIdx::pedalTextAlign,                     P_ID::BEGIN_TEXT_ALIGN       },
+      { StyleIdx::pedalTextAlign,                     P_ID::CONTINUE_TEXT_ALIGN    },
+      { StyleIdx::pedalHookHeight,                    P_ID::BEGIN_HOOK_HEIGHT      },
+      { StyleIdx::pedalHookHeight,                    P_ID::END_HOOK_HEIGHT        },
       };
 
 const std::vector<StyledProperty> hairpinStyle {
@@ -1220,6 +1241,9 @@ SubStyle subStyleFromName(const QString& name)
             if (s.name == name)
                   return SubStyle(s.ss);
             }
+      if (name == "Technique")                  // compatibility
+            return SubStyle::EXPRESSION;
+
       qDebug("substyle <%s> not known", qPrintable(name));
       return SubStyle::DEFAULT;
       }

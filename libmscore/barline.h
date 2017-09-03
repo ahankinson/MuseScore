@@ -57,26 +57,20 @@ struct BarLineTableItem {
 class BarLine : public Element {
       Q_GADGET
 
-      char _spanStaff         { false };       // span barline to next staff if true
-      char _spanFrom          { 0 };           // line number on start and end staves
+      int _spanStaff          { 0 };       // span barline to next staff if true, values > 1 are used for importing from 2.x
+      char _spanFrom          { 0 };       // line number on start and end staves
       char _spanTo            { 0 };
       BarLineType _barLineType { BarLineType::NORMAL };
       mutable qreal y1;
       mutable qreal y2;
       ElementList _el;        ///< fermata or other articulations
 
-      // static variables used while dragging
-      static bool _origSpanStaff;         // original span value before editing
-      static int _origSpanFrom;
-      static int _origSpanTo;
-      static qreal yoff1;                 // used during drag edit to extend y1 and y2
-      static qreal yoff2;
-
       void getY() const;
       void drawDots(QPainter* painter, qreal x) const;
       void drawTips(QPainter* painter, bool reversed, qreal x) const;
       bool isTop() const;
       bool isBottom() const;
+      void drawEditMode(QPainter*, EditData&);
 
    public:
       BarLine(Score* s = 0);
@@ -102,10 +96,10 @@ class BarLine : public Element {
       Segment* segment() const        { return toSegment(parent()); }
       Measure* measure() const        { return toMeasure(parent()->parent()); }
 
-      void setSpanStaff(bool val)     { _spanStaff = val;     }
+      void setSpanStaff(int val)      { _spanStaff = val;     }
       void setSpanFrom(int val)       { _spanFrom = val;      }
       void setSpanTo(int val)         { _spanTo = val;        }
-      bool spanStaff() const          { return _spanStaff;    }
+      int spanStaff() const           { return _spanStaff;    }
       int spanFrom() const            { return _spanFrom;     }
       int spanTo() const              { return _spanTo;       }
 
@@ -136,10 +130,10 @@ class BarLine : public Element {
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;
       virtual QVariant propertyDefault(P_ID propertyId) const override;
 
-      static void layoutWidth(Score*, BarLineType, qreal mag, qreal* lx, qreal* rx);
+      static qreal layoutWidth(Score*, BarLineType);
 
-      virtual Element* nextElement() override;
-      virtual Element* prevElement() override;
+      virtual Element* nextSegmentElement() override;
+      virtual Element* prevSegmentElement() override;
 
       virtual QString accessibleInfo() const override;
       virtual QString accessibleExtraInfo() const override;

@@ -17,6 +17,8 @@
       <lyricsMinBottomDistance>4</lyricsMinBottomDistance>
       <clefLeftMargin>0.64</clefLeftMargin>
       <clefKeyRightMargin>1.75</clefKeyRightMargin>
+      <clefBarlineDistance>0.18</clefBarlineDistance>
+      <barNoteDistance>1.2</barNoteDistance>
       <pedalPosBelow>0</pedalPosBelow>
       <trillPosAbove>0</trillPosAbove>
       <minMMRestWidth>0</minMMRestWidth>
@@ -103,7 +105,6 @@
           <lid>3</lid>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <HairPin id="2">
           <subtype>0</subtype>
@@ -615,7 +616,6 @@
             <lid>3</lid>
             <sigN>4</sigN>
             <sigD>4</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <HairPin id="3">
             <subtype>0</subtype>

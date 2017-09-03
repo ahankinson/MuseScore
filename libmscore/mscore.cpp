@@ -71,6 +71,7 @@ bool MScore::noVerticalStretch   = false;
 bool MScore::showBoundingRect    = false;
 bool MScore::showCorruptedMeasures = true;
 bool MScore::useFallbackFont       = true;
+bool MScore::autoplaceSlurs        = true;
 // #endif
 
 bool  MScore::saveTemplateMode = false;
@@ -160,28 +161,30 @@ MsError MScore::_error { MS_NO_ERROR };
 //   Direction
 //---------------------------------------------------------
 
-Direction::Direction(const QString& s)
+Direction toDirection(const QString& s)
       {
+      Direction val;
       if (s == "up")
-            val = UP;
+            val = Direction::UP;
       else if (s == "down")
-            val = DOWN;
+            val = Direction::DOWN;
       else if (s == "auto")
-            val = AUTO;
+            val = Direction::AUTO;
       else
-            val = s.toInt();
+            val = Direction(s.toInt());
+      return val;
       }
 
 //---------------------------------------------------------
 //   Direction::toString
 //---------------------------------------------------------
 
-const char* Direction::toString() const
+const char* toString(Direction val)
       {
       switch (val) {
-            case AUTO: return "auto";
-            case UP:   return "up";
-            case DOWN: return "down";
+            case Direction::AUTO: return "auto";
+            case Direction::UP:   return "up";
+            case Direction::DOWN: return "down";
             }
       __builtin_unreachable();
       }
@@ -190,15 +193,22 @@ const char* Direction::toString() const
 //   fillComboBox
 //---------------------------------------------------------
 
-void Direction::fillComboBox(QComboBox* cb)
+void fillComboBoxDirection(QComboBox* cb)
       {
       cb->clear();
-      cb->addItem(qApp->translate("Direction", "auto"), int(AUTO));
-      cb->addItem(qApp->translate("Direction", "up"),   int(UP));
-      cb->addItem(qApp->translate("Direction", "down"), int(DOWN));
+      cb->addItem(qApp->translate("Direction", "auto"), QVariant::fromValue<Direction>(Direction::AUTO));
+      cb->addItem(qApp->translate("Direction", "up"),   QVariant::fromValue<Direction>(Direction::UP));
+      cb->addItem(qApp->translate("Direction", "down"), QVariant::fromValue<Direction>(Direction::DOWN));
       }
 
-static Spatium doubleToSpatium(double d) { return Spatium(d); }
+//---------------------------------------------------------
+//   doubleToSpatium
+//---------------------------------------------------------
+
+static Spatium doubleToSpatium(double d)
+      {
+      return Spatium(d);
+      }
 
 //---------------------------------------------------------
 //   init
@@ -210,12 +220,11 @@ void MScore::init()
             qFatal("registerConverter Spatium::toDouble failed");
       if (!QMetaType::registerConverter<double, Spatium>(&doubleToSpatium))
             qFatal("registerConverter doubleToSpatium failed");
+//      if (!QMetaType::registerComparators<Spatium>())
+//            qFatal("registerComparators for Spatium failed");
 
 #ifdef SCRIPT_INTERFACE
-      qRegisterMetaType<ElementType>     ("ElementType");
       qRegisterMetaType<Note::ValueType>   ("ValueType");
-
-      qRegisterMetaType<Direction::E>("Direction");
 
       qRegisterMetaType<MScore::DirectionH>("DirectionH");
       qRegisterMetaType<Element::Placement>("Placement");
@@ -412,18 +421,18 @@ QQmlEngine* MScore::qml()
             _qml->setImportPathList(importPaths);
 #endif
             const char* enumErr = "You can't create an enumeration";
-            qmlRegisterType<MsProcess>  ("MuseScore", 1, 0, "QProcess");
-            qmlRegisterType<FileIO, 1>  ("FileIO",    1, 0, "FileIO");
+            qmlRegisterType<MsProcess>  ("MuseScore", 3, 0, "QProcess");
+            qmlRegisterType<FileIO, 1>  ("FileIO",    3, 0, "FileIO");
             //-----------mscore bindings
-//            qmlRegisterUncreatableMetaObject(Ms::staticMetaObject, "MuseScore", 1, 0, "Ms", enumErr);
-            qmlRegisterUncreatableType<Direction>("MuseScore", 1, 0, "Direction", tr(enumErr));
+            qmlRegisterUncreatableMetaObject(Ms::staticMetaObject, "MuseScore", 3, 0, "Ms", enumErr);
+//            qmlRegisterUncreatableType<Direction>("MuseScore", 3, 0, "Direction", QObject::tr(enumErr));
 
-            qmlRegisterType<MScore>     ("MuseScore", 1, 0, "MScore");
-            qmlRegisterType<MsScoreView>("MuseScore", 1, 0, "ScoreView");
+            qmlRegisterType<MScore>     ("MuseScore", 3, 0, "MScore");
+            qmlRegisterType<MsScoreView>("MuseScore", 3, 0, "ScoreView");
 
-            qmlRegisterType<Score>      ("MuseScore", 1, 0, "Score");
-            qmlRegisterType<Cursor>     ("MuseScore", 1, 0, "Cursor");
-            qmlRegisterType<ElementW>   ("MuseScore", 1, 0, "Element");
+            qmlRegisterType<Score>      ("MuseScore", 3, 0, "Score");
+            qmlRegisterType<Cursor>     ("MuseScore", 3, 0, "Cursor");
+            qmlRegisterType<ElementW>   ("MuseScore", 3, 0, "Element");
             qRegisterMetaType<ElementW*>("ElementWrapper*");
 #if 0
             qmlRegisterType<Segment>    ("MuseScore", 1, 0, "Segment");
@@ -456,7 +465,7 @@ QQmlEngine* MScore::qml()
 
 
             //classed enumerations
-            qmlRegisterUncreatableType<MSQE_StyledPropertyListIdx>("MuseScore", 1, 0, "StyledPropertyListIdx", tr("You can't create an enum"));
+            qmlRegisterUncreatableType<MSQE_StyledPropertyListIdx>("MuseScore", 1, 0, "StyledPropertyListIdx", QObject::tr("You can't create an enum"));
             qmlRegisterUncreatableType<MSQE_BarLineType>("MuseScore", 1, 0, "BarLineType", enumErr);
 
             //-----------virtual classes
@@ -464,7 +473,7 @@ QQmlEngine* MScore::qml()
             qmlRegisterType<SlurTie>();
             qmlRegisterType<Spanner>();
 #endif
-            qmlRegisterType<FractionWrapper>   ("MuseScore", 1, 1, "Fraction");
+            qmlRegisterType<FractionWrapper>   ("MuseScore", 3, 1, "Fraction");
             qRegisterMetaType<FractionWrapper*>("FractionWrapper*");
             }
       return _qml;

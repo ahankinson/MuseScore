@@ -9,31 +9,22 @@ How to add a new language
 
 You need the name of the language and the two letter code
 
-On Transifex
+On [Transifex](https://www.transifex.com/musescore/musescore/dashboard/)
 ------
 * Add the language
 https://www.transifex.com/organization/musescore/team/1397/
 or request it https://www.transifex.com/projects/p/musescore/
 
-In MuseScore source 
+In [MuseScore source](https://github.com/musescore/MuseScore)
 ------
 * Add the language in share/locale/languages.xml
-
-* Add the language mscore_XX.qm in share/locale/CMakeLists.txt
-* Add the language instruments_XX.qm in share/locale/CMakeLists.txt
-
-* Add the language mscore_XX.ts to build/gen-qt-projectfile.bat and build/gen-instruments-projectfile
-* Add the language instruments_XX.ts to build/gen-instruments-projectfile.bat and build/gen-qt-projectfile
 
 * Add the share/locale/mscore_XX.ts file, tx pull can help (`tx pull -t language_code)
 * Add the share/locale/instruments_XX.ts file, see above
 
+* Finally create a PR
 
 
-
-
-On the update translation server
+In [txt2s3 source](https://github.com/musescore/tx2s3)
 ------
-* Modify languages.json
-* rm share/locale/details.json
-
+* Modify languages.json (and create a PR)

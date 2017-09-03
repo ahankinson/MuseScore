@@ -71,7 +71,6 @@
           <lid>3</lid>
           <sigN>12</sigN>
           <sigD>8</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Tempo>
           <tempo>1.68333</tempo>
@@ -923,7 +922,6 @@
             <name>tab6StrCommon</name>
             <lines>7</lines>
             <lineDistance>1.5</lineDistance>
-            <stepOffset>2</stepOffset>
             <timesig>0</timesig>
             <durations>0</durations>
             <durationFontName>MuseScore Tab Modern</durationFontName>
@@ -990,7 +988,6 @@
             <lid>3</lid>
             <sigN>12</sigN>
             <sigD>8</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <Tempo>
             <tempo>1.68333</tempo>

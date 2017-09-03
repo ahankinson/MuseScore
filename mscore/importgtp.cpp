@@ -13,6 +13,7 @@
 #include "importgtp.h"
 #include "globals.h"
 #include "libmscore/score.h"
+#include "libmscore/elementlayout.h"
 #include "libmscore/measurebase.h"
 #include "libmscore/text.h"
 #include "libmscore/box.h"
@@ -56,6 +57,7 @@
 #include "libmscore/stafftext.h"
 #include "libmscore/sym.h"
 #include "libmscore/bracketItem.h"
+#include "libmscore/textline.h"
 #include "preferences.h"
 
 namespace Ms {
@@ -94,6 +96,7 @@ GuitarPro::GuitarPro(Score* s, int v)
       version = v;
       _codec = QTextCodec::codecForName(preferences.importCharsetGP.toLatin1());
       voltaSequence = 1;
+      tempo = -1;
       }
 
 GuitarPro::~GuitarPro()
@@ -317,19 +320,75 @@ void GuitarPro::initGuitarProDrumset()
 //   addPalmMate
 //---------------------------------------------------------
 
-void GuitarPro::addPalmMute(Note* note)
+void GuitarPro::addPalmMute(Chord* chord, int staffIdx, bool hasPM)
       {
-      addTextToNote("P.M.", Align::CENTER, note);
+      TextLine* tl = palmMutes[staffIdx];
+      if (hasPM) {
+            if (tl) {
+                  // we already have pm, let's expand it
+                  tl->setTick2(chord->tick() + chord->actualTicks());
+                  }
+            else {
+                  // we don't have pm. Let's create one
+                  tl = new TextLine(score);
+                  tl->setParent(0);
+                  tl->setBeginText("P.M.");
+                  tl->setContinueText("P.M.");
+                  tl->setEndHookType(HookType::HOOK_90);
+                  tl->setTick(chord->tick());
+                  tl->setTrack(chord->track());
+                  tl->setTrack2(chord->track());
+                  tl->setLineStyle(Qt::DashLine);
+                  tl->setEndHookHeight(Spatium(1));
+                  tl->setYoff(-2.5);
+                  palmMutes[staffIdx] = tl;
+                  score->addElement(tl);
+                  }
+            }
+      else {
+            // no more pm
+            if (tl)
+                  palmMutes[staffIdx] = 0;
+            }
       }
 
 //---------------------------------------------------------
 //   addLetRing
 //---------------------------------------------------------
 
-void GuitarPro::addLetRing(Note* note)
+void GuitarPro::addLetRing(Chord* chord, int staffIdx, bool hasLetRing)
       {
-      Text* t = addTextToNote("let ring", Align::CENTER, note);
-      t->setItalic(true);
+      Pedal* p = letRings[staffIdx];
+      if (hasLetRing) {
+            if (p) {
+                  // we already have pedal, let's expand it
+                  p->setTick2(chord->tick() + chord->actualTicks());
+                  }
+            else {
+                  // we don't have pedal. Let's create one
+                  p = new Pedal(score);
+                  p->setParent(0);
+                  p->setBeginText("let ring");
+                  p->setContinueText("let ring");
+                  p->setEndHookType(HookType::HOOK_90);
+                  p->setTick(chord->tick());
+                  p->setTick2(chord->tick() + chord->actualTicks());
+                  p->setTrack(chord->track());
+                  p->setTrack2(chord->track());
+                  p->setLineStyle(Qt::DashLine);
+                  p->setEndHookHeight(Spatium(1));
+                  p->setPlacement(Element::Placement::ABOVE);
+                  p->setProperty(P_ID::BEGIN_FONT_ITALIC, true);
+                  p->setProperty(P_ID::CONTINUE_FONT_ITALIC, true);
+                  letRings[staffIdx] = p;
+                  score->addElement(p);
+                  }
+            }
+      else {
+            // no more ring
+            if (p)
+                  letRings[staffIdx] = 0;
+            }
       }
 
 //---------------------------------------------------------
@@ -423,17 +482,21 @@ void GuitarPro::addDynamic(Note* note, int d)
             qDebug() << "addDynamics: No chord associated with this note";
             return;
             }
-      Dynamic* dyn = new Dynamic(score);
-      // guitar pro only allows their users to go from ppp to fff
-      QString map_dyn[] = {"f","ppp","pp","p","mp","mf","f","ff","fff"};
-      dyn->setDynamicType(map_dyn[d]);
-      dyn->setTrack(note->track());
+      Segment* s = nullptr;
       if (note->chord()->isGrace()) {
             Chord* parent = static_cast<Chord*>(note->chord()->parent());
-            parent->segment()->add(dyn);
+            s = parent->segment();
             }
       else
-            note->chord()->segment()->add(dyn);
+            s = note->chord()->segment();
+      if (!s->findAnnotation(ElementType::DYNAMIC, note->staffIdx() * VOICES, note->staffIdx() * VOICES + VOICES - 1)) {
+            Dynamic* dyn = new Dynamic(score);
+            // guitar pro only allows their users to go from ppp to fff
+            QString map_dyn[] = {"f","ppp","pp","p","mp","mf","f","ff","fff"};
+            dyn->setDynamicType(map_dyn[d]);
+            dyn->setTrack(note->track());
+            s->add(dyn);
+            }
       }
 
 void GuitarPro::readVolta(GPVolta* gpVolta, Measure* m)
@@ -1107,8 +1170,8 @@ void GuitarPro::createSlur(bool hasSlur, int staffIdx, ChordRest* cr)
       if (hasSlur && (slurs[staffIdx] == 0)) {
             Slur* slur = new Slur(score);
             slur->setParent(0);
-            slur->setTrack(staffIdx * VOICES);
-            slur->setTrack2(staffIdx * VOICES);
+            slur->setTrack(cr->track());
+            slur->setTrack2(cr->track());
             slur->setTick(cr->tick());
             slur->setTick2(cr->tick());
             slurs[staffIdx] = slur;
@@ -1488,7 +1551,7 @@ void GuitarPro2::read(QFile* fp)
 //   readNote
 //---------------------------------------------------------
 
-void GuitarPro1::readNote(int string, Note* note)
+bool GuitarPro1::readNote(int string, Note* note)
       {
       uchar noteBits = readUChar();
 
@@ -1528,7 +1591,7 @@ void GuitarPro1::readNote(int string, Note* note)
       if (noteBits & 0x1) {               // note != beat
             int a = readUChar();          // length
             int b = readUChar();          // t
-            qDebug("Time independend note len, len %d t %d", a, b);
+            qDebug("Time-independent note len, len %d t %d", a, b);
             }
       if (noteBits & 0x2) {               // note is dotted
             //readUChar();
@@ -1552,6 +1615,7 @@ void GuitarPro1::readNote(int string, Note* note)
             int b = readUChar();
             qDebug("Fingering=========%d %d", a, b);
             }
+      bool slur = false;
       if (noteBits & BEAT_EFFECTS) {
             uchar modMask1 = readUChar();
             uchar modMask2 = 0;
@@ -1636,10 +1700,12 @@ void GuitarPro1::readNote(int string, Note* note)
                          score->addElement(slur);
                          }
                   }
-            if (modMask1 & EFFECT_HAMMER) {         // hammer on / pull off
-                  }
-            if (modMask1 & EFFECT_LET_RING) {         // let ring
-                  }
+            if (modMask1 & EFFECT_HAMMER)  // hammer on / pull off
+                  slur = true;
+            if (modMask1 & EFFECT_LET_RING)  // let ring
+                  addLetRing(note->chord(), note->staffIdx(), true);
+            else
+                  addLetRing(note->chord(), note->staffIdx(), false);
             if (modMask1 & EFFECT_SLIDE_OLD)
                   slides[note->chord()->track()] = SHIFT_SLIDE;
 
@@ -1657,6 +1723,9 @@ void GuitarPro1::readNote(int string, Note* note)
                         readUChar();      // trill length
                         }
                   }
+            }
+      else {
+            addLetRing(note->chord(), note->staffIdx(), false);
             }
       if (fretNumber == -1) {
             qDebug("Note: no fret number, tie %d", tieNote);
@@ -1714,6 +1783,7 @@ void GuitarPro1::readNote(int string, Note* note)
                   segment = segment->prev1(SegmentType::ChordRest);
                   }
             }
+      return slur;
       }
 
 //---------------------------------------------------------
@@ -1981,6 +2051,15 @@ void GuitarPro3::read(QFile* fp)
             ch->updateInitList();
             }
 
+      slurs = new Slur*[staves];
+      letRings = new Pedal*[staves];
+      palmMutes = new TextLine*[staves];
+      for (int i = 0; i < staves; ++i) {
+            slurs[i] = 0;
+            letRings[i] = 0;
+            palmMutes[i] = 0;
+            }
+
       previousTempo = tempo;
       Measure* measure = score->firstMeasure();
       bool mixChange = false;
@@ -2111,6 +2190,7 @@ void GuitarPro3::read(QFile* fp)
 
                         Staff* staff = cr->staff();
                         int numStrings = staff->part()->instrument()->stringData()->strings();
+                        bool hasSlur = false;
                         for (int i = 6; i >= 0; --i) {
                               if (strings & (1 << i) && ((6-i) < numStrings)) {
                                     Note* note = new Note(score);
@@ -2124,7 +2204,7 @@ void GuitarPro3::read(QFile* fp)
                                           note->add(dot);
                                           }
                                     static_cast<Chord*>(cr)->add(note);
-                                    readNote(6-i, note);
+                                    hasSlur = readNote(6-i, note);
                                     note->setTpcFromPitch();
                                     }
                               }
@@ -2133,6 +2213,7 @@ void GuitarPro3::read(QFile* fp)
                               if (slide > 0)
                                     createSlide(slide, cr, staffIdx);
                               }
+                        createSlur(hasSlur, staffIdx, cr);
 
                         restsForEmptyBeats(segment, measure, cr, l, track, tick);
                         tick += cr->actualTicks();
@@ -2334,7 +2415,7 @@ Score::FileError importGTP(MasterScore* score, const QString& name)
             s->setPlainText(gp->title);
             m->add(s);
             }
-      if (!gp->subtitle.isEmpty() && !gp->artist.isEmpty() && !gp->album.isEmpty()) {
+      if (!gp->subtitle.isEmpty()|| !gp->artist.isEmpty() || !gp->album.isEmpty()) {
             Text* s = new Text(SubStyle::SUBTITLE, score);
             QString str;
             if (!gp->subtitle.isEmpty())

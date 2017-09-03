@@ -33,6 +33,7 @@
 #include "libmscore/keysig.h"
 #include "libmscore/hairpin.h"
 #include "libmscore/ottava.h"
+#include "libmscore/pedal.h"
 #include "libmscore/drumset.h"
 
 namespace Ms {
@@ -192,6 +193,8 @@ class GuitarPro {
       int voltaSequence;
       QTextCodec* _codec;
       Slur** slurs;
+      Pedal** letRings;
+      TextLine** palmMutes;
 
       void skip(qint64 len);
       void read(void* p, qint64 len);
@@ -222,8 +225,8 @@ class GuitarPro {
       void createSlide(int slide, ChordRest* cr, int staffIdx);
       void createCrecDim(int staffIdx, int track, int tick, bool crec);
       Text* addTextToNote(QString, Align, Note*);
-      void addPalmMute(Note* note);
-      void addLetRing(Note* note);
+      void addPalmMute(Chord* chord, int staffIdx, bool hasPM);
+      void addLetRing(Chord* chord, int staffIdx, bool hasLetRing);
       void addTap(Note* note);
       void addSlap(Note* note);
       void addPop(Note* note);
@@ -255,7 +258,7 @@ class GuitarPro {
 class GuitarPro1 : public GuitarPro {
 
    protected:
-      void readNote(int string, Note* note);
+      bool readNote(int string, Note* note);
       virtual int readBeatEffects(int track, Segment*);
 
    public:
@@ -351,9 +354,11 @@ class GuitarPro6 : public GuitarPro {
             QDomNode notes;
             QDomNode rhythms;
             };
-      // a mapping from identifiers to fret diagrams
-      QMap<int, FretDiagram*> fretDiagrams;
-      void parseFile(char* filename, QByteArray* data);
+      Slur** legatos;
+      TextLine** barres;
+      // a mapping from identifiers to fret diagrams by tracks
+      QMap<int, QMap<int, FretDiagram*>> fretDiagrams;
+      QMap<int, QMap<int, QString>> chordnames;
       int readBit();
       QByteArray getBytes(QByteArray* buffer, int offset, int length);
       void readGPX(QByteArray* buffer);
@@ -363,13 +368,15 @@ class GuitarPro6 : public GuitarPro {
       int readBitsReversed(int bitsToRead);
       void readGpif(QByteArray* data);
       void readScore(QDomNode* metadata);
-      void readChord(QDomNode* diagram, int track);
+      void readFretboardDiagram(QDomNode* diagram, int track);
       int findNumMeasures(GPPartInfo* partInfo);
       void readMasterTracks(QDomNode* masterTrack);
       void readDrumNote(Note* note, int element, int variation);
       int readBeats(QString beats, GPPartInfo* partInfo, Measure* measure, int startTick, int staffIdx, int voiceNum, Tuplet* tuplets[], int measureCounter);
       void readBars(QDomNode* barList, Measure* measure, ClefType oldClefId[], GPPartInfo* partInfo, int measureCounter);
       void readTracks(QDomNode* tracks);
+      void readTrackProperties(QDomNode* currentNode, Part* part, int trackCounter);
+
       void readMasterBars(GPPartInfo* partInfo);
       Fraction rhythmToDuration(QString value);
       Fraction fermataToFraction(int numerator, int denominator);
@@ -378,13 +385,17 @@ class GuitarPro6 : public GuitarPro {
       void makeTie(Note* note);
       int* previousDynamic;
       void addTremoloBar(Segment* segment, int track, int whammyOrigin, int whammyMiddle, int whammyEnd);
+      void addBarre(Chord* chord, int staffIdx, bool hasBarre, QString text = "");
+
 
    protected:
       void readNote(int string, Note* note);
       virtual int readBeatEffects(int track, Segment*);
+      void parseFile(const char* filename, QByteArray* data);
 
    public:
       GuitarPro6(Score* s) : GuitarPro(s, 6) {}
+      GuitarPro6(Score* s, int v) : GuitarPro(s, v) {}
       virtual void read(QFile*);
       };
 

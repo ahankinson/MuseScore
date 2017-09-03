@@ -539,8 +539,13 @@ void GuitarPro5::read(QFile* fp)
       staves  = readInt();
 
       slurs = new Slur*[staves];
-      for (int i = 0; i < staves; ++i)
+      letRings = new Pedal*[staves];
+      palmMutes = new TextLine*[staves];
+      for (int i = 0; i < staves; ++i) {
             slurs[i] = 0;
+            letRings[i] = 0;
+            palmMutes[i] = 0;
+            }
 
       int tnumerator   = 4;
       int tdenominator = 4;
@@ -623,8 +628,9 @@ bool GuitarPro5::readNoteEffects(Note* note)
       if (modMask1 & EFFECT_HAMMER)
             slur = true;
       if (modMask1 & EFFECT_LET_RING)
-            addLetRing(note);
-
+            addLetRing(note->chord(), note->staffIdx(), true);
+      else
+            addLetRing(note->chord(), note->staffIdx(), false);
       if (modMask1 & EFFECT_GRACE) {
             int fret = readUChar();            // grace fret
             int dynamic = readUChar();            // grace dynamic
@@ -716,7 +722,9 @@ bool GuitarPro5::readNoteEffects(Note* note)
             chord->add(a);
             }
       if (modMask2 & EFFECT_PALM_MUTE)
-            addPalmMute(note);
+            addPalmMute(note->chord(), note->staffIdx(), true);
+      else
+            addPalmMute(note->chord(), note->staffIdx(), false);
 
       if (modMask2 & EFFECT_TREMOLO) {    // tremolo picking length
             int tremoloDivision = readUChar();
@@ -893,6 +901,8 @@ bool GuitarPro5::readNote(int string, Note* note)
       bool slur = false;
       if (noteBits & NOTE_SLUR)
             slur = readNoteEffects(note);
+      else
+            addLetRing(note->chord(), note->staffIdx(), false);
 
       if (tieNote) {
             bool found = false;

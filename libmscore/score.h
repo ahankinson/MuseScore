@@ -527,7 +527,6 @@ class Score : public QObject, ScoreElement {
       void cmdToggleHideEmpty();
       void cmdSetVisible();
       void cmdUnsetVisible();
-      void cmdToggleLayoutBreak(LayoutBreak::Type);
       inline virtual Movements* movements();
       inline virtual const Movements* movements() const;
 
@@ -574,6 +573,7 @@ class Score : public QObject, ScoreElement {
       void cmdHalfDuration()        { cmdIncDecDuration( 1, 0); }
       void cmdIncDurationDotted()   { cmdIncDecDuration(-1, 1); }
       void cmdDecDurationDotted()   { cmdIncDecDuration( 1, 1); }
+      void cmdToggleLayoutBreak(LayoutBreak::Type);
 
       void addRemoveBreaks(int interval, bool lock);
 
@@ -622,7 +622,7 @@ class Score : public QObject, ScoreElement {
       void undoPropertyChanged(Element*, P_ID, const QVariant& v);
       void undoPropertyChanged(ScoreElement*, P_ID, const QVariant& v);
       inline virtual UndoStack* undoStack() const;
-      void undo(UndoCommand* cmd) const;
+      void undo(UndoCommand*, EditData* = 0) const;
       void undoRemoveMeasures(Measure*, Measure*);
       void undoAddBracket(Staff* staff, int level, BracketType type, int span);
       void undoRemoveBracket(Bracket*);
@@ -688,7 +688,7 @@ class Score : public QObject, ScoreElement {
       void startCmd();                          // start undoable command
       void endCmd(bool rollback = false);       // end undoable command
       void update();
-      void undoRedo(bool undo, EditData&);
+      void undoRedo(bool undo, EditData*);
 
       void cmdRemoveTimeSig(TimeSig*);
       void cmdAddTimeSig(Measure*, int staffIdx, TimeSig*, bool local);
@@ -700,6 +700,8 @@ class Score : public QObject, ScoreElement {
       virtual inline void addLayoutFlags(LayoutFlags);
       virtual inline void setInstrumentsChanged(bool);
       void addRefresh(const QRectF&);
+
+      void cmdRelayout();
 
       bool playNote() const                 { return _updateState._playNote; }
       void setPlayNote(bool v)              { _updateState._playNote = v;    }
@@ -738,7 +740,7 @@ class Score : public QObject, ScoreElement {
       bool saveFile(QFileInfo& info);
       bool saveFile(QIODevice* f, bool msczFormat, bool onlySelection = false);
       bool saveCompressedFile(QFileInfo&, bool onlySelection);
-      bool saveCompressedFile(QIODevice*, QFileInfo&, bool onlySelection);
+      bool saveCompressedFile(QIODevice*, QFileInfo&, bool onlySelection, bool createThumbnail = true);
       bool exportFile();
 
       void print(QPainter* printer, int page);
@@ -774,6 +776,8 @@ class Score : public QObject, ScoreElement {
       Segment* tick2leftSegment(int tick) const;
       Segment* tick2rightSegment(int tick) const;
       void fixTicks();
+      Element* nextElement();
+      Element* prevElement();
 
       void cmd(const QAction*, EditData&);
       int fileDivision(int t) const { return ((qint64)t * MScore::division + _fileDivision/2) / _fileDivision; }
@@ -833,8 +837,8 @@ class Score : public QObject, ScoreElement {
       int pos(POS pos) const                   {  return _pos[int(pos)]; }
       void setPos(POS pos, int tick);
 
-      bool noteEntryMode() const               { return inputState().noteEntryMode(); }
-      void setNoteEntryMode(bool val)          { inputState().setNoteEntryMode(val); }
+      bool noteEntryMode() const                   { return inputState().noteEntryMode(); }
+      void setNoteEntryMode(bool val)              { inputState().setNoteEntryMode(val); }
       NoteEntryMethod noteEntryMethod() const      { return inputState().noteEntryMethod();        }
       void setNoteEntryMethod(NoteEntryMethod m)   { inputState().setNoteEntryMethod(m);           }
       bool usingNoteEntryMethod(NoteEntryMethod m) { return inputState().usingNoteEntryMethod(m);  }
@@ -1059,7 +1063,7 @@ class Score : public QObject, ScoreElement {
       void cmdAddSpanner(Spanner* spanner, const QPointF& pos);
       void cmdAddSpanner(Spanner* spanner, int staffIdx, Segment* startSegment, Segment* endSegment);
       void checkSpanner(int startTick, int lastTick);
-      const std::set<Spanner*>unmanagedSpanners() { return _unmanagedSpanner; }
+      const std::set<Spanner*> unmanagedSpanners() { return _unmanagedSpanner; }
       void addUnmanagedSpanner(Spanner*);
       void removeUnmanagedSpanner(Spanner*);
 

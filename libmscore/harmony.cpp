@@ -359,7 +359,7 @@ void Harmony::read(XmlReader& e)
             // but we no longer support user-applied formatting for chord symbols anyhow
             // with any luck, the resulting text will be parseable now, so give it a shot
             createLayout();
-            QString s = plainText(true);
+            QString s = plainText();
             if (!s.isEmpty()) {
                   setHarmony(s);
                   return;
@@ -1009,7 +1009,7 @@ const ChordDescription* Harmony::generateDescription()
 void Harmony::textChanged()
       {
 //      Text::createLayout();
-      setHarmony(plainText(true));
+      setHarmony(plainText());
       }
 
 //---------------------------------------------------------
@@ -1613,6 +1613,36 @@ QString Harmony::screenReaderInfo() const
             rez = QString("%1 / %2").arg(rez).arg(tpc2name(_baseTpc, NoteSpellingType::STANDARD, NoteCaseType::AUTO, true));
 
       return rez;
+      }
+
+//---------------------------------------------------------
+//   acceptDrop
+//---------------------------------------------------------
+
+bool Harmony::acceptDrop(EditData& data) const
+      {
+      return data.element->type() == ElementType::FRET_DIAGRAM;
+      }
+
+//---------------------------------------------------------
+//   drop
+//---------------------------------------------------------
+
+Element* Harmony::drop(EditData& data)
+      {
+      Element* e = data.element;
+      if (e->type() == ElementType::FRET_DIAGRAM) {
+            FretDiagram* fd = toFretDiagram(e);
+            fd->setParent(parent());
+            fd->setTrack(track());
+            score()->undoAddElement(fd);
+            }
+      else {
+            qWarning("Harmony: cannot drop <%s>\n", e->name());
+            delete e;
+            e = 0;
+            }
+      return e;
       }
 
 //---------------------------------------------------------

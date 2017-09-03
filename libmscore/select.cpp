@@ -24,6 +24,7 @@
 #include "figuredbass.h"
 #include "glissando.h"
 #include "harmony.h"
+#include "fret.h"
 #include "hook.h"
 #include "input.h"
 #include "limits.h"
@@ -508,6 +509,8 @@ void Selection::updateSelectedElements()
             // ignore spanners belonging to other tracks
             if (sp->track() < startTrack || sp->track() >= endTrack)
                   continue;
+            if (!canSelectVoice(sp->track()))
+                  continue;
             // ignore voltas
             if (sp->type() == ElementType::VOLTA)
                   continue;
@@ -789,7 +792,6 @@ Enabling copying of more element types requires enabling pasting in Score::paste
                   case ElementType::SYSTEM_TEXT:
                   case ElementType::REHEARSAL_MARK:
                   case ElementType::INSTRUMENT_CHANGE:
-                  case ElementType::FRET_DIAGRAM:
                   case ElementType::BEND:
                   case ElementType::TREMOLOBAR:
                   case ElementType::VOLTA:
@@ -856,7 +858,8 @@ Enabling copying of more element types requires enabling pasting in Score::paste
                         seg = toFiguredBass(e)->segment();
                         break;
                   case ElementType::HARMONY:
-                        // ignore chord sybols not attached to segment
+                  case ElementType::FRET_DIAGRAM:
+                        // ignore chord symbols or fret diagrams not attached to segment
                         if (e->parent()->isSegment()) {
                               seg = toSegment(e->parent());
                               break;

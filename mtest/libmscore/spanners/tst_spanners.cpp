@@ -70,7 +70,7 @@ void TestSpanners::initTestCase()
 
 void TestSpanners::spanners01()
       {
-      EditData    dropData;
+      EditData    dropData(0);
       Glissando*  gliss;
 
       MasterScore* score = readScore(DIR + "glissando01.mscx");
@@ -185,7 +185,7 @@ void TestSpanners::spanners02()
 
 void TestSpanners::spanners03()
       {
-      EditData    dropData;
+      EditData    dropData(0);
       Glissando*  gliss;
 
       MasterScore* score = readScore(DIR + "glissando-graces01.mscx");
@@ -319,7 +319,7 @@ void TestSpanners::spanners05()
 
 void TestSpanners::spanners06()
       {
-      EditData    dropData;
+      EditData    dropData(0);
       Glissando*  gliss;
 
       MasterScore* score = readScore(DIR + "glissando-cloning03.mscx");
@@ -351,7 +351,7 @@ void TestSpanners::spanners06()
 
 void TestSpanners::spanners07()
       {
-      EditData    dropData;
+      EditData    dropData(0);
       Glissando*  gliss;
 
       MasterScore* score = readScore(DIR + "glissando-cloning04.mscx");
@@ -450,7 +450,7 @@ void TestSpanners::spanners09()
       QVERIFY(saveCompareScore(score, "lyricsline02.mscx", DIR + "lyricsline02-ref.mscx"));
 
       // UNDO AND VERIFY
-      score->undoStack()->undo(ed);
+      score->undoStack()->undo(&ed);
       score->doLayout(); // measure needs to be renumbered
       QVERIFY(saveCompareScore(score, "lyricsline02.mscx", DIR + "lyricsline02.mscx"));
       delete score;
@@ -482,7 +482,7 @@ void TestSpanners::spanners10()
       QVERIFY(saveCompareScore(score, "lyricsline03.mscx", DIR + "lyricsline03-ref.mscx"));
 
       // UNDO AND VERIFY
-      score->undoStack()->undo(ed);
+      score->undoStack()->undo(&ed);
       score->doLayout(); // measure needs to be renumbered
       QVERIFY(saveCompareScore(score, "lyricsline03.mscx", DIR + "lyricsline03.mscx"));
       delete score;
@@ -514,7 +514,7 @@ void TestSpanners::spanners11()
       QVERIFY(saveCompareScore(score, "lyricsline04.mscx", DIR + "lyricsline04-ref.mscx"));
 
       // UNDO AND VERIFY
-      score->undoStack()->undo(ed);
+      score->undoStack()->undo(&ed);
       score->doLayout(); // measure needs to be renumbered
       QVERIFY(saveCompareScore(score, "lyricsline04.mscx", DIR + "lyricsline04.mscx"));
       delete score;
@@ -546,7 +546,7 @@ void TestSpanners::spanners12()
       QVERIFY(saveCompareScore(score, "lyricsline05.mscx", DIR + "lyricsline05-ref.mscx"));
 
       // UNDO AND VERIFY
-      score->undoStack()->undo(ed);
+      score->undoStack()->undo(&ed);
       score->doLayout(); // measure needs to be renumbered
       QVERIFY(saveCompareScore(score, "lyricsline05.mscx", DIR + "lyricsline05.mscx"));
       delete score;
@@ -560,7 +560,7 @@ void TestSpanners::spanners12()
 
 void TestSpanners::spanners13()
       {
-      EditData          dropData;
+      EditData          dropData(0);
       LayoutBreak*      brk;
 
       MasterScore* score = readScore(DIR + "lyricsline06.mscx");

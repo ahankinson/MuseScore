@@ -68,7 +68,7 @@ class Chord : public ChordRest {
 //      Q_PROPERTY(QQmlListProperty<Ms::Note> notes       READ qmlNotes)
       Q_PROPERTY(Ms::Stem* stem                         READ stem)
       Q_PROPERTY(Ms::StemSlash* stemSlash               READ stemSlash)
-      Q_PROPERTY(int stemDirection                      READ stemDirection)
+//      Q_PROPERTY(int stemDirection                      READ stemDirection)
 
       std::vector<Note*>   _notes;       // sorted to decreasing line step
       LedgerLine*          _ledgerLines; // single linked list
@@ -221,6 +221,9 @@ class Chord : public ChordRest {
 
       virtual Element* nextElement() override;
       virtual Element* prevElement() override;
+      virtual Element* nextSegmentElement() override;
+      virtual Element* lastElementBeforeSegment();
+      virtual Element* prevSegmentElement() override;
       virtual QString accessibleExtraInfo() const override;
 
       virtual Shape shape() const override;

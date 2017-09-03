@@ -286,7 +286,7 @@ void FretDiagram::draw(QPainter* painter) const
             painter->drawLine(QLineF(0.0, y, x2, y));
             }
       QFont scaledFont(font);
-      scaledFont.setPointSizeF(font.pointSize() * _userMag);
+      scaledFont.setPointSizeF(font.pointSize() * _userMag * score()->styleD(StyleIdx::fretMag));
       QFontMetricsF fm(scaledFont, MScore::paintDevice());
       scaledFont.setPointSizeF(scaledFont.pointSizeF() * MScore::pixelRatio);
 
@@ -328,7 +328,7 @@ void FretDiagram::draw(QPainter* painter) const
       if (_fretOffset > 0) {
             qreal fretNumMag = score()->styleD(StyleIdx::fretNumMag);
             QFont scaledFont(font);
-            scaledFont.setPointSizeF(font.pointSize() * fretNumMag * _userMag * MScore::pixelRatio);
+            scaledFont.setPointSizeF(font.pointSize() * fretNumMag * _userMag * score()->styleD(StyleIdx::fretMag) * MScore::pixelRatio);
             painter->setFont(scaledFont);
             if (score()->styleI(StyleIdx::fretNumPos) == 0)
                   painter->drawText(QRectF(-stringDist *.4, .0, .0, fretDist),
@@ -550,7 +550,7 @@ Element* FretDiagram::drop(EditData& data)
       if (e->type() == ElementType::HARMONY) {
             Harmony* h = static_cast<Harmony*>(e);
             h->setParent(parent());
-            h->setTrack((track() / VOICES) * VOICES);
+            h->setTrack(track());
             score()->undoAddElement(h);
             }
       else {

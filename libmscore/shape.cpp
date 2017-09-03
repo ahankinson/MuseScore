@@ -66,7 +66,6 @@ qreal Shape::minHorizontalDistance(const Shape& a) const
             for (const QRectF& r1 : *this) {
                   qreal ay1 = r1.top();
                   qreal ay2 = r1.bottom();
-//                  if (intersects(ay1, ay2, by1, by2))
                   if (Ms::intersects(ay1, ay2, by1, by2)
                      || ((r1.height() == 0.0) && (r2.height() == 0.0) && (ay1 == by1))
                      || ((r1.width() == 0.0) || (r2.width() == 0.0)))
@@ -201,7 +200,8 @@ void Shape::remove(const QRectF& r)
                   return;
                   }
             }
-//      qWarning("Shape::remove: QRectF not found in Shape");
+      // qWarning("Shape::remove: QRectF not found in Shape");
+      qFatal("Shape::remove: QRectF not found in Shape");
       }
 
 void Shape::remove(const Shape& s)
@@ -246,9 +246,7 @@ void Shape::paint(QPainter& p)
             p.drawRect(r);
       }
 
-
-#ifdef DEBUG_SHAPES
-
+#ifndef NDEBUG
 //---------------------------------------------------------
 //   dump
 //---------------------------------------------------------
@@ -261,7 +259,9 @@ void Shape::dump(const char* p) const
             }
 
       }
+#endif
 
+#ifdef DEBUG_SHAPES
 //---------------------------------------------------------
 //   testShapes
 //---------------------------------------------------------

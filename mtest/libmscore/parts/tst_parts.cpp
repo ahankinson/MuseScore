@@ -266,7 +266,7 @@ void TestParts::appendMeasure()
 
       QVERIFY(saveCompareScore(score, "part-all-appendmeasures.mscx", DIR + "part-all-appendmeasures.mscx"));
 
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
 
       QVERIFY(saveCompareScore(score, "part-all-uappendmeasures.mscx", DIR + "part-all-uappendmeasures.mscx"));
       delete score;
@@ -289,7 +289,7 @@ void TestParts::insertMeasure()
 
       // QVERIFY(saveCompareScore(score, "part-all-insertmeasures.mscx", DIR + "part-all-insertmeasures.mscx"));
 
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
 
       QVERIFY(saveCompareScore(score, "part-all-uinsertmeasures.mscx", DIR + "part-all-uinsertmeasures.mscx"));
       delete score;
@@ -408,8 +408,7 @@ MasterScore* TestParts::doAddBreath()
       Segment* s   = m->tick2segment(MScore::division);
       Ms::Chord* chord = toChord(s->element(0));
       Note* note   = chord->upNote();
-      EditData dd;
-      dd.view = 0;
+      EditData dd(0);
       Breath* b = new Breath(score);
       b->setSymId(SymId::breathMarkComma);
       dd.element = b;
@@ -440,7 +439,7 @@ void TestParts::undoAddBreath()
       {
       MasterScore* score = doAddBreath();
 
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
 
       QVERIFY(saveCompareScore(score, "part-breath-uadd.mscx", DIR + "part-breath-uadd.mscx"));
       delete score;
@@ -454,8 +453,8 @@ void TestParts::undoRedoAddBreath()
       {
       MasterScore* score = doAddBreath();
 
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
 
       QVERIFY(saveCompareScore(score, "part-breath-uradd.mscx", DIR + "part-breath-uradd.mscx"));
       delete score;
@@ -499,7 +498,7 @@ void TestParts::removeBreath()
 void TestParts::undoRemoveBreath()
       {
       MasterScore* score = doRemoveBreath();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part-breath-udel.mscx", DIR + "part-breath-udel.mscx"));
       delete score;
       }
@@ -511,8 +510,8 @@ void TestParts::undoRemoveBreath()
 void TestParts::undoRedoRemoveBreath()
       {
       MasterScore* score = doRemoveBreath();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
 
       QVERIFY(saveCompareScore(score, "part-breath-urdel.mscx", DIR + "part-breath-urdel.mscx"));
       delete score;
@@ -530,8 +529,7 @@ MasterScore* TestParts::doAddFingering()
       Segment* s   = m->tick2segment(MScore::division);
       Ms::Chord* chord = static_cast<Ms::Chord*>(s->element(0));
       Note* note   = chord->upNote();
-      EditData dd;
-      dd.view = 0;
+      EditData dd(0);
       Fingering* b = new Fingering(score);
       b->setXmlText("3");
       dd.element = b;
@@ -560,7 +558,7 @@ void TestParts::addFingering()
 void TestParts::undoAddFingering()
       {
       MasterScore* score = doAddFingering();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part-fingering-uadd.mscx", DIR + "part-fingering-uadd.mscx"));
       delete score;
       }
@@ -572,8 +570,8 @@ void TestParts::undoAddFingering()
 void TestParts::undoRedoAddFingering()
       {
       MasterScore* score = doAddFingering();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
       QVERIFY(saveCompareScore(score, "part-fingering-uradd.mscx", DIR + "part-fingering-uradd.mscx"));
       delete score;
       }
@@ -624,7 +622,7 @@ void TestParts::removeFingering()
 void TestParts::undoRemoveFingering()
       {
       MasterScore* score = doRemoveFingering();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part-fingering-udel.mscx", DIR + "part-fingering-udel.mscx"));
       delete score;
       }
@@ -636,8 +634,8 @@ void TestParts::undoRemoveFingering()
 void TestParts::undoRedoRemoveFingering()
       {
       MasterScore* score = doRemoveFingering();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
       QVERIFY(saveCompareScore(score, "part-fingering-urdel.mscx", DIR + "part-fingering-urdel.mscx"));
       delete score;
       }
@@ -654,8 +652,7 @@ MasterScore* TestParts::doAddSymbol()
       Segment* s   = m->tick2segment(MScore::division);
       Ms::Chord* chord = static_cast<Ms::Chord*>(s->element(0));
       Note* note   = chord->upNote();
-      EditData dd;
-      dd.view = 0;
+      EditData dd(0);
       Symbol* b  = new Symbol(score);
       b->setSym(SymId::gClef);
       dd.element = b;
@@ -684,7 +681,7 @@ void TestParts::addSymbol()
 void TestParts::undoAddSymbol()
       {
       MasterScore* score = doAddSymbol();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part-symbol-uadd.mscx", DIR + "part-symbol-uadd.mscx"));
       delete score;
       }
@@ -696,8 +693,8 @@ void TestParts::undoAddSymbol()
 void TestParts::undoRedoAddSymbol()
       {
       MasterScore* score = doAddSymbol();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
       QVERIFY(saveCompareScore(score, "part-symbol-uradd.mscx", DIR + "part-symbol-uradd.mscx"));
       delete score;
       }
@@ -748,7 +745,7 @@ void TestParts::removeSymbol()
 void TestParts::undoRemoveSymbol()
       {
       MasterScore* score = doRemoveSymbol();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part-symbol-udel.mscx", DIR + "part-symbol-udel.mscx"));
       delete score;
       }
@@ -760,8 +757,8 @@ void TestParts::undoRemoveSymbol()
 void TestParts::undoRedoRemoveSymbol()
       {
       MasterScore* score = doRemoveSymbol();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
       QVERIFY(saveCompareScore(score, "part-symbol-urdel.mscx", DIR + "part-symbol-urdel.mscx"));
       delete score;
       }
@@ -778,8 +775,7 @@ MasterScore* TestParts::doAddChordline()
       Segment* s   = m->tick2segment(MScore::division);
       Ms::Chord* chord = static_cast<Ms::Chord*>(s->element(0));
       Note* note   = chord->upNote();
-      EditData dd;
-      dd.view = 0;
+      EditData dd(0);
       ChordLine* b  = new ChordLine(score);
       b->setChordLineType(ChordLineType::FALL);
       dd.element = b;
@@ -808,7 +804,7 @@ void TestParts::addChordline()
 void TestParts::undoAddChordline()
       {
       MasterScore* score = doAddChordline();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part-chordline-uadd.mscx", DIR + "part-chordline-uadd.mscx"));
       delete score;
       }
@@ -820,8 +816,8 @@ void TestParts::undoAddChordline()
 void TestParts::undoRedoAddChordline()
       {
       MasterScore* score = doAddChordline();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
       QVERIFY(saveCompareScore(score, "part-chordline-uradd.mscx", DIR + "part-chordline-uradd.mscx"));
       delete score;
       }
@@ -872,7 +868,7 @@ void TestParts::removeChordline()
 void TestParts::undoRemoveChordline()
       {
       MasterScore* score = doRemoveChordline();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part-chordline-udel.mscx", DIR + "part-chordline-udel.mscx"));
       delete score;
       }
@@ -884,8 +880,8 @@ void TestParts::undoRemoveChordline()
 void TestParts::undoRedoRemoveChordline()
       {
       MasterScore* score = doRemoveChordline();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
       QVERIFY(saveCompareScore(score, "part-chordline-urdel.mscx", DIR + "part-chordline-urdel.mscx"));
       delete score;
       }
@@ -902,8 +898,7 @@ MasterScore* TestParts::doAddImage()
       Segment* s   = m->tick2segment(MScore::division);
       Ms::Chord* chord = static_cast<Ms::Chord*>(s->element(0));
       Note* note   = chord->upNote();
-      EditData dd;
-      dd.view = 0;
+      EditData dd(0);
       RasterImage* b = new RasterImage(score);
       b->load(DIR + "schnee.png");
       dd.element = b;
@@ -932,7 +927,7 @@ void TestParts::addImage()
 void TestParts::undoAddImage()
       {
       MasterScore* score = doAddImage();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part26.mscx", DIR + "part26o.mscx"));
       delete score;
       }
@@ -944,8 +939,8 @@ void TestParts::undoAddImage()
 void TestParts::undoRedoAddImage()
       {
       MasterScore* score = doAddImage();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
       QVERIFY(saveCompareScore(score, "part27.mscx", DIR + "part27o.mscx"));
       delete score;
       }
@@ -996,7 +991,7 @@ void TestParts::removeImage()
 void TestParts::undoRemoveImage()
       {
       MasterScore* score = doRemoveImage();
-      score->undoRedo(true, ed);
+      score->undoRedo(true, 0);
       QVERIFY(saveCompareScore(score, "part29.mscx", DIR + "part29o.mscx"));
       delete score;
       }
@@ -1008,8 +1003,8 @@ void TestParts::undoRemoveImage()
 void TestParts::undoRedoRemoveImage()
       {
       MasterScore* score = doRemoveImage();
-      score->undoRedo(true, ed);
-      score->undoRedo(false, ed);
+      score->undoRedo(true, 0);
+      score->undoRedo(false, 0);
       QVERIFY(saveCompareScore(score, "part30.mscx", DIR + "part30o.mscx"));
       delete score;
       }

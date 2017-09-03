@@ -182,10 +182,10 @@ static bool readScoreError(const QString& name, Score::FileError error, bool ask
                   canIgnore = true;
                   break;
             case Score::FileError::FILE_NOT_FOUND:
-                  msg = QObject::tr("File not found %1").arg(name);
+                  msg = QObject::tr("File \"%1\" not found.").arg(name);
                   break;
             case Score::FileError::FILE_CORRUPTED:
-                  msg = QObject::tr("File corrupted %1").arg(name);
+                  msg = QObject::tr("File \"%1\" corrupted.").arg(name);
                   detailedMsg = MScore::lastError;
                   canIgnore = true;
                   break;
@@ -390,7 +390,7 @@ bool MuseScore::saveFile(MasterScore* score)
             QString fn = score->masterScore()->fileInfo()->fileName();
             Text* t = score->getText(SubStyle::TITLE);
             if (t)
-                  fn = t->plainText(true);
+                  fn = t->plainText();
             QString name = createDefaultFileName(fn);
             QString f1 = tr("MuseScore File") + " (*.mscz)";
             QString f2 = tr("Uncompressed MuseScore File") + " (*.mscx)";
@@ -497,23 +497,19 @@ MasterScore* MuseScore::getNewFile()
       if (pickupMeasure)
             measures += 1;
 
-      MasterScore* score;
-      QString tp = newWizard->templatePath();
+      MasterScore* score = new MasterScore(MScore::defaultStyle());
+      QString tp         = newWizard->templatePath();
 
       QList<Excerpt*> excerpts;
       if (!newWizard->emptyScore()) {
-            MasterScore* tscore = new MasterScore();
-            tscore->setMovements(new Movements());
-            tscore->setStyle(MScore::defaultStyle());
+            MasterScore* tscore = new MasterScore(MScore::defaultStyle());
             Score::FileError rv = Ms::readScore(tscore, tp, false);
             if (rv != Score::FileError::FILE_NO_ERROR) {
                   readScoreError(newWizard->templatePath(), rv, false);
                   delete tscore;
+                  delete score;
                   return 0;
                   }
-            score = new MasterScore();
-            score->setMovements(new Movements());
-            score->setStyle(tscore->style());
             // create instruments from template
             for (Part* tpart : tscore->parts()) {
                   Part* part = new Part(score);
@@ -546,8 +542,8 @@ MasterScore* MuseScore::getNewFile()
                   excerpts.append(x);
                   }
             MeasureBase* mb = tscore->first();
-            if (mb && mb->type() == ElementType::VBOX) {
-                  VBox* tvb = static_cast<VBox*>(mb);
+            if (mb && mb->isVBox()) {
+                  VBox* tvb = toVBox(mb);
                   nvb = new VBox(score);
                   nvb->setBoxHeight(tvb->boxHeight());
                   nvb->setBoxWidth(tvb->boxWidth());
@@ -561,13 +557,11 @@ MasterScore* MuseScore::getNewFile()
             delete tscore;
             }
       else {
-            score = new MasterScore();
-            score->setMovements(new Movements());
-            score->setStyle(MScore::defaultStyle());
+            score = new MasterScore(MScore::defaultStyle());
             newWizard->createInstruments(score);
             }
       score->setCreated(true);
-      score->masterScore()->fileInfo()->setFile(createDefaultName());
+      score->fileInfo()->setFile(createDefaultName());
 
       if (!score->style().chordList()->loaded()) {
             if (score->styleB(StyleIdx::chordsXmlFile))
@@ -575,7 +569,7 @@ MasterScore* MuseScore::getNewFile()
             score->style().chordList()->read(score->styleSt(StyleIdx::chordDescriptionFile));
             }
       if (!newWizard->title().isEmpty())
-            score->masterScore()->fileInfo()->setFile(newWizard->title());
+            score->fileInfo()->setFile(newWizard->title());
 
       score->sigmap()->add(0, timesig);
 
@@ -2328,7 +2322,9 @@ void MuseScore::addImage(Score* score, Element* e)
          tr("All Supported Files") + " (*.svg *.jpg *.jpeg *.png);;" +
          tr("Scalable Vector Graphics") + " (*.svg);;" +
          tr("JPEG") + " (*.jpg *.jpeg);;" +
-         tr("PNG") + " (*.png)"
+         tr("PNG") + " (*.png)",
+         0,
+         preferences.nativeDialogs ? QFileDialog::Options() : QFileDialog::DontUseNativeDialog
          );
       if (fn.isEmpty())
             return;
@@ -2679,7 +2675,7 @@ bool MuseScore::saveSvg(Score* score, const QString& saveName)
             // 1st pass: StaffLines
             for  (System* s : page->systems()) {
                   for (int i = 0, n = s->staves()->size(); i < n; i++) {
-                        if (score->staff(i)->invisible())
+                        if (score->staff(i)->invisible() || !score->staff(i)->show())
                               continue;  // ignore invisible staves
                         if (s->staves()->isEmpty() || !s->staff(i)->show())
                               continue;

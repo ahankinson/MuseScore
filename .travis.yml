@@ -18,6 +18,7 @@ matrix:
   include:
     # 1st parallel build job - debug build on Ubuntu
     - env: "JOB=Tests"
+      dist: precise
       addons:
         apt:
           sources:
@@ -32,6 +33,7 @@ matrix:
             - curl
             - libasound2-dev
             - portaudio19-dev
+            - libportmidi-dev
             - libsndfile1-dev
             - zlib1g-dev
             - libfreetype6-dev

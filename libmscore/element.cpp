@@ -315,74 +315,6 @@ QColor Element::curColor(const Element* proxy) const
       }
 
 //---------------------------------------------------------
-//   drag
-///   Return update Rect relative to canvas.
-//---------------------------------------------------------
-
-QRectF Element::drag(EditData& ed)
-      {
-      QRectF r(canvasBoundingRect());
-
-      qreal x = ed.delta.x();
-      qreal y = ed.delta.y();
-
-      qreal _spatium = spatium();
-      if (ed.hRaster) {
-            qreal hRaster = _spatium / MScore::hRaster();
-            int n = lrint(x / hRaster);
-            x = hRaster * n;
-            }
-      if (ed.vRaster) {
-            qreal vRaster = _spatium / MScore::vRaster();
-            int n = lrint(y / vRaster);
-            y = vRaster * n;
-            }
-
-printf("drag: %f %f\n", x, y);
-      setUserOff(QPointF(x, y));
-      setGenerated(false);
-
-      if (isText()) {         // TODO: check for other types
-            //
-            // restrict move to page boundaries
-            //
-            QRectF r(canvasBoundingRect());
-            Page* p = 0;
-            Element* e = this;
-            while (e) {
-                  if (e->type() == ElementType::PAGE) {
-                        p = static_cast<Page*>(e);
-                        break;
-                        }
-                  e = e->parent();
-                  }
-            if (p) {
-                  bool move = false;
-                  QRectF pr(p->canvasBoundingRect());
-                  if (r.right() > pr.right()) {
-                        x -= r.right() - pr.right();
-                        move = true;
-                        }
-                  else if (r.left() < pr.left()) {
-                        x += pr.left() - r.left();
-                        move = true;
-                        }
-                  if (r.bottom() > pr.bottom()) {
-                        y -= r.bottom() - pr.bottom();
-                        move = true;
-                        }
-                  else if (r.top() < pr.top()) {
-                        y += pr.top() - r.top();
-                        move = true;
-                        }
-                  if (move)
-                        setUserOff(QPointF(x, y));
-                  }
-            }
-      return canvasBoundingRect() | r;
-      }
-
-//---------------------------------------------------------
 //   pagePos
 //    return position in canvas coordinates
 //---------------------------------------------------------
@@ -408,8 +340,12 @@ QPointF Element::pagePos() const
                   system = measure->system();
                   p.ry() += measure->staffLines(vStaffIdx())->y();
                   }
-            if (system)
+            if (system) {
+                  if (system->staves()->size() <= vStaffIdx()) {
+                        qDebug("staffIdx out of bounds: %s", name());
+                        }
                   p.ry() += system->staffYpage(vStaffIdx());
+                  }
             p.rx() = pageX();
             }
       else {
@@ -928,41 +864,6 @@ ElementType Element::readType(XmlReader& e, QPointF* dragOffset,
       }
 
 //---------------------------------------------------------
-//   editDrag
-//---------------------------------------------------------
-
-void Element::editDrag(EditData& ed)
-      {
-      score()->addRefresh(canvasBoundingRect());
-      setUserOff(userOff() + ed.delta);
-      undoChangeProperty(P_ID::AUTOPLACE, false);
-      score()->addRefresh(canvasBoundingRect());
-      }
-
-//---------------------------------------------------------
-//   startEdit
-//---------------------------------------------------------
-
-void Element::startEdit(EditData&)
-      {
-      undoPushProperty(P_ID::USER_OFF);
-      }
-
-//---------------------------------------------------------
-//   edit
-//    return true if event is accepted
-//---------------------------------------------------------
-
-bool Element::edit(EditData& ed)
-      {
-      if (ed.key ==  Qt::Key_Home) {
-            setUserOff(QPoint());
-            return true;
-            }
-      return false;
-      }
-
-//---------------------------------------------------------
 //   add
 //---------------------------------------------------------
 
@@ -1118,26 +1019,6 @@ bool elementLessThan(const Element* const e1, const Element* const e2)
       }
 
 //---------------------------------------------------------
-//   getGrip
-//---------------------------------------------------------
-
-QPointF Element::getGrip(Grip) const
-      {
-      qreal _spatium = score()->spatium();
-      return QPointF(userOff().x() / _spatium, userOff().y() / _spatium);
-      }
-
-//---------------------------------------------------------
-//   setGrip
-//---------------------------------------------------------
-
-void Element::setGrip(Grip, const QPointF& pt)
-      {
-      qreal _spatium = score()->spatium();
-      setUserOff(QPointF(pt.x() * _spatium, pt.y() * _spatium));
-      }
-
-//---------------------------------------------------------
 //   collectElements
 //---------------------------------------------------------
 
@@ -1227,7 +1108,8 @@ bool Element::setProperty(P_ID propertyId, const QVariant& v)
                   setSystemFlag(v.toBool());
                   break;
             default:
-                  qFatal("unknown <%s>(%d), data <%s>", propertyName(propertyId), int(propertyId), qPrintable(v.toString()));
+                  qFatal("unknown %s <%s>(%d), data <%s>", name(), propertyName(propertyId), int(propertyId), qPrintable(v.toString()));
+//                  qDebug("unknown %s <%s>(%d), data <%s>", name(), propertyName(propertyId), int(propertyId), qPrintable(v.toString()));
                   return false;
             }
       triggerLayout();
@@ -1336,7 +1218,7 @@ bool Element::isPrintable() const
 
 Element* Element::findMeasure()
       {
-      if (type() == ElementType::MEASURE)
+      if (isMeasure())
             return this;
       else if (_parent)
             return _parent->findMeasure();
@@ -1531,47 +1413,6 @@ bool Element::symIsValid(SymId id) const
       }
 
 //---------------------------------------------------------
-//   toTimeSigString
-//---------------------------------------------------------
-
-std::vector<SymId> Element::toTimeSigString(const QString& s) const
-      {
-      std::vector<SymId> d;
-      for (int i = 0; i < s.size(); ++i) {
-            switch (s[i].unicode()) {
-                  case 43: d.push_back(SymId::timeSigPlusSmall); break; // '+'
-                  case 48: d.push_back(SymId::timeSig0); break;         // '0'
-                  case 49: d.push_back(SymId::timeSig1); break;         // '1'
-                  case 50: d.push_back(SymId::timeSig2); break;         // '2'
-                  case 51: d.push_back(SymId::timeSig3); break;         // '3'
-                  case 52: d.push_back(SymId::timeSig4); break;         // '4'
-                  case 53: d.push_back(SymId::timeSig5); break;         // '5'
-                  case 54: d.push_back(SymId::timeSig6); break;         // '6'
-                  case 55: d.push_back(SymId::timeSig7); break;         // '7'
-                  case 56: d.push_back(SymId::timeSig8); break;         // '8'
-                  case 57: d.push_back(SymId::timeSig9); break;         // '9'
-                  case 67: d.push_back(SymId::timeSigCommon); break;    // 'C'
-                  case 40: d.push_back(SymId::timeSigParensLeftSmall); break;  // '('
-                  case 41: d.push_back(SymId::timeSigParensRightSmall); break; // ')'
-                  case 162: d.push_back(SymId::timeSigCutCommon); break;    // '¢'
-                  case 59664: d.push_back(SymId::mensuralProlation1); break;
-                  case 79:                                          // 'O'
-                  case 59665: d.push_back(SymId::mensuralProlation2); break;
-                  case 216:                                        // 'Ø'
-                  case 59666: d.push_back(SymId::mensuralProlation3); break;
-                  case 59667: d.push_back(SymId::mensuralProlation4); break;
-                  case 59668: d.push_back(SymId::mensuralProlation5); break;
-                  case 59670: d.push_back(SymId::mensuralProlation7); break;
-                  case 59671: d.push_back(SymId::mensuralProlation8); break;
-                  case 59673: d.push_back(SymId::mensuralProlation10); break;
-                  case 59674: d.push_back(SymId::mensuralProlation11); break;
-                  default:  break;  // d += s[i]; break;
-                  }
-            }
-      return d;
-      }
-
-//---------------------------------------------------------
 //   concertPitch
 //---------------------------------------------------------
 
@@ -1579,16 +1420,83 @@ bool Element::concertPitch() const
       {
       return score()->styleB(StyleIdx::concertPitch);
       }
+//---------------------------------------------------------
+//   nextElement
+//   selects the next score element
+//---------------------------------------------------------
+
+Element* Element::nextElement()
+      {
+      Element* e = score()->selection().element();
+      if (!e && !score()->selection().elements().isEmpty())
+            e = score()->selection().elements().first();
+      if (e) {
+            switch (e->type()) {
+                  case ElementType::SEGMENT: {
+                        Segment* s = static_cast<Segment*>(e);
+                        return s->nextElement(staffIdx());
+                        }
+                  case ElementType::MEASURE: {
+                        Measure* m = static_cast<Measure*>(e);
+                        return m->nextElementStaff(staffIdx());
+                        }
+                  case ElementType::CLEF:
+                  case ElementType::KEYSIG:
+                  case ElementType::TIMESIG:
+                  case ElementType::BAR_LINE:
+                        return nextSegmentElement();
+                  default: {
+                        return e->parent()->nextElement();
+                        }
+                  }
+            }
+      return nullptr;
+      }
+
+
+//---------------------------------------------------------
+//   prevElement
+//   selects the previous score element
+//---------------------------------------------------------
+
+Element* Element::prevElement()
+      {
+      Element* e = score()->selection().element();
+      if (!e && !score()->selection().elements().isEmpty() )
+            e = score()->selection().elements().last();
+      if (e) {
+            switch(e->type()) {
+                  case ElementType::SEGMENT: {
+                        Segment* s = static_cast<Segment*>(e);
+                        return s->prevElement(staffIdx());
+                        }
+                  case ElementType::MEASURE: {
+                        Measure* m = static_cast<Measure*>(e);
+                        return m->prevElementStaff(staffIdx());
+                        }
+                  case ElementType::CLEF:
+                  case ElementType::KEYSIG:
+                  case ElementType::TIMESIG:
+                  case ElementType::BAR_LINE:
+                        return prevSegmentElement();
+                  default: {
+                        return e->parent()->prevElement();
+                        }
+                  }
+            }
+      return nullptr;
+      }
+
 
 //------------------------------------------------------------------------------------------
-//   nextElement
+//   nextSegmentElement
 //   This function is used in for the next-element command to navigate between main elements
 //   of segments. (Note, Rest, Clef, Time Signature, Key Signature, Barline, Ambitus, Breath, etc.)
 //   The default implementation is to look for the first such element. After it is found each
 //   element knows how to find the next one and overrides this method
 //------------------------------------------------------------------------------------------
 
-Element* Element::nextElement()
+Element* Element::nextSegmentElement()
       {
       Element* p = this;
       while (p) {
@@ -1615,7 +1523,7 @@ Element* Element::nextElement()
                         }
                   case ElementType::SYSTEM: {
                         System* sys = static_cast<System*>(p);
-                        return sys->nextElement();
+                        return sys->nextSegmentElement();
                         }
                   default:
                         break;
@@ -1626,14 +1534,14 @@ Element* Element::nextElement()
       }
 
 //------------------------------------------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //   This function is used in for the prev-element command to navigate between main elements
 //   of segments. (Note, Rest, Clef, Time Signature, Key Signature, Barline, Ambitus, Breath, etc.)
 //   The default implementation is to look for the first such element. After it is found each
 //   element knows how to find the previous one and overrides this method
 //------------------------------------------------------------------------------------------
 
-Element* Element::prevElement()
+Element* Element::prevSegmentElement()
       {
       Element* p = this;
       while (p) {
@@ -1660,7 +1568,7 @@ Element* Element::prevElement()
                         }
                   case ElementType::SYSTEM: {
                         System* sys = static_cast<System*>(p);
-                        return sys->prevElement();
+                        return sys->prevSegmentElement();
                         }
                   default:
                         break;
@@ -1764,34 +1672,6 @@ void Element::triggerLayout() const
       }
 
 //---------------------------------------------------------
-//   startDrag
-//---------------------------------------------------------
-
-void Element::startDrag(EditData& data)
-      {
-      printf("start Drag==\n");
-      ElementEditData* elementData = new ElementEditData();
-      elementData->startDragPosition = userOff();
-      elementData->e = this;
-      data.addData(elementData);
-      }
-
-//---------------------------------------------------------
-//   endDrag
-//---------------------------------------------------------
-
-void Element::endDrag(EditData& data)
-      {
-      ElementEditData* ed = data.getData(this);
-      if (ed) {
-            if (userOff() != ed->startDragPosition) {
-                  undoChangeProperty(P_ID::AUTOPLACE, false);
-                  score()->undoPropertyChanged(this, P_ID::USER_OFF, ed->startDragPosition);
-                  }
-            }
-      }
-
-//---------------------------------------------------------
 //   init
 //---------------------------------------------------------
 
@@ -1830,7 +1710,7 @@ void EditData::clearData()
 //   getData
 //---------------------------------------------------------
 
-ElementEditData* EditData::getData(Element* e) const
+ElementEditData* EditData::getData(const Element* e) const
       {
       for (ElementEditData* ed : data) {
             if (ed->e == e)
@@ -1854,22 +1734,6 @@ void EditData::addData(ElementEditData* ed)
 
 void Element::drawEditMode(QPainter* p, EditData& ed)
       {
-      printf("==drawEditMode %s, grips %d\n", name(), ed.grips);
-//      if (ed.grips)
-//            draw(p);
-      if (ed.grips == 6) {       // HACK: this are grips of a slur
-            QPolygonF polygon(7);
-            polygon[0] = QPointF(ed.grip[int(Grip::START)].center());
-            polygon[1] = QPointF(ed.grip[int(Grip::BEZIER1)].center());
-            polygon[2] = QPointF(ed.grip[int(Grip::SHOULDER)].center());
-            polygon[3] = QPointF(ed.grip[int(Grip::BEZIER2)].center());
-            polygon[4] = QPointF(ed.grip[int(Grip::END)].center());
-            polygon[5] = QPointF(ed.grip[int(Grip::DRAG)].center());
-            polygon[6] = QPointF(ed.grip[int(Grip::START)].center());
-            QPen pen(MScore::frameMarginColor, 0.0);
-            p->setPen(pen);
-            p->drawPolyline(polygon);
-            }
       QPen pen(MScore::defaultColor, 0.0);
       p->setPen(pen);
       for (int i = 0; i < ed.grips; ++i) {
@@ -1879,6 +1743,165 @@ void Element::drawEditMode(QPainter* p, EditData& ed)
                   p->setBrush(Qt::NoBrush);
             p->drawRect(ed.grip[i]);
             }
+      }
+
+//---------------------------------------------------------
+//   startDrag
+//---------------------------------------------------------
+
+void Element::startDrag(EditData& ed)
+      {
+      ElementEditData* eed = new ElementEditData();
+      eed->e = this;
+      eed->pushProperty(P_ID::USER_OFF);
+      ed.addData(eed);
+      }
+
+//---------------------------------------------------------
+//   drag
+///   Return update Rect relative to canvas.
+//---------------------------------------------------------
+
+QRectF Element::drag(EditData& ed)
+      {
+      QRectF r(canvasBoundingRect());
+
+      qreal x = ed.delta.x();
+      qreal y = ed.delta.y();
+
+      qreal _spatium = spatium();
+      if (ed.hRaster) {
+            qreal hRaster = _spatium / MScore::hRaster();
+            int n = lrint(x / hRaster);
+            x = hRaster * n;
+            }
+      if (ed.vRaster) {
+            qreal vRaster = _spatium / MScore::vRaster();
+            int n = lrint(y / vRaster);
+            y = vRaster * n;
+            }
+
+      setUserOff(QPointF(x, y));
+      setGenerated(false);
+
+      if (isText()) {         // TODO: check for other types
+            //
+            // restrict move to page boundaries
+            //
+            QRectF r(canvasBoundingRect());
+            Page* p = 0;
+            Element* e = this;
+            while (e) {
+                  if (e->type() == ElementType::PAGE) {
+                        p = static_cast<Page*>(e);
+                        break;
+                        }
+                  e = e->parent();
+                  }
+            if (p) {
+                  bool move = false;
+                  QRectF pr(p->canvasBoundingRect());
+                  if (r.right() > pr.right()) {
+                        x -= r.right() - pr.right();
+                        move = true;
+                        }
+                  else if (r.left() < pr.left()) {
+                        x += pr.left() - r.left();
+                        move = true;
+                        }
+                  if (r.bottom() > pr.bottom()) {
+                        y -= r.bottom() - pr.bottom();
+                        move = true;
+                        }
+                  else if (r.top() < pr.top()) {
+                        y += pr.top() - r.top();
+                        move = true;
+                        }
+                  if (move)
+                        setUserOff(QPointF(x, y));
+                  }
+            }
+      return canvasBoundingRect() | r;
+      }
+
+//---------------------------------------------------------
+//   endDrag
+//---------------------------------------------------------
+
+void Element::endDrag(EditData& ed)
+      {
+      ElementEditData* eed = ed.getData(this);
+      for (PropertyData pd : eed->propertyData)
+            score()->undoPropertyChanged(this, pd.id, pd.data);
+      undoChangeProperty(P_ID::AUTOPLACE, false);
+      }
+
+//---------------------------------------------------------
+//   startEdit
+//---------------------------------------------------------
+
+void Element::startEdit(EditData& ed)
+      {
+      ElementEditData* elementData = new ElementEditData();
+      elementData->e = this;
+      ed.addData(elementData);
+      }
+
+//---------------------------------------------------------
+//   edit
+//    return true if event is accepted
+//---------------------------------------------------------
+
+bool Element::edit(EditData& ed)
+      {
+      if (ed.key ==  Qt::Key_Home) {
+            setUserOff(QPoint());
+            return true;
+            }
+      return false;
+      }
+
+//---------------------------------------------------------
+//   startEditDrag
+//---------------------------------------------------------
+
+void Element::startEditDrag(EditData& ed)
+      {
+      ElementEditData* eed = ed.getData(this);
+      eed->pushProperty(P_ID::USER_OFF);
+      }
+
+//---------------------------------------------------------
+//   editDrag
+//---------------------------------------------------------
+
+void Element::editDrag(EditData& ed)
+      {
+      score()->addRefresh(canvasBoundingRect());
+      setUserOff(userOff() + ed.delta);
+      undoChangeProperty(P_ID::AUTOPLACE, false);
+      score()->addRefresh(canvasBoundingRect());
+      }
+
+//---------------------------------------------------------
+//   endEditDrag
+//---------------------------------------------------------
+
+void Element::endEditDrag(EditData& ed)
+      {
+      ElementEditData* eed = ed.getData(this);
+      for (PropertyData pd : eed->propertyData)
+            score()->undoPropertyChanged(this, pd.id, pd.data);
+      undoChangeProperty(P_ID::AUTOPLACE, false);
+      eed->propertyData.clear();
+      }
+
+//---------------------------------------------------------
+//   endEdit
+//---------------------------------------------------------
+
+void Element::endEdit(EditData&)
+      {
       }
 
 }

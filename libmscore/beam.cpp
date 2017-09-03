@@ -62,7 +62,6 @@ Beam::Beam(Score* s)
       _userModified[1] = false;
       _grow1           = 1.0;
       _grow2           = 1.0;
-      editFragment     = -1;
       _isGrace         = false;
       _cross           = false;
       _noSlope         = score()->styleB(StyleIdx::beamNoSlope);
@@ -87,7 +86,6 @@ Beam::Beam(const Beam& b)
       _userModified[1] = b._userModified[1];
       _grow1           = b._grow1;
       _grow2           = b._grow2;
-      editFragment     = b.editFragment;
       for (const BeamFragment* f : b.fragments)
             fragments.append(new BeamFragment(*f));
       minMove          = b.minMove;
@@ -587,8 +585,8 @@ bool Beam::slopeZero(const std::vector<ChordRest*>& cl)
       if (cl.size() == 2 && (cl.front()->isRest() || cl.back()->isRest()))
             return true;
 
-//      for(const ChordRest* cr : cl) {
-//            if (cr->type() != ElementType::CHORD)
+//      for (const ChordRest* cr : cl) {
+//            if (!cr->isChord())
 //                  return true;
 //            }
       int l1 = cl.front()->line();
@@ -599,9 +597,8 @@ bool Beam::slopeZero(const std::vector<ChordRest*>& cl)
             int l2 = cl[1]->line();
             int l3 = cl[2]->line();
 
-            if ((l1 < le) && (l2 > l1) && (l2 > l3) && (l3 > le)) {
+            if ((l1 < le) && (l2 > l1) && (l2 > l3) && (l3 > le))
                   return true;
-                  }
             if ((l1 == l3) && (l2 == le))
                   return true;
             }
@@ -623,11 +620,9 @@ bool Beam::slopeZero(const std::vector<ChordRest*>& cl)
             int l4 = cl[1]->line(_up);
             for (unsigned  i = 1; i < cl.size()-1; ++i) {
                   // Don't consider interior rests
-                  if (cl[i]->type() != ElementType::CHORD)
+                  if (!cl[i]->isChord())
                         continue;
                   int l3 = cl[i]->line(_up);
-                  if (l3 != l4)
-                        sameLine = false;
                   if (_up) {
                         if (l3 < l1 && l3 < le)
                               return true;
@@ -636,8 +631,9 @@ bool Beam::slopeZero(const std::vector<ChordRest*>& cl)
                         if (l3 > l1 && l3 > le)
                               return true;
                         }
+                  sameLine = l3 == l4;
                   }
-            if (sameLine && (l1 == l4 || le == l4) && cl[1]->type() == ElementType::CHORD) {
+            if (sameLine && (l1 == l4 || le == l4) && cl[1]->isChord()) {
                   if (_up) {
                         if (l1 == l4 && l1 < le)
                               return true;
@@ -1569,7 +1565,7 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                                     score()->layoutChords1(c->segment(), c->staffIdx());
                                     // DEBUG: attempting to layout during beam edit causes crash
                                     // probably because ledger lines are deleted and added back
-                                    if (editFragment == -1)
+                                    // if (editFragment == -1)
                                           c->layout();
                                     }
                               else {
@@ -1920,7 +1916,8 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
             qreal x2   = stemPos.x() - _pagePos.x();
             qreal y1   = (x2 - x1) * slope + py1 + _pagePos.y();
             qreal y2   = stemPos.y();
-            qreal fuzz = _spatium * .1;
+            // qreal fuzz = _spatium * .1;
+            qreal fuzz = _spatium * .4;   // something is wrong
 
             qreal by = y2 < y1 ? -1000000 : 1000000;
             for (const QLineF* l : beamSegments) {
@@ -1940,27 +1937,23 @@ void Beam::layout2(std::vector<ChordRest*>crl, SpannerSegmentType, int frag)
                   by = 0;
                   }
 
-            Stem* stem   = c->stem();
-            Shape& shape = c->segment()->staffShape(c->vStaffIdx());
-
+            Stem* stem = c->stem();
             if (stem) {
-                  shape.remove(stem->shape());
-
                   qreal sw2  = stem->lineWidth() * .5;
                   if (c->up())
                         sw2 = -sw2;
                   stem->rxpos() = c->stemPosX() + sw2;
-                  stem->setLen(y2 - (by + _pagePos.y()));
+                  qreal l       = y2 - (by + _pagePos.y());
+                  stem->setLen(l);
 
-                  shape.add(stem->shape());
+                  StemSlash* stemSlash = c->stemSlash();
+                  if (stemSlash)
+                        stemSlash->layout();
+                  Tremolo* tremolo = c->tremolo();
+                  if (tremolo)
+                        tremolo->layout();
+                  c->segment()->createShape(c->vStaffIdx());      // recreate shape
                   }
-
-            StemSlash* stemSlash = c->stemSlash();
-            if (stemSlash)
-                  stemSlash->layout();
-            Tremolo* tremolo = c->tremolo();
-            if (tremolo)
-                  tremolo->layout();
             }
       }
 
@@ -2089,6 +2082,15 @@ void Beam::read(XmlReader& e)
       }
 
 //---------------------------------------------------------
+//   BeamEditData
+//---------------------------------------------------------
+
+class BeamEditData : public ElementEditData {
+   public:
+      int editFragment;
+      };
+
+//---------------------------------------------------------
 //   editDrag
 //---------------------------------------------------------
 
@@ -2096,27 +2098,19 @@ void Beam::editDrag(EditData& ed)
       {
       int idx  = (_direction == Direction::AUTO || _direction == Direction::DOWN) ? 0 : 1;
       qreal dy = ed.delta.y();
-      BeamFragment* f = fragments[editFragment];
+      BeamEditData* bed = static_cast<BeamEditData*>(ed.getData(this));
+      BeamFragment* f = fragments[bed->editFragment];
+      qreal y1 = f->py1[idx];
+      qreal y2 = f->py2[idx] + dy;
       if (ed.curGrip == Grip::START)
-            f->py1[idx] += dy;
-      f->py2[idx] += dy;
-      _userModified[idx] = true;
-      setGenerated(false);
-      if (_elements.front()->isGrace()) {
-            layoutGraceNotes();
-            score()->rebuildBspTree(); // ledger lines might be deleted. See #138256
-            }
-      else
-            layout1();
-      layout();
-      for (ChordRest* cr : _elements) {
-            if (cr->tuplet())
-                  cr->tuplet()->layout();
-            // TODO: would be nice to redraw stems while dragging beam,
-            // the following is not sufficient - a full (?) relayout would still be needed
-            //if (cr->type() == ElementType::CHORD)
-            //      static_cast<Chord*>(cr)->layoutStem();
-            }
+            y1 += dy;
+
+      qreal _spatium = spatium();
+      undoChangeProperty(P_ID::BEAM_POS, QPointF(y1 / _spatium, y2 / _spatium));
+      undoChangeProperty(P_ID::USER_MODIFIED, true);
+      undoChangeProperty(P_ID::GENERATED, false);
+
+      triggerLayout();
       }
 
 //---------------------------------------------------------
@@ -2126,7 +2120,8 @@ void Beam::editDrag(EditData& ed)
 void Beam::updateGrips(EditData& ed) const
       {
       int idx = (_direction == Direction::AUTO || _direction == Direction::DOWN) ? 0 : 1;
-      BeamFragment* f = fragments[editFragment];
+      BeamEditData* bed = static_cast<BeamEditData*>(ed.getData(this));
+      BeamFragment* f = fragments[bed->editFragment];
 
       ChordRest* c1 = nullptr;
       ChordRest* c2 = nullptr;
@@ -2177,7 +2172,7 @@ void Beam::reset()
             undoChangeProperty(P_ID::USER_MODIFIED, false);
             }
       if (beamDirection() != Direction::AUTO)
-            undoChangeProperty(P_ID::STEM_DIRECTION, Direction(Direction::AUTO));
+            undoChangeProperty(P_ID::STEM_DIRECTION, QVariant::fromValue<Direction>(Direction::AUTO));
       if (noSlopeStyle == PropertyFlags::UNSTYLED)
             resetProperty(P_ID::BEAM_NO_SLOPE);       // TODO: make undoable
 
@@ -2192,21 +2187,20 @@ void Beam::startEdit(EditData& ed)
       {
       ed.grips   = 2;
       ed.curGrip = Grip::END;
-
-      undoPushProperty(P_ID::BEAM_POS);
-      undoPushProperty(P_ID::USER_MODIFIED);
-      undoPushProperty(P_ID::GENERATED);
+      BeamEditData* bed = new BeamEditData();
+      bed->e    = this;
+      bed->editFragment = 0;
+      ed.addData(bed);
 
       QPointF pt(ed.startMove - pagePos());
       qreal ydiff = 100000000.0;
       int idx = (_direction == Direction::AUTO || _direction == Direction::DOWN) ? 0 : 1;
       int i = 0;
-      editFragment = 0;
       for (BeamFragment* f : fragments) {
             qreal d = fabs(f->py1[idx] - pt.y());
             if (d < ydiff) {
                   ydiff = d;
-                  editFragment = i;
+                  bed->editFragment = i;
                   }
             ++i;
             }
@@ -2219,8 +2213,6 @@ void Beam::startEdit(EditData& ed)
 void Beam::endEdit(EditData& ed)
       {
       Element::endEdit(ed);
-      editFragment = -1;
-      triggerLayout();
       }
 
 //---------------------------------------------------------
@@ -2334,7 +2326,7 @@ void Beam::setUserModified(bool val)
 QVariant Beam::getProperty(P_ID propertyId) const
       {
       switch (propertyId) {
-            case P_ID::STEM_DIRECTION: return beamDirection();
+            case P_ID::STEM_DIRECTION: return QVariant::fromValue<Direction>(beamDirection());
             case P_ID::DISTRIBUTE:     return distribute();
             case P_ID::GROW_LEFT:      return growLeft();
             case P_ID::GROW_RIGHT:     return growRight();
@@ -2396,7 +2388,7 @@ bool Beam::setProperty(P_ID propertyId, const QVariant& v)
 QVariant Beam::propertyDefault(P_ID id) const
       {
       switch (id) {
-            case P_ID::STEM_DIRECTION: return Direction(Direction::AUTO);
+            case P_ID::STEM_DIRECTION: return QVariant::fromValue<Direction>(Direction::AUTO);
             case P_ID::DISTRIBUTE:     return false;
             case P_ID::GROW_LEFT:      return 1.0;
             case P_ID::GROW_RIGHT:     return 1.0;
@@ -2456,8 +2448,37 @@ void Beam::styleChanged()
 
 Shape Beam::shape() const
       {
+      qreal lw2 = score()->styleP(StyleIdx::beamWidth) * .5 * mag();
+      const QLineF* bs = beamSegments.front();
+      double d  = (qAbs(bs->y2() - bs->y1())) / (bs->x2() - bs->x1());
+      if (beamSegments.size() > 1 && d > M_PI/6.0)
+            d = M_PI/6.0;
+      double ww      = lw2 / sin(M_PI_2 - atan(d));
+      qreal _spatium = spatium();
+
       Shape shape;
-      shape.add(bbox());
+      for (const QLineF* bs : beamSegments) {
+            qreal x = bs->x1();
+            qreal y = bs->y1();
+            qreal w = bs->x2() - x;
+            int n   = int(ceil(w / _spatium));
+            qreal s = (bs->y2() - y) / w;
+            w /= n;
+            for (int i = 1; i < n; ++i) {
+                  qreal xx = bs->x1() + i * w;
+                  qreal yy = bs->y1() + i * w * s;
+                  if (yy > y)
+                        shape.add(QRectF(x, y-ww, w, yy - y + ww*2));
+                  else
+                        shape.add(QRectF(x, yy-ww, w, y - yy + ww*2));
+                  x = xx;
+                  y = yy;
+                  }
+            if (y > bs->y2())
+                  shape.add(QRectF(x, bs->y2()-ww, w, y - bs->y2() + ww*2));
+            else
+                  shape.add(QRectF(x, y-ww, w, bs->y2() - y + ww*2));
+            }
       return shape;
       }
 

@@ -26,6 +26,7 @@
 #include "libmscore/undo.h"
 #include "libmscore/range.h"
 #include "musescore.h"
+#include "timeline.h"
 
 namespace Ms {
 
@@ -132,7 +133,10 @@ void MeasureProperties::setMeasure(Measure* _m)
       breakMultiMeasureRest->setChecked(m->breakMultiMeasureRest());
       int n  = m->repeatCount();
       count->setValue(n);
-      count->setEnabled(m->repeatEnd());
+      bool enableCount = m->repeatEnd();
+      count->setEnabled(enableCount);
+      count->setVisible(enableCount);
+      labelCount->setVisible(enableCount);
       layoutStretch->setValue(m->userStretch());
       measureNumberMode->setCurrentIndex(int(m->measureNumberMode()));
       measureNumberOffset->setValue(m->noOffset());
@@ -272,6 +276,7 @@ void MeasureProperties::apply()
             }
       score->select(m, SelectType::SINGLE, 0);
       score->update();
+      mscore->timeline()->updateGrid();
       }
 
 //---------------------------------------------------------

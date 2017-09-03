@@ -93,11 +93,6 @@ QVariant OttavaSegment::getProperty(P_ID id) const
             case P_ID::OTTAVA_TYPE:
             case P_ID::PLACEMENT:
             case P_ID::NUMBERS_ONLY:
-            case P_ID::BEGIN_FONT_FACE:
-            case P_ID::BEGIN_FONT_SIZE:
-            case P_ID::BEGIN_FONT_BOLD:
-            case P_ID::BEGIN_FONT_ITALIC:
-            case P_ID::BEGIN_FONT_UNDERLINE:
                   return ottava()->getProperty(id);
             default:
                   return TextLineBaseSegment::getProperty(id);
@@ -116,11 +111,6 @@ bool OttavaSegment::setProperty(P_ID id, const QVariant& v)
             case P_ID::OTTAVA_TYPE:
             case P_ID::PLACEMENT:
             case P_ID::NUMBERS_ONLY:
-            case P_ID::BEGIN_FONT_FACE:
-            case P_ID::BEGIN_FONT_SIZE:
-            case P_ID::BEGIN_FONT_BOLD:
-            case P_ID::BEGIN_FONT_ITALIC:
-            case P_ID::BEGIN_FONT_UNDERLINE:
                   return ottava()->setProperty(id, v);
             default:
                   return TextLineBaseSegment::setProperty(id, v);
@@ -139,11 +129,6 @@ QVariant OttavaSegment::propertyDefault(P_ID id) const
             case P_ID::OTTAVA_TYPE:
             case P_ID::PLACEMENT:
             case P_ID::NUMBERS_ONLY:
-            case P_ID::BEGIN_FONT_FACE:
-            case P_ID::BEGIN_FONT_SIZE:
-            case P_ID::BEGIN_FONT_BOLD:
-            case P_ID::BEGIN_FONT_ITALIC:
-            case P_ID::BEGIN_FONT_UNDERLINE:
                   return ottava()->propertyDefault(id);
             default:
                   return TextLineBaseSegment::propertyDefault(id);
@@ -162,11 +147,6 @@ PropertyFlags OttavaSegment::propertyFlags(P_ID id) const
             case P_ID::LINE_STYLE:
             case P_ID::PLACEMENT:
             case P_ID::NUMBERS_ONLY:
-            case P_ID::BEGIN_FONT_FACE:
-            case P_ID::BEGIN_FONT_SIZE:
-            case P_ID::BEGIN_FONT_BOLD:
-            case P_ID::BEGIN_FONT_ITALIC:
-            case P_ID::BEGIN_FONT_UNDERLINE:
                   return ottava()->propertyFlags(id);
 
             default:
@@ -185,11 +165,6 @@ void OttavaSegment::resetProperty(P_ID id)
             case P_ID::LINE_WIDTH:
             case P_ID::LINE_STYLE:
             case P_ID::NUMBERS_ONLY:
-            case P_ID::BEGIN_FONT_FACE:
-            case P_ID::BEGIN_FONT_SIZE:
-            case P_ID::BEGIN_FONT_BOLD:
-            case P_ID::BEGIN_FONT_ITALIC:
-            case P_ID::BEGIN_FONT_UNDERLINE:
                   return ottava()->resetProperty(id);
 
             default:
@@ -207,11 +182,6 @@ StyleIdx OttavaSegment::getPropertyStyle(P_ID id) const
             case P_ID::LINE_WIDTH:
             case P_ID::LINE_STYLE:
             case P_ID::NUMBERS_ONLY:
-            case P_ID::BEGIN_FONT_FACE:
-            case P_ID::BEGIN_FONT_SIZE:
-            case P_ID::BEGIN_FONT_BOLD:
-            case P_ID::BEGIN_FONT_ITALIC:
-            case P_ID::BEGIN_FONT_UNDERLINE:
                   return ottava()->getPropertyStyle(id);
 
             default:
@@ -250,6 +220,8 @@ Ottava::Ottava(Score* s)
       resetProperty(P_ID::BEGIN_FONT_BOLD);
       resetProperty(P_ID::BEGIN_FONT_ITALIC);
       resetProperty(P_ID::BEGIN_FONT_UNDERLINE);
+      resetProperty(P_ID::BEGIN_TEXT_ALIGN);
+      resetProperty(P_ID::CONTINUE_TEXT_ALIGN);
       }
 
 Ottava::Ottava(const Ottava& o)
@@ -288,13 +260,15 @@ LineSegment* Ottava::createLineSegment()
       return new OttavaSegment(score());
       }
 
+#if 0
 //---------------------------------------------------------
 //   endEdit
 //---------------------------------------------------------
 
 void Ottava::endEdit(EditData& ed)
       {
-      if (editTick != tick() || editTick2 != tick2()) {
+      SpannerEditData* ned = static_cast<SpannerEditData*>(ed.getData(this));
+      if (ned->editTick != tick() || ned->editTick2 != tick2()) {
             Staff* s = staff();
             s->updateOttava();
             score()->addLayoutFlags(LayoutFlag::FIX_PITCH_VELO);
@@ -302,6 +276,7 @@ void Ottava::endEdit(EditData& ed)
             }
       TextLineBase::endEdit(ed);
       }
+#endif
 
 //---------------------------------------------------------
 //   write
@@ -470,7 +445,6 @@ QVariant Ottava::propertyDefault(P_ID propertyId) const
                   return int(HookType::HOOK_90);
             case P_ID::END_HOOK_HEIGHT:
                   return score()->styleS(StyleIdx::ottavaHook) * ottavaDefault[int(_ottavaType)].hookDirection;
-//                  return score()->styleV(StyleIdx::ottavaHook);
             case P_ID::NUMBERS_ONLY:
                   return score()->styleV(StyleIdx::ottavaNumbersOnly);
             case P_ID::BEGIN_TEXT:
@@ -491,6 +465,9 @@ QVariant Ottava::propertyDefault(P_ID propertyId) const
                   return score()->styleV(StyleIdx::ottavaFontItalic);
             case P_ID::BEGIN_FONT_UNDERLINE:
                   return score()->styleV(StyleIdx::ottavaFontUnderline);
+            case P_ID::BEGIN_TEXT_ALIGN:
+            case P_ID::CONTINUE_TEXT_ALIGN:
+                  return score()->styleV(StyleIdx::ottavaTextAlign);
             default:
                   return TextLineBase::propertyDefault(propertyId);
             }
@@ -565,6 +542,9 @@ StyleIdx Ottava::getPropertyStyle(P_ID id) const
                   return StyleIdx::ottavaFontItalic;
             case P_ID::BEGIN_FONT_UNDERLINE:
                   return StyleIdx::ottavaFontUnderline;
+            case P_ID::BEGIN_TEXT_ALIGN:
+            case P_ID::CONTINUE_TEXT_ALIGN:
+                  return StyleIdx::ottavaTextAlign;
             default:
                   break;
             }

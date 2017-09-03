@@ -29,23 +29,26 @@
         </Staff>
       <trackName>S-Gt</trackName>
       <Instrument>
-        <longName>Acoustic Guitar</longName>
+        <longName>Guitar</longName>
         <shortName>Guit.</shortName>
-        <trackName>Acoustic Guitar</trackName>
+        <trackName>Acoustic Guitar (Treble Clef)</trackName>
         <minPitchP>40</minPitchP>
         <maxPitchP>83</maxPitchP>
         <minPitchA>40</minPitchA>
         <maxPitchA>83</maxPitchA>
+        <transposeDiatonic>-7</transposeDiatonic>
+        <transposeChromatic>-12</transposeChromatic>
         <instrumentId>pluck.guitar.acoustic</instrumentId>
-        <clef>G8vb</clef>
+        <concertClef>G8vb</concertClef>
+        <transposingClef>G</transposingClef>
         <StringData>
           <frets>21</frets>
-          <string>40</string>
-          <string>45</string>
-          <string>50</string>
-          <string>55</string>
-          <string>59</string>
-          <string>64</string>
+          <string>52</string>
+          <string>57</string>
+          <string>62</string>
+          <string>67</string>
+          <string>71</string>
+          <string>76</string>
           </StringData>
         <Articulation>
           <velocity>100</velocity>
@@ -87,8 +90,8 @@
         </VBox>
       <Measure number="1">
         <Clef>
-          <concertClefType>G8vb</concertClefType>
-          <transposingClefType>G8vb</transposingClefType>
+          <concertClefType>G</concertClefType>
+          <transposingClefType>G</transposingClefType>
           <lid>1</lid>
           </Clef>
         <KeySig>
@@ -99,7 +102,6 @@
           <lid>3</lid>
           <sigN>4</sigN>
           <sigD>4</sigD>
-          <showCourtesySig>1</showCourtesySig>
           </TimeSig>
         <Dynamic>
           <subtype>mf</subtype>
@@ -111,16 +113,18 @@
           <lid>5</lid>
           <text><sym>metNoteQuarterUp</sym> = 120</text>
           </Tempo>
+        <TextLine id="2">
+          <endHookType>1</endHookType>
+          <endHookHeight>0.5</endHookHeight>
+          <beginText>1/2B  XV</beginText>
+          <continueText>1/2B  XV</continueText>
+          <lid>14</lid>
+          </TextLine>
         <Chord>
           <lid>6</lid>
           <durationType>quarter</durationType>
           <Note>
             <lid>7</lid>
-            <Text>
-              <lid>8</lid>
-              <align>center,center</align>
-              <text>1/2B XV</text>
-              </Text>
             <pitch>60</pitch>
             <tpc>14</tpc>
             <fret>5</fret>
@@ -128,26 +132,28 @@
             </Note>
           </Chord>
         <Chord>
-          <lid>9</lid>
+          <lid>8</lid>
           <durationType>quarter</durationType>
           <Note>
-            <lid>10</lid>
+            <lid>9</lid>
             <pitch>60</pitch>
             <tpc>14</tpc>
             <fret>5</fret>
             <string>2</string>
             </Note>
           </Chord>
+        <TextLine id="3">
+          <endHookType>1</endHookType>
+          <endHookHeight>0.5</endHookHeight>
+          <beginText>B  VIII</beginText>
+          <continueText>B  VIII</continueText>
+          <lid>15</lid>
+          </TextLine>
         <Chord>
-          <lid>11</lid>
+          <lid>10</lid>
           <durationType>quarter</durationType>
           <Note>
-            <lid>12</lid>
-            <Text>
-              <lid>13</lid>
-              <align>center,center</align>
-              <text>B VIII</text>
-              </Text>
+            <lid>11</lid>
             <pitch>60</pitch>
             <tpc>14</tpc>
             <fret>5</fret>
@@ -155,7 +161,7 @@
             </Note>
           </Chord>
         <Rest>
-          <lid>14</lid>
+          <lid>12</lid>
           <durationType>quarter</durationType>
           </Rest>
         </Measure>
@@ -185,7 +191,6 @@
             <name>tab6StrCommon</name>
             <lines>6</lines>
             <lineDistance>1.5</lineDistance>
-            <stepOffset>2</stepOffset>
             <timesig>0</timesig>
             <durations>0</durations>
             <durationFontName>MuseScore Tab Modern</durationFontName>
@@ -206,23 +211,26 @@
           </Staff>
         <trackName></trackName>
         <Instrument>
-          <longName>Acoustic Guitar</longName>
+          <longName>Guitar</longName>
           <shortName>Guit.</shortName>
-          <trackName>Acoustic Guitar</trackName>
+          <trackName>Acoustic Guitar (Treble Clef)</trackName>
           <minPitchP>40</minPitchP>
           <maxPitchP>83</maxPitchP>
           <minPitchA>40</minPitchA>
           <maxPitchA>83</maxPitchA>
+          <transposeDiatonic>-7</transposeDiatonic>
+          <transposeChromatic>-12</transposeChromatic>
           <instrumentId>pluck.guitar.acoustic</instrumentId>
-          <clef>G8vb</clef>
+          <concertClef>G8vb</concertClef>
+          <transposingClef>G</transposingClef>
           <StringData>
             <frets>21</frets>
-            <string>40</string>
-            <string>45</string>
-            <string>50</string>
-            <string>55</string>
-            <string>59</string>
-            <string>64</string>
+            <string>52</string>
+            <string>57</string>
+            <string>62</string>
+            <string>67</string>
+            <string>71</string>
+            <string>76</string>
             </StringData>
           <Articulation>
             <velocity>100</velocity>
@@ -263,13 +271,13 @@
           <lid>0</lid>
           <Text>
             <style>Instrument Name (Part)</style>
-            <text>Acoustic Guitar</text>
+            <text>Guitar</text>
             </Text>
           </VBox>
         <Measure number="1">
           <Clef>
-            <concertClefType>G8vb</concertClefType>
-            <transposingClefType>G8vb</transposingClefType>
+            <concertClefType>G</concertClefType>
+            <transposingClefType>G</transposingClefType>
             <lid>1</lid>
             </Clef>
           <KeySig>
@@ -280,7 +288,6 @@
             <lid>3</lid>
             <sigN>4</sigN>
             <sigD>4</sigD>
-            <showCourtesySig>1</showCourtesySig>
             </TimeSig>
           <Dynamic>
             <subtype>mf</subtype>
@@ -292,16 +299,18 @@
             <lid>5</lid>
             <text><sym>metNoteQuarterUp</sym> = 120</text>
             </Tempo>
+          <TextLine id="4">
+            <endHookType>1</endHookType>
+            <endHookHeight>0.5</endHookHeight>
+            <beginText>1/2B  XV</beginText>
+            <continueText>1/2B  XV</continueText>
+            <lid>14</lid>
+            </TextLine>
           <Chord>
             <lid>6</lid>
             <durationType>quarter</durationType>
             <Note>
               <lid>7</lid>
-              <Text>
-                <lid>8</lid>
-                <align>center,center</align>
-                <text>1/2B XV</text>
-                </Text>
               <pitch>60</pitch>
               <tpc>14</tpc>
               <fret>5</fret>
@@ -309,26 +318,28 @@
               </Note>
             </Chord>
           <Chord>
-            <lid>9</lid>
+            <lid>8</lid>
             <durationType>quarter</durationType>
             <Note>
-              <lid>10</lid>
+              <lid>9</lid>
               <pitch>60</pitch>
               <tpc>14</tpc>
               <fret>5</fret>
               <string>2</string>
               </Note>
             </Chord>
+          <TextLine id="5">
+            <endHookType>1</endHookType>
+            <endHookHeight>0.5</endHookHeight>
+            <beginText>B  VIII</beginText>
+            <continueText>B  VIII</continueText>
+            <lid>15</lid>
+            </TextLine>
           <Chord>
-            <lid>11</lid>
+            <lid>10</lid>
             <durationType>quarter</durationType>
             <Note>
-              <lid>12</lid>
-              <Text>
-                <lid>13</lid>
-                <align>center,center</align>
-                <text>B VIII</text>
-                </Text>
+              <lid>11</lid>
               <pitch>60</pitch>
               <tpc>14</tpc>
               <fret>5</fret>
@@ -336,7 +347,7 @@
               </Note>
             </Chord>
           <Rest>
-            <lid>14</lid>
+            <lid>12</lid>
             <durationType>quarter</durationType>
             </Rest>
           </Measure>
@@ -347,16 +358,18 @@
             <lid>2</lid>
             <accidental>0</accidental>
             </KeySig>
+          <TextLine id="6">
+            <endHookType>1</endHookType>
+            <endHookHeight>0.5</endHookHeight>
+            <beginText>1/2B  XV</beginText>
+            <continueText>1/2B  XV</continueText>
+            <lid>14</lid>
+            </TextLine>
           <Chord>
             <lid>6</lid>
             <durationType>quarter</durationType>
             <Note>
               <lid>7</lid>
-              <Text>
-                <lid>8</lid>
-                <align>center,center</align>
-                <text>1/2B XV</text>
-                </Text>
               <pitch>60</pitch>
               <tpc>14</tpc>
               <fret>5</fret>
@@ -364,26 +377,28 @@
               </Note>
             </Chord>
           <Chord>
-            <lid>9</lid>
+            <lid>8</lid>
             <durationType>quarter</durationType>
             <Note>
-              <lid>10</lid>
+              <lid>9</lid>
               <pitch>60</pitch>
               <tpc>14</tpc>
               <fret>5</fret>
               <string>2</string>
               </Note>
             </Chord>
+          <TextLine id="7">
+            <endHookType>1</endHookType>
+            <endHookHeight>0.5</endHookHeight>
+            <beginText>B  VIII</beginText>
+            <continueText>B  VIII</continueText>
+            <lid>15</lid>
+            </TextLine>
           <Chord>
-            <lid>11</lid>
+            <lid>10</lid>
             <durationType>quarter</durationType>
             <Note>
-              <lid>12</lid>
-              <Text>
-                <lid>13</lid>
-                <align>center,center</align>
-                <text>B VIII</text>
-                </Text>
+              <lid>11</lid>
               <pitch>60</pitch>
               <tpc>14</tpc>
               <fret>5</fret>
@@ -391,7 +406,7 @@
               </Note>
             </Chord>
           <Rest>
-            <lid>14</lid>
+            <lid>12</lid>
             <durationType>quarter</durationType>
             </Rest>
           </Measure>

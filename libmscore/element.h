@@ -34,7 +34,7 @@ enum class SubStyle;
 //   Grip
 //---------------------------------------------------------
 
-enum class Grip : int {
+enum class Grip {
       NO_GRIP = -1,
       START = 0, END = 1,                         // arpeggio etc.
           MIDDLE = 2, APERTURE = 3,               // Line
@@ -100,6 +100,7 @@ class EditData {
 
       QPointF pos;
       QPointF startMove;
+      QPoint  startMovePixel;
       QPointF lastPos;
       QPointF delta;
       bool hRaster                     { false };
@@ -116,12 +117,15 @@ class EditData {
       Element* element                 { 0     };
       Fraction duration                { Fraction(1,4) };
 
+      EditData(MuseScoreView* v) : view(v) {}
       void init();
       void clearData();
 
-      ElementEditData* getData(Element*) const;
+      ElementEditData* getData(const Element*) const;
       void addData(ElementEditData*);
-      bool control() const { return modifiers & Qt::ControlModifier; }
+      bool control() const  { return modifiers & Qt::ControlModifier; }
+      bool shift() const    { return modifiers & Qt::ShiftModifier; }
+      bool isStartEndGrip() { return curGrip == Grip::START || curGrip == Grip::END; }
       };
 
 //-------------------------------------------------------------------
@@ -273,10 +277,11 @@ class Element : public ScoreElement {
 
       virtual void startEdit(EditData&);
       virtual bool edit(EditData&);
-      virtual void startEditDrag(EditData&)      {}
+      virtual void startEditDrag(EditData&);
       virtual void editDrag(EditData&);
-      virtual void endEditDrag(EditData&)        {}
-      virtual void endEdit(EditData&)            {}
+      virtual void endEditDrag(EditData&);
+      virtual void endEdit(EditData&);
+
       virtual void editCut(EditData&)            {}
       virtual void editCopy(EditData&)           {}
 
@@ -284,8 +289,6 @@ class Element : public ScoreElement {
       virtual bool nextGrip(EditData&) const;
       virtual bool prevGrip(EditData&) const;
       virtual QPointF gripAnchor(Grip) const     { return QPointF(); }
-      virtual void setGrip(Grip, const QPointF&);
-      virtual QPointF getGrip(Grip) const;
 
       int track() const                       { return _track; }
       virtual void setTrack(int val)          { _track = val;  }
@@ -350,7 +353,7 @@ class Element : public ScoreElement {
  delivers mouseEvent to element in edit mode
  returns true if mouse event is accepted by element
  */
-      virtual bool mousePress(EditData&, QMouseEvent*) { return false; }
+      virtual bool mousePress(EditData&) { return false; }
 
       mutable bool itemDiscovered;     ///< helper flag for bsp
 
@@ -434,13 +437,13 @@ class Element : public ScoreElement {
       QPointF symCutOutSE(SymId id) const;
       QPointF symCutOutSW(SymId id) const;
       qreal symAdvance(SymId id) const;
-      std::vector<SymId> toTimeSigString(const QString& s) const;
       bool symIsValid(SymId id) const;
 
       bool concertPitch() const;
-
-      virtual Element* nextElement();  //< Used for navigation
-      virtual Element* prevElement();  //< next-element and prev-element command
+      virtual Element* nextElement(); // selects the next score element, (notes, rests etc. as well as articulation etc.)
+      virtual Element* prevElement(); // selects the next score element, (notes, rests etc. as well as articulation etc.)
+      virtual Element* nextSegmentElement();  //< Used for navigation
+      virtual Element* prevSegmentElement();  //< next-element and prev-element command
 
       virtual QString accessibleInfo() const;         //< used to populate the status bar
       virtual QString screenReaderInfo() const  {     //< by default returns accessibleInfo, but can be overriden
@@ -473,7 +476,6 @@ class ElementEditData {
    public:
       Element* e;
       QList<PropertyData> propertyData;
-      QPointF startDragPosition;
 
       void pushProperty(P_ID pid) { propertyData.push_back(PropertyData({pid, e->getProperty(pid) })); }
       };

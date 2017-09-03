@@ -56,6 +56,7 @@ TextTools::TextTools(QWidget* parent)
       setObjectName("text-tools");
       setWindowTitle(tr("Text Tools"));
       setAllowedAreas(Qt::DockWidgetAreas(Qt::TopDockWidgetArea | Qt::BottomDockWidgetArea));
+      setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 
       text = nullptr;
       cursor = nullptr;
@@ -92,6 +93,7 @@ TextTools::TextTools(QWidget* parent)
       tb->addSeparator();
 
       typefaceFamily = new QFontComboBox(this);
+      typefaceFamily->setEditable(false);
       tb->addWidget(typefaceFamily);
 
       typefaceSize = new QDoubleSpinBox(this);
@@ -140,11 +142,11 @@ void TextTools::updateTools(EditData& ed)
       text   = toText(ed.element);
       cursor = text->cursor(ed);
       blockAllSignals(true);
-      CharFormat* format = text->curFormat(ed);
+      CharFormat* format = cursor->format();
 
       QFont f(format->fontFamily());
       typefaceFamily->setCurrentFont(f);
-      typefaceFamily->setEnabled(format->type() == CharFormatType::TEXT);
+      typefaceFamily->setEnabled(true);
       typefaceSize->setValue(format->fontSize());
 
       typefaceItalic->setChecked(format->italic());
@@ -173,7 +175,7 @@ void TextTools::updateText()
 
 void TextTools::layoutText()
       {
-      text->score()->setLayoutAll();
+      text->triggerLayout();
       text->score()->update();
       }
 

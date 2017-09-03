@@ -158,6 +158,7 @@ enum class StyleIdx {
       pedalLineWidth,
       pedalLineStyle,
       pedalBeginTextOffset,
+      pedalHookHeight,
 
       trillPlacement,
       trillPosAbove,
@@ -226,6 +227,7 @@ enum class StyleIdx {
       SlurMidWidth,
       SlurDottedWidth,
       MinTieLength,
+      SlurMinDistance,
 
       SectionPause,
       MusicalSymbolFont,
@@ -617,12 +619,14 @@ enum class StyleIdx {
       ottavaFontBold,
       ottavaFontItalic,
       ottavaFontUnderline,
+      ottavaTextAlign,
 
       pedalFontFace,
       pedalFontSize,
       pedalFontBold,
       pedalFontItalic,
       pedalFontUnderline,
+      pedalTextAlign,
 
       hairpinFontFace,
       hairpinFontSize,

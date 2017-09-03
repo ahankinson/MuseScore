@@ -318,6 +318,31 @@ void System::layoutSystem(qreal xo1)
       }
 
 //---------------------------------------------------------
+//   nextVisibleStaff
+//---------------------------------------------------------
+
+int System::nextVisibleStaff(int staffIdx) const
+      {
+      int i;
+      for (i = staffIdx + 1; i < _staves.size(); ++i) {
+            Staff*    s  = score()->staff(i);
+            SysStaff* ss = _staves[i];
+            if (s->show() && ss->show())
+                  break;
+            }
+      return i;
+      }
+
+//---------------------------------------------------------
+//   firstVisibleStaff
+//---------------------------------------------------------
+
+int System::firstVisibleStaff() const
+      {
+      return nextVisibleStaff(-1);
+      }
+
+//---------------------------------------------------------
 //   layout2
 //    called after measure layout
 //    adjusts staff distance
@@ -335,33 +360,14 @@ void System::layout2()
       setPos(0.0, 0.0);
       QList<std::pair<int,SysStaff*>> visibleStaves;
 
-      int firstStaffIdx        = -1;
-      int lastStaffIdx         = 0;
-      int firstStaffInitialIdx = -1;
-      Measure* fm              = firstMeasure();
-
       for (int i = 0; i < _staves.size(); ++i) {
             Staff*    s  = score()->staff(i);
             SysStaff* ss = _staves[i];
-            if (s->show() && ss->show()) {
+            if (s->show() && ss->show())
                   visibleStaves.append(std::pair<int,SysStaff*>(i, ss));
-                  if (firstStaffIdx == -1)
-                        firstStaffIdx = i;
-                  if (i > lastStaffIdx)
-                        lastStaffIdx = i;
-                  if (fm && fm->visible(i)) {
-                        if (firstStaffInitialIdx == -1)
-                              firstStaffInitialIdx = i;
-                        }
-                  }
-            else {
+            else
                   ss->setbbox(QRectF());  // already done in layout() ?
-                  }
             }
-      if (firstStaffIdx == -1)
-            firstStaffIdx = 0;
-      if (firstStaffInitialIdx == -1)
-            firstStaffInitialIdx = 0;
 
       qreal _spatium            = spatium();
       qreal y                   = 0.0;
@@ -387,9 +393,10 @@ void System::layout2()
                   }
 
             int si2    = ni->first;
+            Staff* staff2  = score()->staff(si2);
             qreal dist = h;
 
-            switch (staff->innerBracket()) {
+            switch (staff2->innerBracket()) {
                   case BracketType::BRACE:
                         dist += akkoladeDistance;
                         break;
@@ -400,17 +407,17 @@ void System::layout2()
                         dist += staffDistance;
                         break;
                   }
-            dist += score()->staff(si2)->userDist();
+            dist += staff2->userDist();
 
             for (MeasureBase* mb : ml) {
                   if (!mb->isMeasure())
                         continue;
                   Measure* m = toMeasure(mb);
-                  Shape& s1 = m->staffShape(si1);
-                  Shape& s2 = m->staffShape(si2);
+                  Shape& s1  = m->staffShape(si1);
+                  Shape& s2  = m->staffShape(si2);
 
-                  qreal d = s1.minVerticalDistance(s2) + minVerticalDistance;
-                  dist    = qMax(dist, d);
+                  qreal d    = s1.minVerticalDistance(s2);
+                  dist       = qMax(dist, d + minVerticalDistance);
 
                   Spacer* sp = m->vspacerDown(si1);
                   if (sp) {
@@ -431,7 +438,7 @@ void System::layout2()
             y += dist;
             }
 
-      qreal systemHeight = staff(lastStaffIdx)->bbox().bottom();
+      qreal systemHeight = staff(visibleStaves.back().first)->bbox().bottom();
       setHeight(systemHeight);
 
       for (MeasureBase* m : ml) {
@@ -477,8 +484,6 @@ void System::layout2()
                   ey = _staves[staffIdx2]->bbox().bottom();
                   }
             b->rypos() = sy;
-//            if (score()->staff(firstStaffInitialIdx)->lines() == 1)   // bbox of one line staff bad?
-//                  b->rypos() -= _spatium;
             b->setHeight(ey - sy);
             b->layout();
             }
@@ -679,7 +684,7 @@ void System::add(Element* el)
             case ElementType::VBOX:
             case ElementType::TBOX:
             case ElementType::FBOX:
-                  score()->addElement(static_cast<MeasureBase*>(el));
+                  score()->addElement(el);
                   break;
             case ElementType::TEXTLINE_SEGMENT:
             case ElementType::HAIRPIN_SEGMENT:
@@ -704,7 +709,7 @@ void System::add(Element* el)
 
             case ElementType::SYSTEM_DIVIDER:
                   {
-                  SystemDivider* sd = static_cast<SystemDivider*>(el);
+                  SystemDivider* sd = toSystemDivider(el);
                   if (sd->dividerType() == SystemDivider::Type::LEFT)
                         _systemDividerLeft = sd;
                   else
@@ -916,8 +921,7 @@ void System::scanElements(void* data, void (*func)(void*, Element*), bool all)
 qreal System::staffYpage(int staffIdx) const
       {
       if (_staves.size() <= staffIdx || staffIdx < 0) {
-            qDebug("staffY: staves %d: bad staffIdx %d", _staves.size(), staffIdx);
-//            abort();
+            qFatal("staffY: staves %d: bad staffIdx %d", _staves.size(), staffIdx);
             return pagePos().y();
             }
       return _staves[staffIdx]->y() + y();
@@ -966,10 +970,10 @@ void System::read(XmlReader& e)
       }
 
 //---------------------------------------------------------
-//   nextElement
+//   nextSegmentElement
 //---------------------------------------------------------
 
-Element* System::nextElement()
+Element* System::nextSegmentElement()
       {
       Measure* m = firstMeasure();
       if (m) {
@@ -981,10 +985,10 @@ Element* System::nextElement()
       }
 
 //---------------------------------------------------------
-//   prevElement
+//   prevSegmentElement
 //---------------------------------------------------------
 
-Element* System::prevElement()
+Element* System::prevSegmentElement()
       {
       Segment* seg = firstMeasure()->first();
       Element* re = 0;
@@ -1150,7 +1154,7 @@ qreal System::minBottom() const
 //   moveBracket
 //---------------------------------------------------------
 
-void System::moveBracket(int staffIdx, int srcCol, int dstCol)
+void System::moveBracket(int /*staffIdx*/, int /*srcCol*/, int /*dstCol*/)
       {
       printf("System::moveBracket\n");
 #if 0

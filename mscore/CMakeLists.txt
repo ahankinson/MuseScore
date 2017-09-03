@@ -143,7 +143,7 @@ QT5_WRAP_UI (ui_headers
       )
 
 if (APPLE)
-      QT5_ADD_RESOURCES (qrc_files musescore.qrc musescorefonts-Mac.qrc)
+      QT5_ADD_RESOURCES (qrc_files musescore.qrc musescorefonts-Mac.qrc shortcut-Mac.qrc)
 else (APPLE)
       QT5_ADD_RESOURCES (qrc_files musescore.qrc
             musescorefonts-MScore.qrc
@@ -151,7 +151,8 @@ else (APPLE)
             musescorefonts-Bravura.qrc
             musescorefonts-MuseJazz.qrc
             musescorefonts-FreeSerif.qrc
-            musescorefonts-Free.qrc)
+            musescorefonts-Free.qrc
+            shortcut.qrc)
 endif (APPLE)
 
 
@@ -234,13 +235,14 @@ add_executable ( ${ExecutableName}
       ${INCS}
 
       recordbutton.h greendotbutton prefsdialog.h
-      scoreview.cpp events.cpp
+      scoreview.cpp editharmony.cpp editfiguredbass.cpp events.cpp
       editinstrument.cpp editstyle.cpp
       icons.cpp importbww.cpp
       importmxml.cpp importmxmlpass1.cpp importmxmlpass2.cpp
       instrdialog.cpp instrwidget.cpp
       debugger/debugger.cpp menus.cpp
       musescore.cpp navigator.cpp pagesettings.cpp palette.cpp
+      timeline.cpp
       mixer.cpp playpanel.cpp selectionwindow.cpp preferences.cpp measureproperties.cpp
       seq.cpp textpalette.cpp
       timedialog.cpp symboldialog.cpp shortcutcapturedialog.cpp
@@ -267,7 +269,7 @@ add_executable ( ${ExecutableName}
       fretproperties.cpp sectionbreakprop.cpp
       bendproperties.cpp tremolobarprop.cpp file.cpp keyb.cpp osc.cpp
       layer.cpp selectdialog.cpp selectnotedialog.cpp propertymenu.cpp shortcut.cpp bb.cpp
-      dragelement.cpp
+      dragelement.cpp startupWizard.cpp
       svggenerator.cpp
       masterpalette.cpp
       dragdrop.cpp
@@ -350,7 +352,6 @@ add_executable ( ${ExecutableName}
 
 target_link_libraries(mscore
       awl
-      mstyle
       diff_match_patch
       bww
       rtf2html
@@ -427,6 +428,7 @@ if (MINGW)
       ${PROJECT_BINARY_DIR}/resfile.o
       PROPERTIES generated true
       )
+   string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
    # Windows: Add -mconsole to LINK_FLAGS to get a console window for debug output
    if(CMAKE_BUILD_TYPE MATCHES "DEBUG")
      set_target_properties( mscore

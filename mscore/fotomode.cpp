@@ -31,9 +31,18 @@ namespace Ms {
 
 void FotoLasso::startEdit(EditData& ed)
       {
-      printf("Foto: startEdit\n");
       ed.grips   = 8;
       ed.curGrip = Grip(0);
+      QRectF view = ((ScoreView*)ed.view)->toLogical(QRect(0.0, 0.0, ed.view->geometry().width(), ed.view->geometry().height()));
+      if (bbox().isEmpty() || !view.intersects(bbox())) {
+            // rect not found - construct new rect with default size & relative position
+            qreal w = view.width();
+            qreal h = view.height();
+            QRectF rect(w * .3, h * .3, w * .4, h * .4);
+            // convert to absolute position
+            setbbox(rect.translated(view.topLeft()));
+            }
+      setVisible(false);
       }
 
 //---------------------------------------------------------
@@ -42,7 +51,7 @@ void FotoLasso::startEdit(EditData& ed)
 
 void FotoLasso::endEdit(EditData&)
       {
-      printf("Foto: endEdit\n");
+      setVisible(false);
       }
 
 //---------------------------------------------------------
@@ -51,7 +60,6 @@ void FotoLasso::endEdit(EditData&)
 
 void FotoLasso::updateGrips(EditData& ed) const
       {
-      printf("Foto: updateGrips\n");
       Lasso::updateGrips(ed);
       }
 
@@ -69,31 +77,21 @@ void FotoLasso::drawEditMode(QPainter* p, EditData& ed)
       }
 
 //---------------------------------------------------------
-//   startFotomode
+//   startFotoMode
 //---------------------------------------------------------
 
 void ScoreView::startFotomode()
       {
-      printf("start foto mode\n");
       if (!_foto)
             _foto = new FotoLasso(_score);
       else
             _foto->setScore(_score);
       _foto->setVisible(true);
-      _foto->layout();
       _score->select(_foto);
-
-      // try to find existing rect within current view
-      QRectF view = toLogical(QRect(0.0, 0.0, width(), height()));
-      if (_foto->bbox().isEmpty() || !view.intersects(_foto->bbox())) {
-            // rect not found - construct new rect with default size & relative position
-            qreal w = view.width();
-            qreal h = view.height();
-            QRectF rect(w * .3, h * .3, w * .4, h * .4);
-            // convert to absolute position
-            _foto->setbbox(rect.translated(view.topLeft()));
-            }
-      startEditMode(_foto);
+      editData.element = _foto;
+      QAction* a = getAction("fotomode");
+      a->setChecked(true);
+      startEdit();
       }
 
 //---------------------------------------------------------
@@ -170,7 +168,6 @@ void ScoreView::doFotoDragEdit(QMouseEvent* ev)
       score()->addRefresh(_foto->abbox());
 
       editData.delta   = delta;
-      editData.view    = this;
       _foto->editDrag(editData);
       updateGrips();
       editData.startMove = p;
@@ -361,7 +358,7 @@ void ScoreView::fotoContextPopup(QContextMenuEvent* ev)
             bool ok;
             double resolution = QInputDialog::getDouble(this,
                tr("Set Output Resolution"),
-               tr("Set output resolution for PNG/SVG"),
+               tr("Set output resolution for PNG"),
                preferences.pngResolution,
                16.0, 2400.0, 1,
                &ok

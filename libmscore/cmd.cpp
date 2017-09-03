@@ -146,7 +146,7 @@ void Score::startCmd()
 //   undoRedo
 //---------------------------------------------------------
 
-void Score::undoRedo(bool undo, EditData& ed)
+void Score::undoRedo(bool undo, EditData* ed)
       {
       deselectAll();
       cmdState().reset();
@@ -3016,6 +3016,46 @@ void Score::cmdPitchDownOctave()
             upDown(false, UpDownMode::OCTAVE);
       }
 
+/*//---------------------------------------------------------
+//   cmdnextElement
+//---------------------------------------------------------
+
+void Score::cmdNextElement()
+      {
+      Element* el = selection().element();
+            if (!el && !selection().elements().isEmpty() )
+                el = selection().elements().first();
+
+            if (el){
+                  Element* next = nextElement();
+                  int staffId = el->staffIdx();
+                  selectSingle(next, staffId);
+                  }
+            else
+                  selectSingle(score()->firstElement(), 0); // check staffId
+
+      }
+
+//---------------------------------------------------------
+//   cmdprevElement
+//---------------------------------------------------------
+
+void Score::cmdPrevElement()
+      {
+      Element* el = selection().element();
+            if (!el && !selection().elements().isEmpty() )
+                el = selection().elements().last();
+
+            if (el){
+                  Element* prev = prevElement();
+                  int staffId = el->staffIdx();
+                  selectSingle(prev, staffId);
+                  }
+            else
+                  selectSingle(score()->lastElement(), 0); // check staffId
+
+      }
+*/
 //---------------------------------------------------------
 //   cmdPadNoteInclreaseTAB
 //---------------------------------------------------------
@@ -3108,9 +3148,40 @@ void Score::cmdPadNoteDecreaseTAB()
 
 void Score::cmdToggleLayoutBreak(LayoutBreak::Type type)
       {
-      Element* el = selection().element();
-      if (el && el->isBarLine() && el->parent()->isSegment()) {
-            Measure* measure = toMeasure(el->parent()->parent());
+      // find measure(s)
+      QList<Measure*> ml;
+      if (selection().isRange()) {
+            Measure* startMeasure = nullptr;
+            Measure* endMeasure = nullptr;
+            if (!selection().measureRange(&startMeasure, &endMeasure))
+                  return;
+            if (!startMeasure || !endMeasure)
+                  return;
+#if 1
+            // toggle break on the last measure of the range
+            ml.append(endMeasure);
+            // if more than one measure selected,
+            // also toggle break *before* the range (to try to fit selection on a single line)
+            if (startMeasure != endMeasure && startMeasure->prevMeasure())
+                  ml.append(startMeasure->prevMeasure());
+#else
+            // toggle breaks throughout the selection
+            for (Measure* m = startMeasure; m; m = m->nextMeasure()) {
+                  ml.append(m);
+                  if (m == endMeasure)
+                        break;
+                  }
+#endif
+            }
+      else {
+            for (Element* el : selection().elements()) {
+                  Measure* measure = toMeasure(el->findMeasure());
+                  if (measure)
+                        ml.append(measure);
+                  }
+            }
+      // toggle the breaks
+      for (Measure* measure : ml) {
             // if measure is mm rest, then propagate to last original measure
             measure = measure->isMMRest() ? measure->mmRestLast() : measure;
             if (measure)
@@ -3175,6 +3246,7 @@ void Score::cmdAddPitch(const EditData& ed, int note, bool addFlag, bool insert)
             qDebug("cannot enter notes here (no chord rest at current position)");
             return;
             }
+      is.setRest(false);
       const Drumset* ds = is.drumset();
       int octave = 4;
       if (ds) {
@@ -3349,6 +3421,15 @@ void Score::cmdAddFret(int fret)
       }
 
 //---------------------------------------------------------
+//   cmdRelayout
+//---------------------------------------------------------
+
+void Score::cmdRelayout()
+      {
+      setLayoutAll();
+      }
+
+//---------------------------------------------------------
 //   cmd
 //---------------------------------------------------------
 
@@ -3502,6 +3583,7 @@ void Score::cmd(const QAction* a, EditData& ed)
             { "system-break",               [this]{ cmdToggleLayoutBreak(LayoutBreak::Type::LINE);              }},
             { "page-break",                 [this]{ cmdToggleLayoutBreak(LayoutBreak::Type::PAGE);              }},
             { "section-break",              [this]{ cmdToggleLayoutBreak(LayoutBreak::Type::SECTION);           }},
+            { "relayout",                   [this]{ cmdRelayout();                                              }},
             { "",                           [this]{                                                             }},
             };
 

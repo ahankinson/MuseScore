@@ -36,15 +36,6 @@ enum class TimeSigType : char {
 //---------------------------------------------------------------------------------------
 //   @@ TimeSig
 ///    This class represents a time signature.
-//
-//   @P denominator         int           (read only)
-//   @P denominatorStretch  int           (read only)
-//   @P denominatorString   string        text of denominator
-//   @P groups              Groups
-//   @P numerator           int           (read only)
-//   @P numeratorStretch    int           (read only)
-//   @P numeratorString     string        text of numerator
-//   @P showCourtesySig     bool          show courtesy time signature for this sig if appropriate
 //---------------------------------------------------------------------------------------
 
 class TimeSig : public Element {
@@ -52,6 +43,9 @@ class TimeSig : public Element {
 
       QString _numeratorString;     // calculated from actualSig() if !customText
       QString _denominatorString;
+
+      std::vector<SymId> ns;
+      std::vector<SymId> ds;
 
       QPointF pz;
       QPointF pn;
@@ -64,7 +58,6 @@ class TimeSig : public Element {
       QSizeF _scale;
       TimeSigType _timeSigType;
       bool _showCourtesySig;
-      bool customText;        // if false, sz and sn are calculated from _sig
       bool _largeParentheses;
       PropertyFlags scaleStyle;
 
@@ -128,8 +121,6 @@ class TimeSig : public Element {
       virtual void styleChanged() override;
       virtual PropertyFlags propertyFlags(P_ID id) const override;
 
-      bool hasCustomText() const { return customText; }
-
       const Groups& groups() const    { return _groups; }
       void setGroups(const Groups& e) { _groups = e; }
 
@@ -138,8 +129,8 @@ class TimeSig : public Element {
 
       bool isLocal() const                 { return _stretch != Fraction(1,1); }
 
-      virtual Element* nextElement();
-      virtual Element* prevElement();
+      virtual Element* nextSegmentElement();
+      virtual Element* prevSegmentElement();
       virtual QString accessibleInfo() const override;
       };
 

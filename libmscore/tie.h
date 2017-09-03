@@ -32,13 +32,13 @@ class TieSegment : public SlurTieSegment {
       QPointF getAutoAdjust() const             { return autoAdjustOffset; }
 
    protected:
-      void changeAnchor(MuseScoreView*, Grip, Element*);
+      virtual void changeAnchor(EditData&, Element*);
 
    public:
       TieSegment(Score* s) : SlurTieSegment(s) { autoAdjustOffset = QPointF(); }
       TieSegment(const TieSegment& s) : SlurTieSegment(s) { autoAdjustOffset = QPointF(); }
       virtual TieSegment* clone() const override   { return new TieSegment(*this); }
-      virtual ElementType type() const override  { return ElementType::TIE_SEGMENT; }
+      virtual ElementType type() const override    { return ElementType::TIE_SEGMENT; }
       virtual int subtype() const override         { return static_cast<int>(spanner()->type()); }
       virtual QString subtypeName() const override { return name(spanner()->type()); }
       virtual void draw(QPainter*) const override;
@@ -46,18 +46,13 @@ class TieSegment : public SlurTieSegment {
       void layoutSegment(const QPointF& p1, const QPointF& p2);
 
       bool isEdited() const;
-      virtual void startEdit(EditData&) override;
       virtual void editDrag(EditData&) override;
       virtual bool edit(EditData&) override;
       virtual void updateGrips(EditData&) const override;
-      virtual QPointF gripAnchor(Grip grip) const override;
-
-      QPointF getGrip(Grip) const override;
-      void setGrip(Grip, const QPointF&) override;
 
       Tie* tie() const { return (Tie*)spanner(); }
 
-      void computeBezier(QPointF so = QPointF());
+      virtual void computeBezier(QPointF so = QPointF());
       };
 
 //---------------------------------------------------------
@@ -84,10 +79,11 @@ class Tie : public SlurTie {
       void calculateDirection();
       virtual void write(XmlWriter& xml) const override;
       virtual void read(XmlReader&) override;
-      virtual void layout() override;
+//      virtual void layout() override;
       virtual void slurPos(SlurPos*) override;
-      virtual void startEdit(EditData&) override;
-      virtual void endEdit(EditData&) override;
+
+      void layoutFor(System*);
+      void layoutBack(System*);
 
       bool readProperties(XmlReader&);
 

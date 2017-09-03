@@ -110,7 +110,7 @@ void Rest::draw(QPainter* painter) const
             painter->drawLine(QLineF(x1, y-_spatium, x1, y+_spatium));
             painter->drawLine(QLineF(x2, y-_spatium, x2, y+_spatium));
 
-            std::vector<Ms::SymId> s = toTimeSigString(QString("%1").arg(n));
+            std::vector<SymId>&& s = toTimeSigString(QString("%1").arg(n));
             y  = -_spatium * 1.5 - staff()->height() *.5;
             qreal x = center(x1, x2);
             x -= symBbox(s).width() * .5;
@@ -290,7 +290,7 @@ SymId Rest::getSymbol(TDuration::DurationType type, int line, int lines, int* yo
             case TDuration::DurationType::V_MEASURE:
                   if (duration() >= Fraction(2, 1))
                         return SymId::restDoubleWhole;
-                  // fall trough
+                  // fall through
             case TDuration::DurationType::V_WHOLE:
                   *yoffset = 1;
                   return (line <= -2 || line >= (lines - 1)) ? SymId::restWholeLegerLine : SymId::restWhole;
@@ -892,6 +892,24 @@ bool Rest::setProperty(P_ID propertyId, const QVariant& v)
                   return ChordRest::setProperty(propertyId, v);
             }
       return true;
+      }
+
+//---------------------------------------------------------
+//   nextElement
+//---------------------------------------------------------
+
+Element* Rest::nextElement()
+      {
+      return ChordRest::nextElement();
+      }
+
+//---------------------------------------------------------
+//   prevElement
+//---------------------------------------------------------
+
+Element* Rest::prevElement()
+      {
+      return ChordRest::prevElement();
       }
 
 //---------------------------------------------------------

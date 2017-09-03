@@ -65,6 +65,7 @@ void ScoreView::updateGrips()
             while (page->parent())
                   page = page->parent();
             QPointF pageOffset(page->pos());
+
             for (QRectF& grip : editData.grip) {
                   grip.translate(pageOffset);
                   score()->addRefresh(grip.adjusted(-dx, -dy, dx, dy));
@@ -168,65 +169,6 @@ void ScoreView::endEdit()
 #endif
       editData.clearData();
       mscore->updateInspector();
-      }
-
-//---------------------------------------------------------
-//   editData.elementDragTransition
-//    start dragEdit
-//---------------------------------------------------------
-
-bool ScoreView::editElementDragTransition(QMouseEvent* ev)
-      {
-      editData.startMove = toLogical(ev->pos());
-      editData.lastPos   = editData.startMove;
-      editData.pos       = editData.startMove;
-      editData.view      = this;
-      editData.modifiers = qApp->keyboardModifiers();
-
-      int i = 0;
-      score()->startCmd();
-      editData.element->startEditDrag(editData);
-
-      if (editData.element->isText()) {
-            qreal margin = editData.element->spatium();
-            QRectF r = editData.element->pageBoundingRect().adjusted(-margin, -margin, margin, margin);
-            if (r.contains(editData.pos)) {
-                  if (editData.element->shape().translated(editData.element->pagePos()).contains(editData.pos)) {
-                        if (editData.element->mousePress(editData, ev)) {
-                              _score->addRefresh(editData.element->canvasBoundingRect());
-                              _score->update();
-                              }
-                        }
-                  return true;
-                  }
-            return false;
-            }
-
-printf("editData.elementDragTransition %d\n", editData.grips);
-      if (editData.grips) {
-            qreal a = editData.grip[0].width() * 1.0;
-            for (; i < editData.grips; ++i) {
-                  if (editData.grip[i].adjusted(-a, -a, a, a).contains(editData.startMove)) {
-                        editData.curGrip = Grip(i);
-                        updateGrips();
-                        score()->update();
-                        printf("   ===click grip %d %d\n", i, int(editData.curGrip));
-                        return true;
-                        }
-                  }
-            printf("  no grip\n");
-            }
-#if 0
-      Element* e = elementNear(editData.startMove);
-      if (e && (e == editData.element) && (editData.element->isText())) {
-            if (editData.element->mousePress(editData, ev)) {
-                  _score->addRefresh(editData.element->canvasBoundingRect());
-                  _score->update();
-                  }
-            return true;
-            }
-#endif
-      return i != editData.grips;
       }
 
 //---------------------------------------------------------

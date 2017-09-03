@@ -253,11 +253,11 @@
     <seq>Ctrl+End</seq>
     </SC>
   <SC>
-    <key>next-element</key>
+    <key>next-segment-element</key>
     <seq>Ctrl+Alt+Shift+Right</seq>
     </SC>
   <SC>
-    <key>prev-element</key>
+    <key>prev-segment-element</key>
     <seq>Ctrl+Alt+Shift+Left</seq>
     </SC>
   <SC>
@@ -527,7 +527,7 @@
     <seq>F11</seq>
     </SC>
   <SC>
-    <key>toggle-navigator</key>
+    <key>toggle-timeline</key>
     <seq>F12</seq>
     </SC>
   <SC>
@@ -687,11 +687,11 @@
     <seq>R</seq>
     </SC>
   <SC>
-    <key>enh-up</key>
+    <key>enh-both</key>
     <seq>J</seq>
     </SC>
   <SC>
-    <key>enh-down</key>
+    <key>enh-current</key>
     <seq>Ctrl+J</seq>
     </SC>
   <SC>
@@ -965,6 +965,10 @@
   <SC>
     <key>text-word-left</key>
     <seq>Ctrl+Left</seq>
+    </SC>
+  <SC>
+    <key>relayout</key>
+    <seq>Shift+L</seq>
     </SC>
   <SC>
     <key>text-word-right</key>

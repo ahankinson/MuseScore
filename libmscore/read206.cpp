@@ -46,6 +46,7 @@
 #include "hairpin.h"
 #include "ottava.h"
 #include "trill.h"
+#include "rehearsalmark.h"
 
 #ifdef OMR
 #include "omr/omr.h"
@@ -86,7 +87,7 @@ struct StyleVal2 {
       { StyleIdx::doubleBarWidth,              QVariant(0.16) },
       { StyleIdx::endBarWidth,                 QVariant(0.5) },       // 0.5
       { StyleIdx::doubleBarDistance,           QVariant(0.30) },
-      { StyleIdx::endBarDistance,              QVariant(0.40) },     // 0.3
+      { StyleIdx::endBarDistance,              QVariant(0.65) },     // 0.3
       { StyleIdx::repeatBarTips,               QVariant(false) },
       { StyleIdx::startBarlineSingle,          QVariant(false) },
       { StyleIdx::startBarlineMultiple,        QVariant(true) },
@@ -318,8 +319,8 @@ static void readTextStyle(MStyle* style, XmlReader& e)
       Align align = Align::LEFT;
       bool sizeIsSpatiumDependent = true;
       bool hasFrame = false;
-      double frameWidthMM = 0.0;
-      double paddingWidthMM = 0.0;
+//      double frameWidthMM = 0.0;
+//      double paddingWidthMM = 0.0;
       Spatium paddingWidth(0.0);
       int frameRound = 0;
       QColor frameColor = QColor(0, 0, 0, 255);
@@ -405,7 +406,7 @@ static void readTextStyle(MStyle* style, XmlReader& e)
                   sizeIsSpatiumDependent = e.readInt();
             else if (tag == "frameWidth") { // obsolete
                   hasFrame = true;
-                  frameWidthMM = e.readDouble();
+                  /*frameWidthMM =*/ e.readDouble();
                   }
             else if (tag == "frameWidthS") {
                   hasFrame = true;
@@ -414,7 +415,7 @@ static void readTextStyle(MStyle* style, XmlReader& e)
             else if (tag == "frame")
                   hasFrame = e.readInt();
             else if (tag == "paddingWidth")          // obsolete
-                  paddingWidthMM = e.readDouble();
+                  /*paddingWidthMM =*/ e.readDouble();
             else if (tag == "paddingWidthS")
                   paddingWidth = Spatium(e.readDouble());
             else if (tag == "frameRound")
@@ -466,8 +467,6 @@ static void readTextStyle(MStyle* style, XmlReader& e)
             { "Rehearsal Mark",          SubStyle::REHEARSAL_MARK },
             { "Repeat Text Left",        SubStyle::REPEAT_LEFT },
             { "Repeat Text Right",       SubStyle::REPEAT_RIGHT },
-            { "Repeat Text",             SubStyle::REPEAT_LEFT },
-//            { "Volta",                   SubStyle::VOLTA },
             { "Frame",                   SubStyle::FRAME },
             { "Text Line",               SubStyle::TEXTLINE },
             { "Glissando",               SubStyle::GLISSANDO },
@@ -495,18 +494,33 @@ static void readTextStyle(MStyle* style, XmlReader& e)
                         case P_ID::SUB_STYLE:
                               value = int(ss);
                               break;
+                        case P_ID::BEGIN_FONT_FACE:
+                        case P_ID::CONTINUE_FONT_FACE:
+                        case P_ID::END_FONT_FACE:
                         case P_ID::FONT_FACE:
                               value = family;
                               break;
+                        case P_ID::BEGIN_FONT_SIZE:
+                        case P_ID::CONTINUE_FONT_SIZE:
+                        case P_ID::END_FONT_SIZE:
                         case P_ID::FONT_SIZE:
                               value = size;
                               break;
+                        case P_ID::BEGIN_FONT_BOLD:
+                        case P_ID::CONTINUE_FONT_BOLD:
+                        case P_ID::END_FONT_BOLD:
                         case P_ID::FONT_BOLD:
                               value = bold;
                               break;
+                        case P_ID::BEGIN_FONT_ITALIC:
+                        case P_ID::CONTINUE_FONT_ITALIC:
+                        case P_ID::END_FONT_ITALIC:
                         case P_ID::FONT_ITALIC:
                               value = italic;
                               break;
+                        case P_ID::BEGIN_FONT_UNDERLINE:
+                        case P_ID::CONTINUE_FONT_UNDERLINE:
+                        case P_ID::END_FONT_UNDERLINE:
                         case P_ID::FONT_UNDERLINE:
                               value = underline;
                               break;
@@ -537,6 +551,9 @@ static void readTextStyle(MStyle* style, XmlReader& e)
                         case P_ID::FONT_SPATIUM_DEPENDENT:
                               value = sizeIsSpatiumDependent;
                               break;
+                        case P_ID::BEGIN_TEXT_ALIGN:
+                        case P_ID::CONTINUE_TEXT_ALIGN:
+                        case P_ID::END_TEXT_ALIGN:
                         case P_ID::ALIGN:
                               value = QVariant::fromValue(align);
                               break;
@@ -549,11 +566,16 @@ static void readTextStyle(MStyle* style, XmlReader& e)
                         case P_ID::SYSTEM_FLAG:
                               value = systemFlag;
                               break;
+                        case P_ID::BEGIN_HOOK_HEIGHT:
+                        case P_ID::END_HOOK_HEIGHT:
+                              value = QVariant();
+                              break;
                         default:
                               qDebug("unhandled property %s", propertyName(i.propertyIdx));
                               break;
                         }
-                  style->set(i.styleIdx, value);
+                  if (value.isValid())
+                        style->set(i.styleIdx, value);
                   }
             }
       }
@@ -784,7 +806,7 @@ static void readStaff(Staff* staff, XmlReader& e)
                   staff->setBarLineFrom(e.intAttribute("from", 0));
                   staff->setBarLineTo(e.intAttribute("to", 0));
                   int span     = e.readInt();
-                  staff->setBarLineSpan(span > 1);    // TODO: set flag for other staves if span > 2
+                  staff->setBarLineSpan(span - 1);
                   }
             else if (staff->readProperties(e))
                   ;
@@ -979,6 +1001,41 @@ static void readChord(Chord* chord, XmlReader& e)
       }
 
 //---------------------------------------------------------
+//   read
+//---------------------------------------------------------
+
+static void readText(XmlReader& e, Text* t, Element* be)
+      {
+      while (e.readNextStartElement()) {
+            const QStringRef& tag(e.name());
+            if (tag == "style") {
+                  QString s = e.readElementText();
+                  SubStyle ss = subStyleFromName(s);
+                  be->initSubStyle(ss);
+                  }
+            else if (tag == "foregroundColor")  // same as "color" ?
+                  e.skipCurrentElement();
+            else if (tag == "frame")
+                  t->setHasFrame(e.readBool());
+            else if (tag == "halign") {
+                  Align align = Align(int(t->align()) & int(~(Align::HCENTER | Align::RIGHT)));
+                  const QString& val(e.readElementText());
+                  if (val == "center")
+                        align = align | Align::HCENTER;
+                  else if (val == "right")
+                        align = align | Align::RIGHT;
+                  else if (val == "left")
+                        ;
+                  else
+                        qDebug("readText: unknown alignment: <%s>", qPrintable(val));
+                  t->setAlign(align);
+                  }
+            else if (!t->readProperties(e))
+                  e.unknown();
+            }
+      }
+
+//---------------------------------------------------------
 //   readTextLineProperties
 //---------------------------------------------------------
 
@@ -988,19 +1045,19 @@ static bool readTextLineProperties(XmlReader& e, TextLineBase* tl)
 
       if (tag == "beginText") {
             Text* text = new Text(tl->score());
-            text->read(e);
+            readText(e, text, tl);
             tl->setBeginText(text->xmlText());
             delete text;
             }
       else if (tag == "continueText") {
             Text* text = new Text(tl->score());
-            text->read(e);
+            readText(e, text, tl);
             tl->setContinueText(text->xmlText());
             delete text;
             }
       else if (tag == "endText") {
             Text* text = new Text(tl->score());
-            text->read(e);
+            readText(e, text, tl);
             tl->setEndText(text->xmlText());
             delete text;
             }
@@ -1280,7 +1337,7 @@ void readArticulation(Articulation* a, XmlReader& e)
                                     if (s == al[i].name) {
                                           a->setSymId(al[i].id);
                                           a->setUp(al[i].up);
-                                          a->setDirection(a->up() ? Direction_UP : Direction_DOWN);
+                                          a->setDirection(a->up() ? Direction::UP : Direction::DOWN);
                                           break;
                                           }
                                     }
@@ -1378,9 +1435,12 @@ static void readMeasure(Measure* m, int staffIdx, XmlReader& e)
                         else if (tag == "customSubtype")                      // obsolete
                               e.readInt();
                         else if (tag == "span") {
-                              bl->setSpanFrom(e.intAttribute("from", bl->spanFrom()));      // obsolete
-                              bl->setSpanTo(e.intAttribute("to", bl->spanTo()));          // obsolete
-                              bl->setSpanStaff(e.readInt() > 1);
+                              //TODO bl->setSpanFrom(e.intAttribute("from", bl->spanFrom()));  // obsolete
+                              // bl->setSpanTo(e.intAttribute("to", bl->spanTo()));            // obsolete
+                              int span = e.readInt();
+                              if (span)
+                                    span--;
+                              bl->setSpanStaff(span);
                               }
                         else if (tag == "spanFromOffset")
                               bl->setSpanFrom(e.readInt());
@@ -1669,7 +1729,7 @@ static void readMeasure(Measure* m, int staffIdx, XmlReader& e)
             else if (tag == "Text") {
                   Text* t = new StaffText(score);
                   t->setTrack(e.track());
-                  t->read(e);
+                  readText(e, t, t);
                   if (t->empty()) {
                         qDebug("reading empty text: deleted");
                         delete t;
@@ -1690,13 +1750,32 @@ static void readMeasure(Measure* m, int staffIdx, XmlReader& e)
                   segment = m->getSegment(SegmentType::ChordRest, e.tick());
                   segment->add(dyn);
                   }
+            else if (tag == "RehearsalMark") {
+                  RehearsalMark* el = new RehearsalMark(score);
+                  el->setTrack(e.track());
+                  readText(e, el, el);
+                  segment = m->getSegment(SegmentType::ChordRest, e.tick());
+                  segment->add(el);
+                  }
+            else if (tag == "StaffText") {
+                  StaffText* el = new StaffText(score);
+                  el->setTrack(e.track());
+
+                  while (e.readNextStartElement()) {
+                        const QStringRef& tag(e.name());
+                        if (tag == "foregroundColor")
+                              e.skipCurrentElement();
+                        else if (!el->readProperties(e))
+                              e.unknown();
+                        }
+                  segment = m->getSegment(SegmentType::ChordRest, e.tick());
+                  segment->add(el);
+                  }
             else if (tag == "Harmony"
                || tag == "FretDiagram"
                || tag == "TremoloBar"
                || tag == "Symbol"
                || tag == "Tempo"
-               || tag == "StaffText"
-               || tag == "RehearsalMark"
                || tag == "InstrumentChange"
                || tag == "StaffState"
                || tag == "FiguredBass"
@@ -2301,6 +2380,7 @@ Score::FileError MasterScore::read206(XmlReader& e)
 
       for (unsigned int i = 0; i < sizeof(style206)/sizeof(*style206); ++i)
             style().set(style206[i].idx, style206[i].val);
+
       // old text style default
       style().set(StyleIdx::rehearsalMarkFrameSquare, false);
       style().set(StyleIdx::rehearsalMarkFrameRound, 20);
@@ -2330,6 +2410,40 @@ Score::FileError MasterScore::read206(XmlReader& e)
 
       for (Staff* s : staves())
             s->updateOttava();
+
+      // fix segment span
+      SegmentType st = SegmentType::BarLineType;
+      for (Segment* s = firstSegment(st); s; s = s->next1(st)) {
+            for (int staffIdx = 0; staffIdx < nstaves(); ++staffIdx) {
+                  BarLine* b = toBarLine(s->element(staffIdx * VOICES));
+                  if (!b)
+                        continue;
+                  int sp = b->spanStaff();
+                  if (sp == 0)
+                        continue;
+                  for (int span = 1; span <= sp; ++span) {
+                        BarLine* nb = toBarLine(s->element((staffIdx + span) * VOICES));
+                        if (!nb) {
+                              nb = b->clone();
+                              nb->setTrack((staffIdx + span) * VOICES);
+                              s->add(nb);
+                              }
+                        nb->setSpanStaff(sp - span);
+                        }
+                  staffIdx += sp;
+                  }
+            }
+      for (int staffIdx = 0; staffIdx < nstaves(); ++staffIdx) {
+            Staff* s = staff(staffIdx);
+            int sp = s->barLineSpan();
+            if (sp == 0)
+                  continue;
+            for (int span = 1; span <= sp; ++span) {
+                  Staff* ns = staff(staffIdx + span);
+                  ns->setBarLineSpan(sp - span);
+                  }
+            staffIdx += sp;
+            }
 
       // treat reading a 2.06 file as import
       // on save warn if old file will be overwritten
